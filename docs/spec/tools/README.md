@@ -1,0 +1,152 @@
+# 工具契约目录
+
+> **状态**：`unverified`。本目录收录的 6 个工具**均无 handler、无 `ToolRegistry` 注册、无夹具**；所有验收命令一律写 `尚未落盘`。
+> **规范正文**：[../dsl/README.md](../dsl/README.md)（`v0.1 rev.1`）。
+> **决策锚点**：[D-002](../../decisions/D-002.md)、[D-007](../../decisions/D-007.md)、[D-008](../../decisions/D-008.md)、[D-014](../../decisions/D-014.md)。
+> **编号**：S-021..S-026，接在 [S-020](../S-020-error-format.md) 之后；编号与状态规则同 [../README.md §3](../README.md)。
+
+本目录只回答“这些工具被调用时，输入是什么、输出是什么、失败归哪一类”。不定义 handler 实现、不定义注册表代码、不新增 DSL 语法。
+
+## 1. 收录范围
+
+| 工具 | 条目 | 正文引用 | 状态 |
+| --- | --- | --- | --- |
+| `read` | [S-021](S-021-tool-read.md) | [08 §1/§3/§4](../dsl/08-examples.md)、[07 §4](../dsl/07-runtime.md)、[S-017](../S-017-path-constraint.md) | `unverified` |
+| `grep` | [S-022](S-022-tool-grep.md) | [08 §1/§3/§4](../dsl/08-examples.md)、[07 §4](../dsl/07-runtime.md) | `unverified` |
+| `write` | [S-023](S-023-tool-write.md) | [08 §1/§2/§3/§5](../dsl/08-examples.md)、[07 §4](../dsl/07-runtime.md) | `unverified` |
+| `json_parse` | [S-024](S-024-tool-json-parse.md) | [08 §2/§5](../dsl/08-examples.md)、[07 §4](../dsl/07-runtime.md) | `unverified` |
+| `get` | [S-025](S-025-tool-get.md) | [05 §1.3](../dsl/05-data-metadata.md)、[D-008](../../decisions/D-008.md) | `unverified` |
+| `json_build` | [S-026](S-026-tool-json-build.md) | `v0.1` §4 注（历史输入）、[D-006](../../decisions/D-006.md) 出证 | `unverified` |
+
+`read`/`grep`/`write`/`json_parse`/`get` 五个出现在 [07 §4](../dsl/07-runtime.md) 的错误示例 `Available:` 行，是正文唯一一次成组列出的工具名；该行是示例，不是注册表定义，实际可见集合仍由内核 `ToolRegistry` 决定。`json_build` 只在 `docs/design/dsl-spec-v0.1.md` 出现，rev.1 正文未直接引用；收录理由：emit payload 之外没有通用对象字面量（[dsl/README §4](../dsl/README.md)），若内核不提供该工具，构造 JSON 就没有任何手段。
+
+**不收录**：
+
+| 名字 | 出现位置 | 不收录理由 |
+| --- | --- | --- |
+| `parse` | [04 §1/§5](../dsl/04-pipeline-errors.md)、[S-007](../S-007-fallback-precedence.md) | 只作示例中的占位工具名，正文没有语义、参数或返回值定义；臆造契约会让规范凭空多出一条规则。 |
+| `exec`、`http_post` | [06 §5.2](../dsl/06-security.md)、[S-013](../S-013-default-deny.md)、`v0.1` L222 | 作为“未注册/被 deny”的反例名出现，不是本期工具；M8 的 argv/域名约束没有宿主工具。 |
+| `delete_tool` | `v0.1` §5.1 代码注释 | 注册表 API 的注释，不是工具名。 |
+| `emit` | [05 §2](../dsl/05-data-metadata.md) | 语言语句，不是工具调用，不经过 `ToolDef` 与三层白名单（[05 §2.1](../dsl/05-data-metadata.md)）。 |
+
+## 2. 契约字段
+
+| 字段 | 本目录写法 | 依据 |
+| --- | --- | --- |
+| 名字 | 必须是 `IDENT` 且不是关键字（[01 §3](../dsl/01-lexical.md)） | 注册名即调用名 |
+| 位置参数（arity） | 固定个数 `m`，按书写顺序编号；`params_schema` 非 NULL | [07 §1](../dsl/07-runtime.md) |
+| required | 固定 arity 下**所有**位置参数都是 required | 见下 |
+| `accepts_context` | 是否允许 `$` 作为隐式末参注入 | [03 §6](../dsl/03-semantics.md)、[D-007](../../decisions/D-007.md) |
+| 返回值 | 六类 payload 之一；不返回 `meta` | [05 §1.1](../dsl/05-data-metadata.md) |
+| 截断 | 是否产生 `truncated`/`original_size` | [D-008](../../decisions/D-008.md) |
+| 错误 | 只列该工具可能产生的 `error_kind` | §5 |
+| 约束 | 第三层 `ParamConstraint` 的类别与档位 | §6、[D-014](../../decisions/D-014.md) |
+
+**required 的机械含义**：本规范没有可选参数、默认值、命名参数。一个参数“可以省略”只有两种来源——`|>` 追加或 `$` 注入；两者都只是把值补到末尾，不是默认值。补完之后个数仍不等于 `m` → `constraint`，handler 不执行。因此每个固定 arity 工具的所有参数都标 required。
+
+**变长工具的例外**：`json_build` 的 `params_schema` 为 NULL（变长）。变长工具既没有固定 `m`，也不参与 `$` 注入（[03 §6](../dsl/03-semantics.md)）；它的逐位校验由 handler 承担，错误类别因此与固定 arity 工具不同（见 [S-026](S-026-tool-json-build.md)）。
+
+## 3. 实参顺序与注入
+
+最终实参的组装顺序由 [03 §6](../dsl/03-semantics.md) 与 [D-007](../../decisions/D-007.md) 固定，本目录不另立规则：
+
+```
+最终实参 = 显式实参（书写序） ++ 管道值（若有） ++ 隐式 $（若注入）
+```
+
+注入三条件同时成立才发生：① 位于 `into` 块内；② 工具声明 `accepts_context`；③ `n < m`（`n` = 显式实参数 + 管道值个数，`m` = 固定位置形参数）。`|?` 两侧各自独立计算。
+
+| 调用 | 显式 | 管道 | 注入 | 最终 args | 结果 |
+| --- | --- | --- | --- | --- | --- |
+| `get "k"`（`into` 内） | 1 | 0 | 是（1<2） | `["k", $]` | 正常 |
+| `get "k" $` | 2 | 0 | 否（2=m） | `["k", $]` | 正常 |
+| `$ \|> get "k"` | 1 | 1 | 否（2=m） | `["k", $]` | 正常 |
+| `get "k"`（`into` 外） | 1 | 0 | 否（无 `$`） | `["k"]` | `constraint` |
+| `read`（裸名，零参调用） | 0 | 0 | 否 | `[]` | `constraint` |
+| `x \|> read "p"` | 1 | 1 | 否 | `["p", x]` | `constraint`（2≠1） |
+| `content \|> grep "m"` | 1 | 1 | 否 | `["m", content]` | 正常 |
+| `read p \|> json_parse` | 0 | 1 | 否 | `[text]` | 正常 |
+| `$ \|> write "out"` | 1 | 1 | 否 | `["out", $]` | 正常 |
+| `json_build "a" 1` | 2 | 0 | 否（变长不注入） | `["a", 1]` | 正常 |
+
+只有 `get` 声明 `accepts_context: true`。`read`/`grep`/`write`/`json_parse` 声明 false；`json_build` 是变长，按规则即使声明 true 也不会注入，故声明 false 以免误导。
+
+## 4. 截断语义（D-008）
+
+- 截断**只由工具产生**，DSL 没有 `limit N` 语法；`read` 与 `grep` 可截断，其余四个不截断。
+- handler 与工具参数只看到 `payload`，收不到带 `meta` 的包装值；截断事实通过 `ToolResult` 的 `truncated`/`original_size` 两个标量回传，`meta` 结构由运行时维护（[05 §1.2](../dsl/05-data-metadata.md)、[07 §1](../dsl/07-runtime.md)）。
+- 截断结果**不加省略号或任何标记**：payload 是原始内容的前缀，`truncated` 只在侧车里。
+- 切点按 UTF-8 字节，且不得把一个多字节序列切成两半；因此实际返回可能略少于 `max_output_bytes`。
+- `original_size`：截断分支取**切前**完整结果的字节数，未截断分支取返回值的**序列化**字节数（[05 §1.4](../dsl/05-data-metadata.md)）。对 `string` 结果，前者是原始字节、后者含引号与转义，两者口径不同，不能互相反推。单位与 `ExecLimits.max_output_bytes` 同口径。
+- 粘性由运行时归并，不由 handler 负责：`result.truncated = 本次截断 || 任一实参 truncated`；`original_size` 按 [05 §1.4](../dsl/05-data-metadata.md) 三条分支取值。所以 `read` 被截断后 `grep` 再返回空数组，结果仍是 `truncated=true`。
+- 不能截断的构造型结果（`json_parse`、`get`、`json_build`）超限时返回 `limit`，不得返回半截 JSON。
+
+## 5. `error_kind` 归属表
+
+这张表解决“工具错误归一到哪个 `error_kind`、由谁判定”的未定问题。`error_kind` 枚举以 [07 §3.2](../dsl/07-runtime.md) 为准；可捕获性以 [04 §2.1](../dsl/04-pipeline-errors.md) 为准，工具无权改动。
+
+| `error_kind` | 归属 | 判定点 | `\|?` 捕获 | 本目录工具 |
+| --- | --- | --- | --- | --- |
+| `not_found` | handler | 目标不存在（文件、父目录） | 是 | `read`、`write` |
+| `invalid_input` | handler | 拿到的数据本身不合法（编码、正则、JSON、键值对） | 是 | `read`、`grep`、`write`、`json_parse`、`json_build` |
+| `transient` | handler | 可重试的 I/O 失败 | 是 | `read`、`write` |
+| `denied` | runtime（策略层）+ handler（OS 权限/空间） | 调用被拒绝执行 | 否 | `read`、`write`（仅 OS 侧） |
+| `constraint` | runtime | 调用形状或参数值不符合声明（路径、arity、标量类型） | 否 | 全部固定 arity 工具 |
+| `limit` | runtime（ExecLimits）+ handler（构造型不可截断） | 资源上限 | 否 | `json_parse`、`get`、`json_build` 的结果上限；全部工具的 `ExecLimits` |
+| `internal` | runtime / handler | 未归类失败、未知 `error_kind` | 否 | 全部 |
+| `type` | runtime（DSL 运算） | 运算/比较的类型不符 | 否 | 工具不得产生 |
+| `for_not_array` | runtime | `for` 集合不是数组 | 否 | 工具不得产生 |
+| `condition_not_bool` | runtime | 条件不是 `bool` | 否 | 工具不得产生 |
+| `emit_schema` | runtime（emit） | 事件 payload 不符合 schema | 否 | 工具不涉及 |
+| `approval_required` / `approval_denied` / `approval_stale` / `approval_reused` | runtime | 审批 | 否 | 工具只声明 `requires_approval`，不产生这些 kind |
+| `revoked` | runtime | 策略快照在调用边界强杀 | 否 | 同上 |
+| `unconstrained_arg` | runtime | 隐式 `$` 在 schema 中没有具名参数槽 | 否 | `get` 的 `$` 绑定到 `obj`，不触发 |
+| 加载期全部 kind（[07 §3.1](../dsl/07-runtime.md)） | loader | 加载 | 否 | 不进入工具边界 |
+
+规则：
+
+1. **单一归属**：handler 只允许返回上表“归属”含 handler 的行；返回其他 kind 一律由运行时归一为 `internal`。
+2. **未知字符串**：handler 返回枚举外的字符串 → `internal`，且不可捕获（沿用 [S-008 §3](../S-008-capturable-errors.md)）。
+3. **`constraint` 与 `invalid_input` 的机械判据**：判定者是运行时/schema → `constraint`；判定者是 handler 且失败来自数据内容 → `invalid_input`。前者说明脚本写错，不应被 `|?` 静默兜底；后者说明输入数据有问题，允许兜底。
+4. **不得为可降级改类**：工具不能把 `denied`/`limit` 改写成可捕获类别来绕过 [04 §2.1](../dsl/04-pipeline-errors.md)。
+5. **`null` 不是错误**：缺键、空匹配、空文件都返回合法 payload，不产生任何 `error_kind`。
+6. **一次调用一个类别**：失败只归一到一个 kind，不聚合、不带错误值回脚本。
+
+### 5.1 失败现象 → `error_kind` 速查
+
+| 失败现象 | `error_kind` | 判定者 |
+| --- | --- | --- |
+| 路径不在 root 内、symlink 越界、arity 不符、固定参数的标量类型不符 | `constraint` | runtime |
+| 文件或父目录不存在 | `not_found` | handler |
+| OS 拒绝（`EACCES`/`EPERM`）或空间耗尽（`ENOSPC`） | `denied` | handler |
+| 可重试 I/O（`EIO`/`EBUSY`/`EAGAIN`） | `transient` | handler |
+| 目标是目录、字节非 UTF-8、正则非法、JSON 非法、重复键、键值未成对 | `invalid_input` | handler |
+| 构造型结果超 `max_output_bytes`；`ExecLimits` 任一超限 | `limit` | handler / runtime |
+| handler 返回枚举外的字符串 | `internal` | runtime 归一 |
+
+同一次失败只命中一行；若现象同时符合多行，按“判定者更早”的一行归一（runtime 先于 handler）。
+
+`denied` 的双来源（策略层 / OS 权限）是已知的归类重叠：策略侧由运行时在 handler 之前判定，OS 侧由 handler 判定，两者共用同一 kind 与不可捕获性，靠错误详情行区分来源。是否拆分类别属于正文改动，本目录不主张。
+
+## 6. 参数约束分档（D-014）
+
+| 工具.参数 | 约束类 | 档位 | 本目录声明 |
+| --- | --- | --- | --- |
+| `read.path` | `CONSTRAINT_PATH_PREFIX` + canonical + 组件边界 + 打开同源 | 必做 | 声明 |
+| `write.path` | 同上，另加父目录 realpath、basename 非 symlink | 必做 | 声明 |
+| 固定 arity 工具的 arity/标量类型 | schema 浅校验（个数、string） | 必做 | 声明 |
+| `args_json` 单次解析、重复键 `E_DUP_KEY`、约束与 handler 同源 | 双通道 | 必做 | 运行时统一执行 |
+| 隐式 `$` 具名并进入同一套 schema | 双通道 | 必做 | `get.obj` |
+| `read.path` 的 `DENY_PATTERN`（如 `*.key`） | 正则黑名单 | 本期不主张 | 不声明 |
+| `grep.pattern` 长度/复杂度上限（ReDoS） | 正则黑名单类 | 本期不主张 | 不声明；风险另记 |
+| `argv[0]` 绝对路径、`CONSTRAINT_ARGV_PREFIX` | 命令 | 本目录无 exec 工具 | 不适用 |
+| 域名白名单、逐跳重定向、DNS 钉住 | 域名 | 本目录无网络工具 | 不适用 |
+| `max_emit_bytes` / `max_payload_depth` / `external_egress` | emit | emit 不是工具 | 不适用 |
+
+关于 `unconstrained_arg`：该错误只表示“隐式 `$` 在 schema 里找不到具名参数槽”，不表示“该参数没有第三层约束”。`get.obj` 在 schema 中具名、参与同一套校验，即使没有路径/域名类约束也不触发 `unconstrained_arg`。这是本目录对 [06 §5.4](../dsl/06-security.md) 的机械解释；若正文另有主张，以正文修订为准。
+
+## 7. 门禁状态
+
+- 命令：`尚未落盘`。仓库没有构建、没有 `tools/check.sh`、没有任何 `.rill` 夹具。
+- 计划（M 落地后）：`tools/check.sh m3-control`（arity / `constraint`）、`m4-pipeline`（可捕获性）、`m6-events`（截断与粘性）、`m8-constraints`（路径六例）。
+- 在命令存在之前，本目录任何条目都不得标 `accepted`；每条目的“验收命令与阈值”一节同样写 `尚未落盘`。
