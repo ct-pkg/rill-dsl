@@ -14,10 +14,10 @@
 | Q4 | P-004 | 截断结果元数据的暴露方式 | decided → D-008（C 方案） |
 | Q5 | P-005 | `# allow:` 缺省是否改为默认拒绝 | decided → D-011（默认拒绝） |
 | Q6 | P-006 | 审批节点放内核还是 DSL | decided → D-013（内核） |
-| Q7 | P-007 | `par` 是否进入保留字 | pending |
+| Q7 | P-007 | `par` 是否进入保留字 | decided → D-019 |
 | Q8 | P-008 | 错误格式是否统一为 CT 的 `path:line:col: error:` | decided → D-015 |
-| Q9 | P-009 | `# dsl-version:` 是否 MVP 直接报错 | pending |
-| Q10 | P-010 | 是否保留嵌套 `into` 与 `$` 覆盖规则 | pending |
+| Q9 | P-009 | `# dsl-version:` 是否 MVP 直接报错 | decided → D-018 |
+| Q10 | P-010 | 是否保留嵌套 `into` 与 `$` 覆盖规则 | decided → D-017 |
 
 ## 2. 待定清单
 
@@ -29,10 +29,10 @@
 | P-004 | 截断元数据如何暴露 | **decided → D-008**：C 方案（侧车伪字段 + 粘性传播） | 工具边界、管道、JSON 冲突 | [讨论稿 §2.2](../design/dsl-discussion.md#L52-L69) |
 | P-005 | `# allow:` 缺省是否默认拒绝 | **decided → D-011**：默认拒绝；`*` 显式逃生并审计；deny-only 报错 | 安全默认值 | [讨论稿 P1-8](../design/dsl-discussion.md#L307-L316) |
 | P-006 | 审批节点放内核还是 DSL | **decided → D-013**：内核；DSL 零审批语法 | DSL 语法面 | [讨论稿 P1-9](../design/dsl-discussion.md#L317-L324) |
-| P-007 | `par` 是否进入保留字 | pending；规范正文按 `provisional` 保留 `par`（E-1），待确认 | 词法保留字表 | [讨论稿 P1-5](../design/dsl-discussion.md#L277-L284) |
+| P-007 | `par` 是否进入保留字 | **decided → D-019**：保留；脚本出现即 `not_implemented`，Hint 指向内核调度 | 词法保留字表 | [D-019](../decisions/D-019.md) |
 | P-008 | 错误格式统一为 CT `path:line:col: error:` 还是 v0.1 格式 | **decided → D-015**：统一 `path:line:col: error:` + 详情 + Hint；只报第一个错误 | 全部错误输出与 M1 基线 | [D-015](../decisions/D-015.md) |
-| P-009 | `# dsl-version:` 是否 MVP 直接报错 | pending；规范正文按 `provisional` 接受 `1`、其他值报错（E-2），待确认 | header 文法 | [讨论稿 P0-8](../design/dsl-discussion.md#L188-L197) |
-| P-010 | 是否保留嵌套 `into` 与内层 `$` 覆盖 | pending；规范正文按 `provisional` 允许嵌套（E-3），待确认 | M5 作用域 | [讨论稿 §5](../design/dsl-discussion.md#L236-L347) |
+| P-009 | `# dsl-version:` 是否 MVP 直接报错 | **decided → D-018**：接受 `1`；其他值 `E_VERSION` | header 文法 | [D-018](../decisions/D-018.md) |
+| P-010 | 是否保留嵌套 `into` 与内层 `$` 覆盖 | **decided → D-017**：允许；内层 `$` 覆盖、退出恢复；理由是不做编译期脱糖 | M5 作用域 | [D-017](../decisions/D-017.md) |
 | P-011 | `while` / `break` / `continue` 是否进 M4 | **decided → D-009**：`for` + `break`/`continue` 进 M4；`while` 不进 MVP；重开条件见 D-009 | M4 | [讨论稿 P1-1](../design/dsl-discussion.md#L238-L247) |
 | P-012 | `\|?` 的优先级、失败单元、右侧形态、与 `$` 的先后 | **decided → D-007**：`\|?` 高于 `\|>`；左侧单 call；可捕获集显式；`$` 按形参位注入 | M3 | [讨论稿 §2.3](../design/dsl-discussion.md#L70-L80) |
 | P-013 | 错误信息升级（Did-you-mean、片段、插入符） | pending | M1/M9 | [讨论稿 P1-3](../design/dsl-discussion.md#L261-L268) |

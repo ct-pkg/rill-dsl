@@ -1,8 +1,8 @@
 # 主张层：Rill DSL（讨论阶段）
 
 > 状态：**规范正文已有 `v0.1 rev.1` 草案（unverified，无实现）**。本文件只做主张层索引，不替代规范正文。
-> 已拍板项为 [D-001](../decisions/D-001.md) 与 [D-002..D-015](../decisions/README.md)。
-> 仍未决的问题登记在 [docs/spec/PENDING.md](../spec/PENDING.md)，正文中以 `provisional` 标注的三处（P-007/P-009/P-010）待确认。
+> 已拍板项为 [D-001](../decisions/D-001.md) 与 [D-002..D-019](../decisions/README.md)；其中 D-015..D-019 多为裁判席技术裁定，不挂用户名义。
+> 仍未决的问题登记在 [docs/spec/PENDING.md](../spec/PENDING.md)；规范正文已无 `provisional` 文本。
 
 ## 1. 目标（一句话）
 
@@ -43,7 +43,7 @@
 | 策略快照 | 加载时绑定的 allow/deny/registry/constraint 版本，执行期不随热更新改变；见 D-012 |
 | trace_id | 一次执行生成的关联 id，随 emit 事件传播，供因果链查询（P-014 未定） |
 | accepted | 已拍板且已验收；当前 **0 条** |
-| unverified | 已拍板但未实现/无门禁；当前 S-001..S-020 与规范正文 |
+| unverified | 已拍板但未实现/无门禁；当前 S-001..S-024 与规范正文 |
 | pending | 未拍板；没有验收判据；当前 PENDING 除已定稿项外的条目 |
 | 候选偏离 | 与主规范有张力但未取得用户签字，**不计为已登记 deviation** |
 
@@ -53,9 +53,14 @@
 | --- | --- | --- | --- |
 | D-001 | accepted | 调用统一空格；括号只作分组与 fn 参数表；judge 为用户 | [D-001](../decisions/D-001.md) |
 | D-002..D-014 | accepted | B1/B2/B3 battle 判决（文法、语义、安全） | [决策索引](../decisions/README.md) |
-| D-015 | accepted | 错误格式统一 `path:line:col: error:` + 详情 + Hint；judge 为用户 | [D-015](../decisions/D-015.md) |
+| D-014 | accepted | 参数约束分档（必做/不做/deferred） | [D-014](../decisions/D-014.md) |
+| D-015 | accepted | 错误格式统一；judge 为裁判席（用户未参与） | [D-015](../decisions/D-015.md) |
+| D-016 | accepted | 值层：`string + 标量` 拼接、`json_array.length` | [D-016](../decisions/D-016.md) |
+| D-017 | accepted | 嵌套 `into` 允许，内层 `$` 覆盖、退出恢复 | [D-017](../decisions/D-017.md) |
+| D-018 | accepted | `# dsl-version:` 接受 `1`，其他值报错 | [D-018](../decisions/D-018.md) |
+| D-019 | accepted | `par` 保留为关键字，出现即 `not_implemented` | [D-019](../decisions/D-019.md) |
 
-未决问题仍按用户指示登记在待定条目里，避免伪装成 accepted：P-007/P-009/P-010（正文 provisional）、P-013/P-014/P-017、P-020/P-021（undecidable）。
+未决问题仍登记在待定条目里，避免伪装成 accepted：P-013/P-014/P-017、P-020/P-021（undecidable）。P-007/P-009/P-010 已由 D-019/D-018/D-017 收口。
 
 - Q1–Q10 与 P0/P1 清单：[docs/spec/PENDING.md](../spec/PENDING.md)
 - 各方意见与倾向：[dsl-discussion.md](../design/dsl-discussion.md)
@@ -66,7 +71,7 @@
 | --- | --- | --- | --- |
 | 正文 | Rill DSL 规范 `v0.1 rev.1`（词法/文法/语义/安全/运行时/示例/里程碑） | unverified | [dsl/README.md](../spec/dsl/README.md) |
 | S-001 | 调用形态：空格参数，括号仅分组 | unverified | [S-001](../spec/S-001-call-form.md) |
-| S-002..S-020 | 文法、语义、安全、错误的可验收条目 | unverified | [规格索引](../spec/README.md) |
+| S-002..S-024 | 文法、语义、安全、错误、值层的可验收条目 | unverified | [规格索引](../spec/README.md) |
 | P-001..P-021 | 未决问题清单 | pending / partial | [PENDING](../spec/PENDING.md) |
 
 ## 6. 候选偏离（未签字，不计为已登记 deviation）
@@ -89,4 +94,4 @@
 - 决策层：`docs/decisions/`
 - 仓库治理：`AGENTS.md`（v1.7.0 生成块原样入库）
 
-下一步：实现 M0–M2 之前先确认三处 `provisional`（P-007/P-009/P-010）；M1 落地后把 S-001..S-020 的验收命令从 `尚未落盘` 换成真实门禁。
+下一步：M0 只做门禁与文档基线；原先三处 `provisional` 已由 D-017/D-018/D-019 收口，正文无临时文本。M1 落地后把 S-001..S-024 的验收命令从 `尚未落盘` 换成真实门禁。
