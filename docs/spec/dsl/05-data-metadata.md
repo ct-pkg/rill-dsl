@@ -79,4 +79,4 @@ result.original_size = 本次被截断 ? 切前字节数
 ## 3. 验收锚点
 
 - [S-009](../S-009-truncation.md)、[S-019](../S-019-emit-limits.md)。
-- 夹具：侧车不泄漏 1 例、伪字段优先 1 例、`get` 逃逸 1 例、粘性 2 例、字节口径 1 例；emit 超限 2 例、schema 2 例、`external_egress` 1 例。
+- 夹具：侧车不泄漏 1 例、伪字段优先 1 例、`get` 逃逸 1 例、粘性 2 例、字节口径 1 例；emit 字节/深度超限与无订阅方/队列满各 1 例、`external_egress` 1 例。内核配置提供的 schema 不产生脚本侧用例。

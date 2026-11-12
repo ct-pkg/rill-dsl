@@ -13,7 +13,7 @@
 | D-007 | 2026-11-12 | accepted | EDITOR | `\|?` 高于 `\|>`，左侧单 call，可捕获集显式 | [D-007](D-007.md) |
 | D-008 | 2026-11-12 | accepted | EDITOR | 截断元数据用侧车伪字段（C 方案），粘性传播 | [D-008](D-008.md) |
 | D-009 | 2026-11-12 | accepted | EDITOR | 赋值限 `let mut`；`for` + break/continue；无 `while` | [D-009](D-009.md) |
-| D-010 | 2026-11-12 | accepted | EDITOR | R4 重述为“调用级降级、无块级恢复” | [D-010](D-010.md) |
+| D-010 | 2026-11-12 | **superseded → D-014** | EDITOR | R4 重述为“调用级降级、无块级恢复”；emit 失败部分由 D-014 取代 | [D-010](D-010.md)、[D-014](D-014.md) |
 | D-011 | 2026-11-12 | accepted | EDITOR | `# allow:` 缺省默认拒绝，`*` 显式且审计 | [D-011](D-011.md) |
 | D-012 | 2026-11-12 | accepted | EDITOR | 策略热更新用不可变快照 + 调用边界强杀 | [D-012](D-012.md) |
 | D-013 | 2026-11-12 | accepted | EDITOR | 审批在内核，DSL 零审批语法；边界一节 | [D-013](D-013.md) |

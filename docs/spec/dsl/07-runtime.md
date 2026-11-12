@@ -64,7 +64,7 @@ struct ExecLimits {
 };
 ```
 
-- 超限一律 `ok=0`、`error_kind=limit`。失败位置：`max_output_bytes`、`max_input_bytes`、工具结果深度超限在调用语句；`max_emit_bytes`、emit payload 深度超限在 emit 语句。
+- 超限一律 `ok=0`、`error_kind=limit`。失败位置：`max_output_bytes`、`max_input_bytes`、工具结果深度超限在调用语句；`max_emit_bytes`、`max_emit_count`、emit payload 深度超限在 emit 语句。
 - rev.1 基线默认值（内核可覆盖）：`max_steps=10000`、`max_tool_calls=200`、`max_fn_depth=8`、`max_emit_count=100`、`max_output_bytes=262144`、`max_input_bytes=262144`、`max_emit_bytes=65536`、`max_payload_depth=8`、`timeout_ms=30000`。
 - 计数口径：语句执行 +1；循环每次迭代至少 +1；`continue` 不重置；`|?` 右侧执行照常计数。
 - `max_input_bytes` 口径：一次工具调用的输入总量 = `args_json` 与 `ctx_json` 各自序列化后的 UTF-8 字节数之和；`ctx_json` 未注入时按 0 计。单参数字节数不会超过总量，因此任一实参超限必然使本次调用超限。
@@ -100,6 +100,7 @@ struct ExecLimits {
 | `pipe_rhs` | `\|>` 右侧不是可调用节点（call、零参调用裸名、首操作数是可调用节点的 fallback 链） |
 | `fallback_lhs` | `\|?` 链的最左操作数不是单个调用 |
 | `dollar_outside` | `$` 出现在任何 `into` 块之外 |
+| `dup_key` | emit payload 的**对象字面量内重复键**（静态可判，位置在 emit 语句的 payload 处） |
 | `policy_expansion_unapproved` | 策略扩张未审批 |
 
 `unknown_callee` 已并入 `unknown_tool`：加载期名字解析只有一个失败点——名字既不在工具注册表也不在脚本 `fn`。拆成两个 kind 会让同一条调用因注册状态不同而换类别，且没有独立判据；`unknown_tool` 的 Hint 同时提示检查工具名与函数名。
@@ -109,7 +110,7 @@ struct ExecLimits {
 `not_found`、`invalid_input`、`transient`、`denied`、`constraint`、`approval_required`、`approval_denied`、`approval_stale`、`approval_reused`、`limit`、`revoked`、`script_changed`、`internal`、`type`、`emit_schema`、`dup_key`、`for_not_array`、`unconstrained_arg`、`condition_not_bool`。
 
 - `script_changed` 是运行期检查：执行期脚本哈希与加载期不一致时，在下一次工具调用边界失败（[D-012](../../decisions/D-012.md)）。
-- `dup_key` 是**参数协议级**重复键：`args_json`/`ctx_json` 中出现同名键，解析即失败，handler 不执行（[D-014](../../decisions/D-014.md) 第 6 条）。
+- `dup_key` 是**参数协议级**重复键：`args_json`/`ctx_json` 中出现同名键，解析即失败，handler 不执行（[D-014](../../decisions/D-014.md) 第 6 条）。加载期另有同名 kind，指 emit 字面量内的重复键；两阶段语义不同、各自可判。
 - 三种“重复键”语义分开：协议级 → `dup_key`（运行时，handler 之前）；业务 JSON 文本里的重复键 → `invalid_input`（handler 解析时）；`json_build` 的重复键 → `invalid_input`（handler 构造时）。
 
 - `limit` 覆盖两类：① `ExecLimits` 任一计数超限；② `requires_complete_input=1` 的工具收到被上游截断的实参（`meta.truncated=1`）。第 ② 类由运行时在 handler 之前判定，handler 不执行。

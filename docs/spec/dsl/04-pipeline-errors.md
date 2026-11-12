@@ -79,6 +79,7 @@ R4 的完整表述 [D-010]：
 | `emit` 无订阅方或队列满 | 丢弃并记日志，不中止 | `ok` 不变 |
 | `emit` 超出 `max_emit_bytes`/`max_payload_depth` | 中止当前块 | `ok=0`，`error_kind=limit` |
 | `emit` payload 不符合内核 schema | 中止当前块 | `ok=0`，`error_kind=emit_schema` |
+| 超过 `max_emit_count` | 中止当前块 | `ok=0`，`error_kind=limit` |
 | 步数/调用数/超时/深度超限 | 中止整个执行 | `ok=0`，`error_kind=limit` |
 | 策略在调用边界被撤销 | 中止 | `ok=0`，`error_kind=revoked` |
 | `|?` 已发生的副作用 | **不回滚** | 需工具提供补偿 |
