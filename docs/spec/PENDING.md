@@ -40,7 +40,7 @@
 | P-015 | 白名单热更新的策略快照语义 | **decided → D-012**：不可变快照 + 下一次工具调用边界强杀 | 加载/执行一致性 | [讨论稿 P1-7](../design/dsl-discussion.md#L299-L306) |
 | P-016 | 「Rill 在 agent 运行时中的位置」一节是否写入规范 | **decided → D-013**（第 8 条）：写入，附一条归属规则 | 内核职责边界 | [讨论稿 P1-4](../design/dsl-discussion.md#L269-L276) |
 | P-017 | MVP 不做并行是否写成规范条款 | **decided → D-019**：`par` 保留为关键字、出现即 `not_implemented`；README §4 列为非目标 | 能力边界 | [D-019](../decisions/D-019.md) |
-| P-018 | 工具/函数同名解析、零参调用、嵌套实参 | **decided**：嵌套实参与括号单原子 → D-002；零参与工具名遮蔽 → D-005；关键字/字段名冲突 → 01/02 保留字（`into` 等）+ `reserved_name`；裸名命中带参 `fn` → `bare_fn_ref` | S-001/S-005、M1/M6 | [讨论稿 §2.1](../design/dsl-discussion.md#L44-L50) |
+| P-018 | 工具/函数同名解析、零参调用、嵌套实参 | **decided**：嵌套实参与括号单原子 → D-002；零参与工具名遮蔽 → D-005；关键字/字段名冲突 → 01/02 保留字（`into` 等）+ 07 `reserved_name`；裸名命中带参 `fn` → `bare_fn_ref`。锚点：[S-005](S-005-parens-zero-arg.md)、[02 §3](dsl/02-grammar.md)、[03 §2](dsl/03-semantics.md)（无独立 D 记录） | S-001/S-005、M1/M6 | [讨论稿 §2.1](../design/dsl-discussion.md#L44-L50) |
 | P-019 | 截断与重试如何落成正式规格 | **decided**：方向由 D-007/D-008 固定；验收已建 [S-009](S-009-truncation.md)（9000 字节、粘性、逃逸、分组） | M2/M3 | [S-009](S-009-truncation.md) |
 | P-020 | 外部授权主体（`principal_id` + `grant_set`）能否约束 `# allow:` 自授权 | **undecidable**：需改 `dsl_exec` 签名与主体模型，无用户拍板。重开条件：首次多租户部署，或内核接口 CR 明确主体字段；届时按“header 是能力请求、外部集是授予”重建 B3-1 | 默认拒绝的诚实边界 | [D-011](../decisions/D-011.md)、[D-013](../decisions/D-013.md)、[B3 反证席 §2](../../battle/B3/seats/challenger.md) |
 | P-021 | 跨 exec payload 的污点/能力标签（taint） | **undecidable**：规范无主体、无标签模型。重开条件：启用外部 webhook 订阅方，或发生“低权脚本经事件把数据送入特权工具”的事件 | emit `external_egress` 的后续 | [D-014](../decisions/D-014.md)、[B3 反证席 §5](../../battle/B3/seats/challenger.md) |

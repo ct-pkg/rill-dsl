@@ -107,11 +107,11 @@ struct ExecLimits {
 
 ### 3.2 运行期 `error_kind`
 
-`not_found`、`invalid_input`、`transient`、`denied`、`constraint`、`approval_required`、`approval_denied`、`approval_stale`、`approval_reused`、`limit`、`revoked`、`script_changed`、`internal`、`type`、`emit_schema`、`dup_key`、`for_not_array`、`unconstrained_arg`、`condition_not_bool`。
+`not_found`、`invalid_input`、`transient`、`denied`、`constraint`、`approval_required`、`approval_denied`、`approval_stale`、`approval_reused`、`limit`、`revoked`、`script_changed`、`internal`、`type`、`emit_schema`、`dup_key_json`、`for_not_array`、`unconstrained_arg`、`condition_not_bool`。
 
 - `script_changed` 是运行期检查：执行期脚本哈希与加载期不一致时，在下一次工具调用边界失败（[D-012](../../decisions/D-012.md)）。
-- `dup_key` 是**参数协议级**重复键：`args_json`/`ctx_json` 中出现同名键，解析即失败，handler 不执行（[D-014](../../decisions/D-014.md) 第 6 条）。加载期另有同名 kind，指 emit 字面量内的重复键；两阶段语义不同、各自可判。
-- 三种“重复键”语义分开：协议级 → `dup_key`（运行时，handler 之前）；业务 JSON 文本里的重复键 → `invalid_input`（handler 解析时）；`json_build` 的重复键 → `invalid_input`（handler 构造时）。
+- `dup_key_json` 是**参数协议级**重复键：`args_json` 或 `ctx_json` 中出现同名键，解析即失败，handler 不执行（[D-014](../../decisions/D-014.md) 第 6 条）。加载期的 `dup_key` 指 emit 字面量内重复键；两者不同阶段、各自可判，不得混用。
+- 三种“重复键”语义分开：协议级 → `dup_key_json`（运行时，handler 之前）；业务 JSON 文本里的重复键 → `invalid_input`（handler 解析时）；`json_build` 的重复键 → `invalid_input`（handler 构造时）。
 
 - `limit` 覆盖两类：① `ExecLimits` 任一计数超限；② `requires_complete_input=1` 的工具收到被上游截断的实参（`meta.truncated=1`）。第 ② 类由运行时在 handler 之前判定，handler 不执行。
 - 半截输入**不得**降为可捕获的 `invalid_input`：截断是上游资源上限造成的，脚本若能用 `|?` 兜底，就会把不完整数据当正常结果继续处理。需要全量输入时，脚本应调大 `max_output_bytes` 或改用分页工具。
