@@ -38,7 +38,7 @@ write "issues.txt" (a + b)              # 第二个实参是分组表达式
 - `truncated`：本工具不产生截断。但运行时按 [05 §1.4](../dsl/05-data-metadata.md) 归并粘性：若 `content` 的 payload 来自被截断的 `read`，则 `(write ...).truncated == true`，`original_size` 取该输入的最大值。这是调用方检测“写入了半截内容”的唯一手段。
 - 未发生粘性时：`truncated=0`，`original_size` = `"null"` 的序列化字节数 `4`（[05 §1.4](../dsl/05-data-metadata.md) 第三条分支）。
 - 覆盖语义：目标存在则截断重写，不存在则创建；写入的就是 `content` 的 payload，不是原始文件内容。
-- 输入上限：**每次调用的输入总量** = `args_json` 与 `ctx_json` 各自序列化后的 UTF-8 字节数之和（`ctx_json` 未注入计 0），不得超过 `ExecLimits.max_input_bytes`（默认 `262144`，与 `max_output_bytes` 同口径）。超限 → `limit`，不可捕获，handler 未执行，目标文件不被创建或截断。总量包含 `path` 参数与引号/转义，不是只看 `content` 本身；夹具要留余量。已落 07 §2。
+- 输入上限：**每次调用的输入总量** = `args_json` 与 `ctx_json` 各自序列化后的 UTF-8 字节数之和，不得超过 `ExecLimits.max_input_bytes`（默认 `262144`，与 `max_output_bytes` 同口径）。两通道**互斥**：`args_json` 只放显式实参加管道值，`ctx_json` 只放注入的 `$`，未注入为 NULL（计 0），同一个值不重复计。超限 → `limit`，不可捕获，handler 未执行，目标文件不被创建或截断。总量包含 `path` 参数与引号/转义，不是只看 `content` 本身；夹具按互斥通道构造并留余量：`path`/`content` 只计入 `args_json`，注入的 `$` 只计入 `ctx_json`。已落 07 §2。
 
 ## 3. 失败语义
 
@@ -66,8 +66,8 @@ write "issues.txt" (a + b)              # 第二个实参是分组表达式
 | `path` | `CONSTRAINT_PATH_PREFIX`：canonical 绝对路径、等于 root 或 `root + "/"` 前缀；写不存在文件时解析父目录 realpath，basename 不是 symlink；判定与打开同源 | 必做（D-014 §5.1） | 声明 |
 | `path` | `CONSTRAINT_DENY_PATTERN`（如 `*.key`） | 本期不主张 | 不声明 |
 | `content` | 类型不设约束：六类 payload 都可写 | — | 不声明 |
-| `content` 序列化字节数 | 计入每次调用输入总量（`args_json` + `ctx_json`），不单参计 | — | 不单列 |
-| 每次调用输入总量 | `max_input_bytes`（默认 `262144`） | 必做（已落 07 §2） | 声明 |
+| `content` 序列化字节数 | 只计入 `args_json`（与 `ctx_json` 互斥），不单参计 | — | 不单列 |
+| 每次调用输入总量 | `max_input_bytes`（默认 `262144`；`args_json` + `ctx_json`，未注入的 ctx 计 0） | 必做（已落 07 §2） | 声明 |
 
 `write` 是路径约束的第二个宿主，夹具与 [S-017](../S-017-path-constraint.md) 共享六例；其中 `/workspace/new.txt` 一例专门覆盖“写不存在文件时解析父目录”的分支。
 
@@ -81,7 +81,7 @@ write "issues.txt" (a + b)              # 第二个实参是分组表达式
   - 粘性 1 例：`read` 截断 → `write` → `(write ...).truncated == true`；
   - 空内容 1 例：`content == ""` 时目标为 0 字节且返回 `null`；
   - `into` 内 `write "out.txt"`（不写 `$`）必须报加载期 `arity` 且 handler 未执行；
-  - 输入总量超 `max_input_bytes` 1 例（构造长 `path` 或多字节内容，留出引号与转义余量）：报 `limit`、不可捕获、handler 未执行，且目标文件保持原样（不得先截断再失败）。
+  - 输入总量超 `max_input_bytes` 1 例（按互斥通道构造：长 `path` 或多字节内容只进 `args_json`，注入 `$` 只进 `ctx_json`；留出引号与转义余量）：报 `limit`、不可捕获、handler 未执行，且目标文件保持原样（不得先截断再失败）。
 
 ## 6. 证据锚点
 

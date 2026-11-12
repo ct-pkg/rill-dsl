@@ -47,10 +47,10 @@
 
 ### 2.1 arity 是加载期判定（已落正文）
 
-- **记在哪**：`ToolDef.params_schema`。固定 arity 时，位置参数个数就是 `m`；`params_schema=NULL` 表示变长，不做个数校验（[T-006](T-006-tool-json-build.md)）。
+- **记在哪**：`ToolDef.params_schema`。固定 arity 时，位置参数个数就是 `m`；`params_schema=NULL` 表示变长，不做固定个数校验，但工具可以另有静态形状规则（`json_build` 的键值成对/偶数），加载期同样按 `arity` 报错（[T-006](T-006-tool-json-build.md)）。
 - **由谁校验**：加载器。每个调用点的 `n = 显式实参数 + 管道值数 + (在 into 内 && accepts_context && n<m ? 1 : 0)` 只由词法结构决定；`n ≠ m` → 加载期 `arity`（[07 §3.1](../dsl/07-runtime.md)），脚本不执行到该调用。
 - **不属于三层**：`arity` 是静态属性，不是第三层 `constraint`；第三层只处理值（路径/命令/域名/大小/类型）。该改判已由 [03 §5/§6](../dsl/03-semantics.md)、[04 §1/§2.1](../dsl/04-pipeline-errors.md)、[06 §1](../dsl/06-security.md)、[07 §3.1](../dsl/07-runtime.md) 落定。
-- **运行期 `constraint` 的职责**：仅值层——`ParamConstraint`、schema 浅校验、变长工具的逐位校验。
+- **运行期 `constraint` 的职责**：仅值层——`ParamConstraint`、schema 浅校验；变长工具的键类型与重复键归 handler 的 `invalid_input`，不算 `constraint`。
 
 ## 3. 实参顺序与注入
 
@@ -112,8 +112,8 @@
 | `invalid_input` | handler | 拿到的数据本身不合法（编码、正则、JSON、键值对） | 是 | `read`、`grep`、`write`、`json_parse`、`json_build` |
 | `transient` | handler | 可重试的 I/O 失败（含磁盘/配额耗尽 `ENOSPC`/`EDQUOT`） | 是 | `read`、`write` |
 | `denied` | runtime（策略层）+ handler（仅 OS 权限 `EACCES`/`EPERM`） | 调用被拒绝执行 | 否 | `read`、`write`（仅 OS 侧） |
-| `constraint` | runtime（第三层）+ 变长工具 handler（逐位） | 参数值不符合值层声明（路径、标量类型、大小；变长工具的成对/键类型） | 否 | 全部固定 arity 工具；`json_build`（逐位） |
-| `arity`（加载期） | loader | 实际实参个数（显式 + 管道 + `$`）≠ 固定形参数 | 否 | 全部固定 arity 工具 |
+| `constraint` | runtime（第三层） | 参数值不符合值层声明（路径、标量类型、大小） | 否 | 全部固定 arity 工具 |
+| `arity`（加载期） | loader | 实际实参个数（显式 + 管道 + `$`）≠ 固定形参数，或 `json_build` 的个数为奇数 | 否 | 全部固定 arity 工具；`json_build`（奇数个） |
 | `limit` | runtime（ExecLimits）+ handler（构造型不可截断） | 资源上限 | 否 | `json_parse`、`get`、`json_build` 的结果上限；`write` 的每次调用输入总量上限；全部工具的 `ExecLimits` |
 | `internal` | runtime / handler | 未归类失败、未知 `error_kind` | 否 | 全部 |
 | `type` | runtime（DSL 运算） | 运算/比较的类型不符 | 否 | 工具不得产生 |
@@ -129,7 +129,7 @@
 
 1. **单一归属**：handler 只允许返回上表“归属”含 handler 的行；返回其他 kind 一律由运行时归一为 `internal`。
 2. **未知字符串**：handler 返回枚举外的字符串 → `internal`，且不可捕获（沿用 [S-008 §3](../S-008-capturable-errors.md)）。
-3. **`constraint` 与 `invalid_input` 的机械判据**：值层的形状/约束失败（运行时 `ParamConstraint`、schema 浅校验，或变长工具的逐位校验）→ `constraint`；失败来自数据内容（编码、JSON 语法、正则、重复键）→ `invalid_input`。前者说明脚本传的值不对，不应被 `|?` 静默兜底；后者说明输入数据有问题，允许兜底。个数不符不在两类中——加载期已报 `arity`。
+3. **`constraint` 与 `invalid_input` 的机械判据**：值层的约束失败（运行时 `ParamConstraint`、schema 浅校验）→ `constraint`；失败来自数据内容或运行期值（编码、JSON 语法、正则、键不是 `string`、重复键）→ `invalid_input`。前者说明脚本传的参数值不对，不应被 `|?` 静默兜底；后者说明输入数据有问题，允许兜底。个数不符（含 `json_build` 的奇数个）不在两类中——加载期已报 `arity`。
 4. **不得为可降级改类**：工具不能把 `denied`/`limit` 改写成可捕获类别来绕过 [04 §2.1](../dsl/04-pipeline-errors.md)。
 5. **空结果不是错误**：缺键、空匹配、空文件都返回合法 payload，不产生任何 `error_kind`；空集合用 `[]`、缺失用 `null`，见 §4.1。
 6. **一次调用一个类别**：失败只归一到一个 kind，不聚合、不带错误值回脚本。
@@ -139,13 +139,12 @@
 | 失败现象 | `error_kind` | 判定者 |
 | --- | --- | --- |
 | 路径不在 root 内、symlink 越界、固定参数的标量类型不符 | `constraint` | runtime |
-| 实际实参个数（含管道与 `$`）≠ 固定 arity | `arity`（加载期） | loader |
+| 实际实参个数（含管道与 `$`）≠ 固定 arity，或 `json_build` 个数为奇数 | `arity`（加载期） | loader |
 | 文件或父目录不存在 | `not_found` | handler |
 | OS 拒绝（`EACCES`/`EPERM`） | `denied` | handler |
 | 磁盘/配额耗尽（`ENOSPC`/`EDQUOT`） | `transient` | handler |
 | 可重试 I/O（`EIO`/`EBUSY`/`EAGAIN`） | `transient` | handler |
-| 目标是目录、字节非 UTF-8、正则非法、JSON 非法、重复键 | `invalid_input` | handler |
-| 变长工具键值未成对、键不是 `string` | `constraint` | handler（变长逐位） |
+| 目标是目录、字节非 UTF-8、正则非法、JSON 非法、键不是 `string`、重复键 | `invalid_input` | handler |
 | 构造型结果超 `max_output_bytes`；`write` 的本次调用输入总量超 `max_input_bytes`；`ExecLimits` 任一超限 | `limit` | handler / runtime |
 | handler 返回枚举外的字符串 | `internal` | runtime 归一 |
 
@@ -159,7 +158,7 @@
 | --- | --- | --- | --- |
 | `read.path` | `CONSTRAINT_PATH_PREFIX` + canonical + 组件边界 + 打开同源 | 必做 | 声明 |
 | `write.path` | 同上，另加父目录 realpath、basename 非 symlink | 必做 | 声明 |
-| 固定 arity 工具的 arity | 加载期 `arity`，不属于第三层（§2.1） | 必做 | 声明 |
+| 固定 arity 工具与 `json_build` 的 arity | 加载期 `arity`，不属于第三层（§2.1） | 必做 | 声明 |
 | 固定 arity 工具的标量类型 | 运行期 schema 浅校验（`string`） | 必做 | 声明 |
 | `args_json` 单次解析、重复键 `E_DUP_KEY`、约束与 handler 同源 | 双通道 | 必做 | 运行时统一执行 |
 | 隐式 `$` 具名并进入同一套 schema | 双通道 | 必做 | `get.obj` |
@@ -184,7 +183,7 @@
 | # | 已写死的规则 | 写在哪 | 正文落点 |
 | --- | --- | --- | --- |
 | 1 | 上游截断输入 `json_parse` → `limit`、handler 未执行；不得降为 `invalid_input` | [T-004](T-004-tool-json-parse.md) §3 | 已落 07 §1（`requires_complete_input`）、04 §2.1/07 §3.2（`limit` 覆盖上游截断） |
-| 2 | `write` 的每次调用输入总量（`args_json`+`ctx_json`）超 `max_input_bytes`（默认 `262144`）→ `limit`、文件不动 | [T-003](T-003-tool-write.md) §2–§4 | 已落 07 §2（总量口径） |
+| 2 | `write` 的每次调用输入总量（`args_json` + `ctx_json`）超 `max_input_bytes`（默认 `262144`）→ `limit`、文件不动；两通道互斥：`args_json` = 显式 + 管道，`ctx_json` = 注入的 `$`（未注入计 0） | [T-003](T-003-tool-write.md) §2–§4 | 已落 07 §2（总量口径） |
 | 3 | `max_payload_depth` 扩为“任何 JSON payload 的深度上限”，emit/parse/json_build 共用 | [T-004](T-004-tool-json-parse.md) §2、[T-006](T-006-tool-json-build.md) §2 | 已落 07 §2、05 §2.2 |
 | 4 | `json_build` 属可选注册集；未注册调用报加载期 `unknown_tool`，不计入必过夹具 | [T-006](T-006-tool-json-build.md) §1 | 已落 07 §1（可选工具，未注册 `unknown_tool`） |
 | 5 | `original_size` 截断分支取原始字节、未截断分支取序列化字节 | 本文件 §4、[T-001](T-001-tool-read.md) §2 | 已落 05 §1.4 |
@@ -194,5 +193,6 @@
 | 9 | `constraint` 只覆盖值层，按“值/内容”分界；个数不符归加载期 `arity` | 本文件 §5 规则 3 | 已落 04 §2.1（值层定义） |
 | 10 | 空结果逐个工具写死：`read ""`、`grep []`、`get null`、`json_build {}`、`write null`、`json_parse "" → invalid_input` | 本文件 §4.1 与各条目 | 无需正文改动（05 §1.1/§1.4 已支撑） |
 | 11 | arity 是静态属性（记在 `params_schema` 的长度），加载期校验，不属于三层 | 本文件 §2.1 | 已落 49f2e37：07 §3.1、03 §5/§6、04 §1/§2.1、06 §1 同步 |
+| 12 | `json_build` 三个负例分层：奇数个 → 加载期 `arity`；键非 `string`、重复键 → handler `invalid_input` | [T-006](T-006-tool-json-build.md) §3–§4 | 已裁定，正文正在同步（03 §6「变长不做个数校验」需让位给偶数成对规则） |
 
 已由正文线修复、不再列为缺口：08 示例的 `matches != null`（改为 `matches.length > 0`）、04/S-007 的 `parse` 占位（改为 `json_parse`）、04 §1 的 `x |> read "p"` 示例（改用 arity=2 的 `grep` 并写明管道不改 arity）。
