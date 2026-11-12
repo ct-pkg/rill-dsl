@@ -26,10 +26,10 @@ write "issues.txt" (a + b)              # 第二个实参是分组表达式
 ["report.txt", <content 的 payload>]
 ```
 
-- `path` 必须是 `string`；`content` 可以是任意六类 payload。任一参数缺失（个数 ≠ 2）或 `path` 非 `string` → `constraint`，handler 不执行。
+- `path` 必须是 `string`；`content` 可以是任意六类 payload。实际实参个数 ≠ 2 → 加载期 `arity`；`path` 非 `string` → `constraint`；两者 handler 都不执行。
 - `content` 为 `string` 时，写入其原始 UTF-8 字节，不额外加引号或换行；为其他五类时，写入该值的 JSON 序列化结果（紧凑、无尾随换行）。因此 `write "x" matches`（`matches` 为数组）写出的字节与其 JSON 文本相同。
 - 空内容：`content == ""` 时写 0 字节，仍返回 `null`，不是错误（空结果契约见 [README](README.md) §4.1）。
-- `write` **不声明** `accepts_context`（[08 §2](../dsl/08-examples.md) L33）：`into` 块内 `write "out.txt"` 只有 1 个实参，不注入 → `constraint`；要写 `$` 必须显式写或走管道。
+- `write` **不声明** `accepts_context`（[08 §2](../dsl/08-examples.md) L33）：`into` 块内 `write "out.txt"` 只有 1 个实参，不注入 → 加载期 `arity`；要写 `$` 必须显式写或走管道。
 - 没有追加、偏移、权限、编码等可选参数；这些属于内核工具注册的扩展决定，不在本契约。
 
 ## 2. 输出
@@ -38,15 +38,16 @@ write "issues.txt" (a + b)              # 第二个实参是分组表达式
 - `truncated`：本工具不产生截断。但运行时按 [05 §1.4](../dsl/05-data-metadata.md) 归并粘性：若 `content` 的 payload 来自被截断的 `read`，则 `(write ...).truncated == true`，`original_size` 取该输入的最大值。这是调用方检测“写入了半截内容”的唯一手段。
 - 未发生粘性时：`truncated=0`，`original_size` = `"null"` 的序列化字节数 `4`（[05 §1.4](../dsl/05-data-metadata.md) 第三条分支）。
 - 覆盖语义：目标存在则截断重写，不存在则创建；写入的就是 `content` 的 payload，不是原始文件内容。
-- 输入上限：**本条目主张** `content` 序列化后的 UTF-8 字节数不得超过 `ExecLimits.max_input_bytes`（新增字段，默认 `262144`，与 `max_output_bytes` 同口径）。超限 → `limit`，不可捕获，handler 未执行，目标文件不被创建或截断。需正文跟进 07 §2 增加该字段、默认值表与“输入”计数口径。
+- 输入上限：**每次调用的输入总量** = `args_json` 与 `ctx_json` 各自序列化后的 UTF-8 字节数之和（`ctx_json` 未注入计 0），不得超过 `ExecLimits.max_input_bytes`（默认 `262144`，与 `max_output_bytes` 同口径）。超限 → `limit`，不可捕获，handler 未执行，目标文件不被创建或截断。总量包含 `path` 参数与引号/转义，不是只看 `content` 本身；夹具要留余量。已落 07 §2。
 
 ## 3. 失败语义
 
 | 场景 | `error_kind` | handler | `\|?` 捕获 |
 | --- | --- | --- | --- |
 | 路径解析后不在 root 界内、指向界外的 symlink、basename 是 symlink | `constraint` | 未执行 | 否 |
-| 实参个数 ≠ 2，或 `path` 非 `string` | `constraint` | 未执行 | 否 |
-| `content` 序列化 > `max_input_bytes` | `limit` | 未执行 | 否 |
+| 实际实参个数（含管道与 `$`）≠ 2 | `arity`（加载期） | 不执行 | 否 |
+| `path` 非 `string` | `constraint` | 未执行 | 否 |
+| 本次调用输入总量（`args_json` + `ctx_json`）> `max_input_bytes` | `limit` | 未执行 | 否 |
 | 父目录不存在（`ENOENT`/`ENOTDIR`） | `not_found` | 执行并失败 | 是 |
 | 目标是目录（`EISDIR`） | `invalid_input` | 执行并失败 | 是 |
 | 操作系统拒绝访问（`EACCES`/`EPERM`） | `denied` | 执行并失败 | 否 |
@@ -65,21 +66,22 @@ write "issues.txt" (a + b)              # 第二个实参是分组表达式
 | `path` | `CONSTRAINT_PATH_PREFIX`：canonical 绝对路径、等于 root 或 `root + "/"` 前缀；写不存在文件时解析父目录 realpath，basename 不是 symlink；判定与打开同源 | 必做（D-014 §5.1） | 声明 |
 | `path` | `CONSTRAINT_DENY_PATTERN`（如 `*.key`） | 本期不主张 | 不声明 |
 | `content` | 类型不设约束：六类 payload 都可写 | — | 不声明 |
-| `content` 序列化字节数 | `max_input_bytes`（新增 `ExecLimits` 字段，默认 `262144`） | 必做（本条目主张） | 声明 |
+| `content` 序列化字节数 | 计入每次调用输入总量（`args_json` + `ctx_json`），不单参计 | — | 不单列 |
+| 每次调用输入总量 | `max_input_bytes`（默认 `262144`） | 必做（已落 07 §2） | 声明 |
 
 `write` 是路径约束的第二个宿主，夹具与 [S-017](../S-017-path-constraint.md) 共享六例；其中 `/workspace/new.txt` 一例专门覆盖“写不存在文件时解析父目录”的分支。
 
 ## 5. 验收命令与阈值
 
 - **命令**：`尚未落盘`。
-- 计划：M8 `tools/check.sh m8-constraints` 跑路径六例；M6 `m6-events` 跑粘性；M3 `m3-control` 跑 arity。
+- 计划：M8 `tools/check.sh m8-constraints` 跑路径六例；M6 `m6-events` 跑粘性；M2 `m2-load` 跑加载期 `arity`。
 - **阈值**：
   - 路径 6/6；写不存在的 `/workspace/new.txt` 必须允许，父目录是 symlink 指向界外必须拒绝；
   - 字符串与非字符串内容各 1 例，落盘字节逐字节比对；
   - 粘性 1 例：`read` 截断 → `write` → `(write ...).truncated == true`；
   - 空内容 1 例：`content == ""` 时目标为 0 字节且返回 `null`；
-  - `into` 内 `write "out.txt"`（不写 `$`）必须报 `constraint` 且 handler 未执行；
-  - `content` 超 `max_input_bytes` 1 例：报 `limit`、不可捕获、handler 未执行，且目标文件保持原样（不得先截断再失败）。
+  - `into` 内 `write "out.txt"`（不写 `$`）必须报加载期 `arity` 且 handler 未执行；
+  - 输入总量超 `max_input_bytes` 1 例（构造长 `path` 或多字节内容，留出引号与转义余量）：报 `limit`、不可捕获、handler 未执行，且目标文件保持原样（不得先截断再失败）。
 
 ## 6. 证据锚点
 
@@ -91,4 +93,4 @@ write "issues.txt" (a + b)              # 第二个实参是分组表达式
 | 路径规则 | [06 §5.1](../dsl/06-security.md) L81-L93、[D-014](../../decisions/D-014.md) L50 | 规范 + 决策 |
 | 侧车与粘性 | [05 §1.1–1.4](../dsl/05-data-metadata.md) L9-L51 | 规范正文 |
 | `params_schema`/`accepts_context` | [07 §1](../dsl/07-runtime.md) L15-L23 | 规范正文 |
-| 输入上限（本条目主张） | [07 §2](../dsl/07-runtime.md) 的 `ExecLimits` 无输入字段 | 规范缺口 |
+| 输入上限（总量口径） | [07 §2](../dsl/07-runtime.md) `max_input_bytes` | 规范正文 |

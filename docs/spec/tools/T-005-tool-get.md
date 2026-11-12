@@ -25,7 +25,7 @@ $ |> get "port"                 # = get("port", $)
 ["truncated", <x 的 payload>]
 ```
 
-- `key` 必须是 `string`；`obj` 接受任意六类 payload。`key` 非 `string` 或个数 ≠ 2 → `constraint`，handler 不执行。
+- `key` 必须是 `string`；`obj` 接受任意六类 payload。实际实参个数 ≠ 2 → 加载期 `arity`；`key` 非 `string` → `constraint`；两者 handler 都不执行。
 - `key` 是**单个键**，不是点分路径：`get "server.port"` 查的是名为 `server.port` 的键，不会拆成 `server` → `port`。嵌套的动态取值要串联：`get "port" (get "server" cfg)`。
 - `obj` 为 `json_object` 且存在该键 → 该值；缺失、`obj` 不是对象（含数组、标量、`null`）→ `null`。不报 `not_found`。
 - 与字段访问的分工：`x.k` 是语法层字段访问，`truncated`/`original_size` 先读侧车；`get` 永远只读 payload 自带的键，是逃逸通道（[05 §1.3](../dsl/05-data-metadata.md)、[D-008](../../decisions/D-008.md) 第 4 条）。
@@ -40,7 +40,7 @@ $ |> get "port"                 # = get("port", $)
 | `get "k" $` | 2 | 0 | 2 | 否 | `["k", $]` |
 | `$ \|> get "k"` | 1 | 1 | 2 | 否 | `["k", $]` |
 | `get "k" obj` | 2 | 0 | 2 | 否 | `["k", obj]` |
-| `get "k"`（`into` 外） | 1 | 0 | 1 | 否（无 `$`） | `["k"]` → `constraint` |
+| `get "k"`（`into` 外） | 1 | 0 | 1 | 否（无 `$`） | `["k"]` → `arity`（加载期） |
 
 `$ |> get "k"` 与 `get "k"` 在 `into` 内得到同一组实参：管道值已经补足第 2 位，不再叠加注入。这正是 [D-007](../../decisions/D-007.md) 第 6 条“按形参位注入，不是总是追加”的落点。
 
@@ -55,7 +55,8 @@ $ |> get "port"                 # = get("port", $)
 
 | 场景 | `error_kind` | handler | `\|?` 捕获 |
 | --- | --- | --- | --- |
-| `key` 非 `string`、实参个数 ≠ 2 | `constraint` | 未执行 | 否 |
+| 实际实参个数（含管道与 `$`）≠ 2 | `arity`（加载期） | 不执行 | 否 |
+| `key` 非 `string` | `constraint` | 未执行 | 否 |
 | 返回值序列化 > `max_output_bytes` | `limit` | 执行并失败 | 否 |
 | `max_tool_calls`/`timeout_ms` 超限、策略强杀 | `limit`/`revoked` | 边界检查 | 否 |
 | 未归类 | `internal` | — | 否 |
@@ -68,16 +69,17 @@ $ |> get "port"                 # = get("port", $)
 
 | 参数 | 约束类 | 档位 | 本期 |
 | --- | --- | --- | --- |
-| `key` | 固定 arity + `string` 类型浅校验 | 必做（[03 §6](../dsl/03-semantics.md)） | 声明 |
+| arity=2 | 加载期 `arity`（`params_schema` 长度） | 必做 | 声明 |
+| `key` 的 `string` 类型 | 运行期 schema 浅校验 | 必做（[03 §6](../dsl/03-semantics.md)） | 声明 |
 | `obj`（含隐式 `$`） | schema 具名槽，接受任意 payload；`args_json` 与 `ctx_json` 都过同一套校验 | 必做（D-014 §5.4 双通道） | 声明 |
 | `obj` | 路径 / argv / 域名 / emit 类 | 不适用 | 不声明 |
 
 ## 5. 验收命令与阈值
 
 - **命令**：`尚未落盘`。
-- 计划：M5 `tools/check.sh m5-into-fn` 跑注入矩阵；M3 `m3-control` 跑 arity；M6 `m6-events` 跑逃逸。
+- 计划：M5 `tools/check.sh m5-into-fn` 跑注入矩阵；M2 `m2-load` 跑加载期 `arity`；M6 `m6-events` 跑逃逸。
 - **阈值**：
-  - 注入矩阵 5 行逐行断言最终 `args_json`；`into` 外 `get "k"` 必须 `constraint`；
+  - 注入矩阵 5 行逐行断言最终 `args_json`；`into` 外 `get "k"` 必须报加载期 `arity`；
   - D-008 逃逸 1 例：`get "truncated" r` 读 payload 键，与 `r.truncated` 读侧车结果不同；
   - 缺键/非对象 3 例（缺键、数组、标量）均返回 `null`，`ok=1`，`|?` 未触发；
   - `unconstrained_arg` 计数 0。

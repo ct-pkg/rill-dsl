@@ -26,8 +26,8 @@ read path
 
 - `path` 必须是 `string`，否则 `constraint`，handler 不执行。
 - 相对路径以 **workspace root** 为基准解析，不以进程 cwd 为基准；绝对路径直接判定。`..` 在解析时消解（[06 §5.1](../dsl/06-security.md)，该基准已写入正文）。
-- 不接受 `$` 注入：`into` 块内调用 `read` 不会补参数。管道值只追加不替换，因此 `x |> read "p"` = `read("p", x)`，两个实参 → `constraint`。
-- 裸名 `read` 是零参调用（[03 §2](../dsl/03-semantics.md)），`[]` ≠ 1 → `constraint`。
+- 不接受 `$` 注入：`into` 块内调用 `read` 不会补参数。管道值只追加不替换，因此 `x |> read "p"` = `read("p", x)`，两个实参 → 加载期 `arity`。
+- 裸名 `read` 是零参调用（[03 §2](../dsl/03-semantics.md)），`[]` ≠ 1 → 加载期 `arity`。
 
 ## 2. 输出
 
@@ -45,7 +45,8 @@ read path
 | 场景 | `error_kind` | handler | `\|?` 捕获 |
 | --- | --- | --- | --- |
 | 路径解析后不在 root 界内、指向界外的 symlink、`/workspace-evil/x` | `constraint` | 未执行 | 否 |
-| 实参个数 ≠ 1，或 `path` 非 `string` | `constraint` | 未执行 | 否 |
+| 实际实参个数（含管道与 `$`）≠ 1 | `arity`（加载期） | 不执行 | 否 |
+| `path` 非 `string` | `constraint` | 未执行 | 否 |
 | 文件或父目录不存在（`ENOENT`/`ENOTDIR`） | `not_found` | 执行并失败 | 是 |
 | 操作系统拒绝访问（`EACCES`/`EPERM`） | `denied` | 执行并失败 | 否 |
 | 可重试 I/O（`EIO`/`EBUSY`/`EAGAIN`） | `transient` | 执行并失败 | 是 |
@@ -71,11 +72,11 @@ read path
 ## 5. 验收命令与阈值
 
 - **命令**：`尚未落盘`。
-- 计划：M8 `tools/check.sh m8-constraints` 跑路径六例；M6 `m6-events` 跑截断；M3 `m3-control` 跑 arity。
+- 计划：M8 `tools/check.sh m8-constraints` 跑路径六例；M6 `m6-events` 跑截断；M2 `m2-load` 跑加载期 `arity`。
 - **阈值**：
   - 路径 6/6 与 [S-017](../S-017-path-constraint.md) 一致，handler 未执行 3/3；
   - 截断 2 例（大文件、切点落在 3 字节字符中间）均不得产生非法 UTF-8，截断分支的 `original_size` 等于 `stat` 字节数；未截断分支的 `original_size` 等于返回串的序列化字节数；
-  - `x |> read "p"`、裸 `read`、`read 1` 三条负例均报 `constraint` 且 handler 未执行；
+  - `x |> read "p"`、裸 `read` 两条负例报加载期 `arity`，`read 1` 报运行期 `constraint`；三者 handler 均未执行；
   - 0 次泄漏 `meta` 到 `args_json`。
 
 ## 6. 证据锚点

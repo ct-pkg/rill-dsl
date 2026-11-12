@@ -27,7 +27,7 @@ grep "a.*b" content
 
 - `pattern` 是正则表达式文本，必须 `string`；`text` 必须是 `string`。任一不符 → `constraint`，handler 不执行。
 - `grep` 只搜字符串，不读文件；要搜文件先 `read`，再用 `|>` 追加。这与 [dsl/README §4](../dsl/README.md) 的非目标一致：没有正则字面量，模式只能是字符串数据。
-- 不接受 `$` 注入。`into` 内 `grep "m"` 只有 1 个实参且不注入 → `constraint`（1≠2）。
+- 不接受 `$` 注入。`into` 内 `grep "m"` 只有 1 个实参且不注入 → 加载期 `arity`（1≠2）。
 - 管道值只追加到末尾：`content |> grep "m"` 的 `pattern` 是 `"m"`、`text` 是 `content`；反过来 `"m" |> grep content` 的 `pattern` 是 `content` 的值，两者不自动换位。
 
 ## 2. 输出
@@ -45,20 +45,22 @@ grep "a.*b" content
 
 | 场景 | `error_kind` | handler | `\|?` 捕获 |
 | --- | --- | --- | --- |
-| `pattern`/`text` 非 `string`，或实参个数 ≠ 2 | `constraint` | 未执行 | 否 |
+| 实际实参个数（含管道与 `$`）≠ 2 | `arity`（加载期） | 不执行 | 否 |
+| `pattern`/`text` 非 `string` | `constraint` | 未执行 | 否 |
 | `pattern` 不是合法正则 | `invalid_input` | 执行并失败 | 是 |
 | 结果超过 `max_output_bytes` | 不报错，走截断 | 执行 | — |
 | `max_tool_calls`/`timeout_ms` 超限、策略强杀 | `limit`/`revoked` | 边界检查 | 否 |
 | 未归类 | `internal` | — | 否 |
 
 - `grep` 不产生 `not_found`（没有文件概念）、不产生 `transient`/`denied`（纯计算，无 I/O 权限面）。
-- 正则编译失败是**数据**问题，所以归 `invalid_input`（可捕获），不是 `constraint`。判定者不同是这两类的机械分界，见 [README](README.md) §5 规则 3。
+- 正则编译失败是**数据内容**问题，归 `invalid_input`（可捕获）；它不是值层声明不满足，所以不是 `constraint`。分界见 [README](README.md) §5 规则 3。
 
 ## 4. 参数约束
 
 | 参数 | 约束类 | 档位 | 本期 |
 | --- | --- | --- | --- |
-| `pattern`、`text` | 固定 arity + `string` 类型浅校验 | 必做（[03 §6](../dsl/03-semantics.md)） | 声明 |
+| arity=2 | 加载期 `arity`（`params_schema` 长度） | 必做 | 声明 |
+| `pattern`、`text` 的 `string` 类型 | 运行期 schema 浅校验 | 必做（[03 §6](../dsl/03-semantics.md)） | 声明 |
 | `pattern` 长度/复杂度上限（ReDoS 防护） | 正则黑名单类 | 本期不主张 | 不声明 |
 | `text` | 路径 / argv / 域名 / emit 类 | 不适用 | 不声明 |
 
@@ -72,7 +74,8 @@ ReDoS 风险明确记录为“本期不主张”：没有长度上限与超时�
   - 4 条输入：有匹配、无匹配、空串、同一行多次命中 → 数组形态与顺序逐条断言；
   - 截断 2 例（多条目超限、单条目超限）均保持合法 JSON 与合法 UTF-8，`original_size` 等于切前序列化字节；
   - 粘性 1 例：上游 `truncated=1` 时 `grep` 结果为 `truncated=true`；
-  - 正则非法 1 例报 `invalid_input` 且可被 `|?` 捕获。
+  - 正则非法 1 例报 `invalid_input` 且可被 `|?` 捕获；
+  - `into` 内 `grep "m"` 1 例报加载期 `arity`，handler 未执行。
 
 ## 6. 证据锚点
 
