@@ -41,6 +41,7 @@ src/run.rill:4:1: error: cannot assign to immutable binding 'count'.
 | header | `reserved_name`、`dup_header`、`no_allow_header`、`deny_without_allow`、`version` | 关键字作名字、header 重复、缺 allow、deny 单独出现、版本非 1 |
 | 名字解析 | `unknown_tool`、`tool_not_allowed`、`event_not_declared`、`undefined_name`、`bare_fn_ref`、`shadow_tool`、`dup_decl` | 未注册工具或函数名（含可选的 `json_build` 未注册）、未授权工具、未声明事件、未定义名字、有参 fn 裸引用、遮蔽工具名、重复声明 |
 | 赋值/控制 | `assign_undefined`、`immutable_assign`、`loop_control`、`return_outside_fn` | 赋值目标不存在、改不可变绑定、break/continue 在 for 外、return 在 fn 外 |
+| 作用域 | `dollar_outside` | `$` 出现在任何 `into` 块之外 |
 | 函数/调用 | `recursion`、`arity` | 调用图成环、`fn` 或固定 arity 工具的实参个数不符 |
 | 管道 | `pipe_rhs`、`fallback_lhs` | `\|>` 右侧不是可调用节点（有参 `fn` 裸名另报 `bare_fn_ref`）、`\|?` 链最左不是可调用节点 |
 | emit | `dup_key` | payload 重复键 |
