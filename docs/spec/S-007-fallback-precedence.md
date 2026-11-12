@@ -24,6 +24,7 @@ a |> (read |? read "f")
 - 第 4 行 → 加载期 `fallback_lhs`（左侧是分组管道，不是单个 call）。
 - 第 5 行 = `((read "a" |? read "b") |> f) |> g`；`|?` 不捕获 `f` 或 `g` 的失败。
 - 第 6 行 = `(read a |? read "f")`：管道值只追加到 fallback 链最左侧的 `read`（裸名作零参调用），右侧不接收；整条合法，不报 `pipe_rhs`。
+- `a |> f`（`f` 是有参数的 `fn`）→ 加载期 `bare_fn_ref`，不报 `pipe_rhs`：裸名不能作零参调用，名字用法错误比结构错误更具体。
 
 ## 3. 失败语义
 
