@@ -81,10 +81,9 @@ struct ExecLimits {
 | `no_allow_header` | 无 `# allow:` 或列表为空 |
 | `deny_without_allow` | 只有 `# deny:` |
 | `version` | `# dsl-version:` 不是 `1` |
-| `unknown_tool` | 调用未注册工具 |
+| `unknown_tool` | 调用名既不在工具注册表，也不在脚本 `fn`（加载期名字解析的唯一失败点） |
 | `tool_not_allowed` | 工具不在 `# allow:` |
 | `event_not_declared` | emit 未在 `# emit:` 声明 |
-| `unknown_callee` | 调用既非工具也非 `fn` |
 | `undefined_name` | 引用未定义名字 |
 | `bare_fn_ref` | 有参 `fn` 被当裸名引用 |
 | `shadow_tool` | 局部绑定/参数/`fn` 与工具同名 |
@@ -101,6 +100,8 @@ struct ExecLimits {
 | `dup_key` | emit payload 重复键 |
 | `script_changed` | 执行期脚本哈希与加载期不一致 |
 | `policy_expansion_unapproved` | 策略扩张未审批 |
+
+`unknown_callee` 已并入 `unknown_tool`：加载期名字解析只有一个失败点——名字既不在工具注册表也不在脚本 `fn`。拆成两个 kind 会让同一条调用因注册状态不同而换类别，且没有独立判据；`unknown_tool` 的 Hint 同时提示检查工具名与函数名。
 
 ### 3.2 运行期 `error_kind`
 

@@ -54,6 +54,7 @@
 
 - `#` 到行尾为注释；**注释只吃字符，不吃换行**——`\n` 仍然产出 `NEWLINE` [D-004]。
 - 文件开头的 header 行不是注释：在“header 模式”下，`#` 后紧跟 `allow`/`deny`/`emit`/`dsl-version` 与 `:` 的行按 header 解析（见 [02 §2](02-grammar.md)）。header 模式在遇到第一条非 header、非空行、非注释行时结束。
+- header 只认 `# allow:`、`# deny:`、`# emit:`、`# dsl-version:` 四种前缀。其余 `#` 行一律当注释，不报错、不参与校验——包括 `# approval:`（审批在内核，DSL 零审批语法，[D-013](../../decisions/D-013.md)）。
 - 除 header 行外，任何 `#` 都开始注释；不支持块注释。
 
 ## 7. NEWLINE 生成与抑制

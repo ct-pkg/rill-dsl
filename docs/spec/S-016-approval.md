@@ -16,7 +16,7 @@
 - 参数变化 → `approval_stale`；重放 → `approval_reused`；两者 handler 均未执行。
 - 审批等待不计入 `timeout_ms`；结果含 `approval_wait_ms`。
 - 同次执行内 `(deploy, args_hash)` 第二次调用不再弹窗（缓存）。
-- DSL 中不存在 `approve` 语句或 `# approval:` header；写了 → `syntax` / 未知 header 错误。
+- DSL 中不存在 `approve` 语句；写了 → `syntax`。`# approval:` 不是 header，按注释处理：不报错、不参与校验、不产生任何审批效果（header 只认 `allow`/`deny`/`emit`/`dsl-version` 四种前缀）。
 
 ## 3. 失败语义
 

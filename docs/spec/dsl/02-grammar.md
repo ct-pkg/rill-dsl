@@ -18,6 +18,7 @@ TERM          := NEWLINE | &EOF
 ```
 
 - header 必须位于文件最前（允许空行与注释），出现第一条语句后不得再有 header 行。
+- header 只认 `# allow:`、`# deny:`、`# emit:`、`# dsl-version:` 四种前缀；其余 `#` 行一律按注释丢弃，不报错（`# approval:` 因此不构成 header）[D-013]。header 的 AST 形态与位置见 [10](10-ast-position.md)。
 - header 行按**整行文本**解析（行首 `#`、键、`:`、逗号列表），不进入表达式词法；行内不支持注释，`# allow: read # x` 是语法错误。
 - 每个 header 键最多出现一次；重复 → `E_DUP_HEADER`。
 - 缺少 `# allow:` 时有效工具集为空，加载拒绝 `E_NO_ALLOW_HEADER`（见 [06](06-security.md)）[D-011]。
