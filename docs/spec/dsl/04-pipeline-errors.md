@@ -51,7 +51,7 @@ fallback_expr := or_expr ("|?" or_expr)*        # 左结合，高于 |>
 | 资源上限，或输入被上游截断 | `limit` | **不捕获** |
 | 策略撤销/脚本变更 | `revoked` / `script_changed` | **不捕获** |
 | 内核内部错误 | `internal` | **不捕获** |
-| 加载错误 | `load` | **不捕获**（加载阶段根本不执行） |
+| 加载期错误 | 见 [07 §3.1](07-runtime.md)（含 `dollar_outside` 等） | **不捕获**（加载阶段根本不执行） |
 
 - `null` 是值，不是失败：缺键、越界返回 `null`，不触发 `|?`。
 - `denied` 同时覆盖**策略拒绝**（调用点授权检查判定不放行）与 **OS 权限拒绝**（如 `EACCES`/`EPERM`）。两者对脚本的可观察后果相同：调用未发生、错误不可恢复、不得被降级改写；拆成两个 kind 只会把宿主文件系统细节泄漏进脚本，且会让“不可捕获”集合随平台变化，因此不新增 kind。
@@ -76,7 +76,9 @@ R4 的完整表述 [D-010]：
 | `if` 条件求值失败 | 中止包含该 `if` 的块 | `ok=0` |
 | `for` 的集合求值失败 / 非数组 | 中止，`E_FOR_NOT_ARRAY` 或上抛 | `ok=0` |
 | 循环体内失败 | 中止 `for` 块，不继续下一轮 | `ok=0` |
-| `emit` 失败（无订阅方/队列满/超限） | 不中止；丢弃并记日志；超限为可见错误（[05 §2](05-data-metadata.md)） | `limit` 时 `ok=0` |
+| `emit` 无订阅方或队列满 | 丢弃并记日志，不中止 | `ok` 不变 |
+| `emit` 超出 `max_emit_bytes`/`max_payload_depth` | 中止当前块 | `ok=0`，`error_kind=limit` |
+| `emit` payload 不符合内核 schema | 中止当前块 | `ok=0`，`error_kind=emit_schema` |
 | 步数/调用数/超时/深度超限 | 中止整个执行 | `ok=0`，`error_kind=limit` |
 | 策略在调用边界被撤销 | 中止 | `ok=0`，`error_kind=revoked` |
 | `|?` 已发生的副作用 | **不回滚** | 需工具提供补偿 |

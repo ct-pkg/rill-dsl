@@ -19,7 +19,7 @@
 | M3 | 执行器核心：值模型、`let`/`let mut`/赋值、`if`/`for`/`break`/`continue`、`ExecLimits`、`DslResult`、错误格式 | 赋值 4 类错误、循环 2 类错误、条件 1 类错误全部有负例；步数/调用数超限返回 `limit` | `examples/m3-control/` + fake 工具 | 1400 |
 | M4 | 管道与降级：`\|>`、`\|?`、R4 失败行为表、`degraded` | 求值轨迹 golden 4 例；可捕获/不可捕获各 2 例；`E_PIPE_RHS`/`E_FALLBACK_LHS` 负例 | `examples/m4-pipeline/` | 700 |
 | M5 | `into` + `$` + `fn`：注入规则、闭包只读、调用图无环、`E_ARITY` | 注入矩阵（n<m/不接受 context/变长）3 例；递归与遮蔽工具名负例 | `examples/m5-into-fn/` | 800 |
-| M6 | 截断 + emit + 事件总线：侧车元数据、粘性、`max_emit_bytes`/`max_payload_depth` | 伪字段/逃逸/粘性/字节口径 6 例；emit 超限与 schema 4 例 | `examples/m6-events/` | 700 |
+| M6 | 截断 + emit + 事件总线：侧车元数据、粘性、`max_emit_bytes`/`max_payload_depth` | 伪字段/逃逸/粘性/字节口径 6 例；emit 无订阅方/队列满、字节与深度超限各 1 例（schema 校验由内核配置，不在脚本 golden 内） | `examples/m6-events/` | 700 |
 | M7 | 三层白名单 + 策略快照 + 审批 | 默认拒绝/deny-only/`*` 审计/快照跨代/强杀/审批 4 类错误全部有负例 | `examples/m7-security/` | 1000 |
 | M8 | 参数约束：路径五件套、argv、域名八例、双通道、重复键 | 夹具逐条通过；`E_CONSTRAINT`/`E_UNCONSTRAINED_ARG`/`E_DUP_KEY` 负例 | `examples/m8-constraints/` | 800 |
 | M9 | 诊断：统一格式、Hint、`error_kind` 全覆盖 | 每条 `error_kind` 至少 1 个 golden；格式字段齐全 | `examples/m9-errors/` | 500 |

@@ -67,8 +67,7 @@ result.original_size = 本次被截断 ? 切前字节数
 - `max_emit_bytes`：单条 payload 序列化后的最大字节数；默认 `65536`；超限 → `ok=0`、`error_kind=limit`，脚本可见，**不得静默丢弃** [D-014]。
 - `max_payload_depth`：**通用** JSON payload 深度上限，emit payload 与工具返回 payload 共用；默认 `8`，按对象/数组嵌套层数计（字符串内的括号不计）。emit 侧超限 → `ok=0`、`error_kind=limit`，失败位置在 emit 语句；工具结果超限 → `limit`，失败位置在调用语句 [D-014]。
 - 上限口径统一见 [07 §2](07-runtime.md)：输入上限 `max_input_bytes`（默认 `262144`）用于工具调用，不属于 emit。
-- 每条 `# emit:` 可选声明 payload schema：顶层字段名 + 标量类型（`string`/`number`/`bool`/`null`）。声明后，缺字段或类型不符 → `E_EMIT_SCHEMA`。
-- 不做 `additionalProperties: false`：多余顶层字段允许，除非该事件 schema 显式列全后由订阅方自行裁剪 [D-014]。
+- payload schema 由**内核配置**按事件名提供，**MVP 不做脚本语法**：脚本 header 没有 schema 声明，也没有 `additionalProperties` 开关。内核声明 schema 后，缺字段或类型不符 → `E_EMIT_SCHEMA`；未声明的事件不校验。多余顶层字段默认允许，由订阅方自行裁剪 [D-014]。
 - `external_egress`：**内核事件注册属性**，按事件名配置，不是脚本 header；脚本不能自行把事件提升为可外发。未标记的事件不得投递给外部 webhook，只能进进程内订阅方。
 
 ### 2.3 订阅方

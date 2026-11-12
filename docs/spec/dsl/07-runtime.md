@@ -95,17 +95,20 @@ struct ExecLimits {
 | `recursion` | 调用图有环 |
 | `arity` | `fn` 或固定 arity 工具的实际实参个数（含管道值与 `$` 注入）与形参个数不符；`json_build` 收到奇数个实参（契约要求键值成对，静态可算） |
 | `not_implemented` | `par` 等已保留但 MVP 不实现的语法 |
-| `pipe_rhs` | `\|>` 右侧不是调用 |
-| `fallback_lhs` | `\|?` 左侧不是单个调用 |
-| `dup_key` | emit payload 重复键 |
-| `script_changed` | 执行期脚本哈希与加载期不一致 |
+| `pipe_rhs` | `\|>` 右侧不是可调用节点（call、零参调用裸名、首操作数是 call 的 fallback 链） |
+| `fallback_lhs` | `\|?` 链的最左操作数不是单个调用 |
+| `dollar_outside` | `$` 出现在任何 `into` 块之外 |
 | `policy_expansion_unapproved` | 策略扩张未审批 |
 
 `unknown_callee` 已并入 `unknown_tool`：加载期名字解析只有一个失败点——名字既不在工具注册表也不在脚本 `fn`。拆成两个 kind 会让同一条调用因注册状态不同而换类别，且没有独立判据；`unknown_tool` 的 Hint 同时提示检查工具名与函数名。
 
 ### 3.2 运行期 `error_kind`
 
-`not_found`、`invalid_input`、`transient`、`denied`、`constraint`、`approval_required`、`approval_denied`、`approval_stale`、`approval_reused`、`limit`、`revoked`、`internal`、`type`、`emit_schema`、`for_not_array`、`unconstrained_arg`、`condition_not_bool`。
+`not_found`、`invalid_input`、`transient`、`denied`、`constraint`、`approval_required`、`approval_denied`、`approval_stale`、`approval_reused`、`limit`、`revoked`、`script_changed`、`internal`、`type`、`emit_schema`、`dup_key`、`for_not_array`、`unconstrained_arg`、`condition_not_bool`。
+
+- `script_changed` 是运行期检查：执行期脚本哈希与加载期不一致时，在下一次工具调用边界失败（[D-012](../../decisions/D-012.md)）。
+- `dup_key` 是**参数协议级**重复键：`args_json`/`ctx_json` 中出现同名键，解析即失败，handler 不执行（[D-014](../../decisions/D-014.md) 第 6 条）。
+- 三种“重复键”语义分开：协议级 → `dup_key`（运行时，handler 之前）；业务 JSON 文本里的重复键 → `invalid_input`（handler 解析时）；`json_build` 的重复键 → `invalid_input`（handler 构造时）。
 
 - `limit` 覆盖两类：① `ExecLimits` 任一计数超限；② `requires_complete_input=1` 的工具收到被上游截断的实参（`meta.truncated=1`）。第 ② 类由运行时在 handler 之前判定，handler 不执行。
 - 半截输入**不得**降为可捕获的 `invalid_input`：截断是上游资源上限造成的，脚本若能用 `|?` 兜底，就会把不完整数据当正常结果继续处理。需要全量输入时，脚本应调大 `max_output_bytes` 或改用分页工具。
