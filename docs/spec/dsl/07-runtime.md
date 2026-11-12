@@ -59,6 +59,7 @@ struct ExecLimits {
 ```
 
 - 超限一律 `ok=0`、`error_kind=limit`；`max_emit_bytes`/`max_payload_depth` 的失败位置在 emit 语句。
+- rev.1 基线默认值（内核可覆盖）：`max_steps=10000`、`max_tool_calls=200`、`max_fn_depth=8`、`max_emit_count=100`、`max_output_bytes=262144`、`max_emit_bytes=65536`、`max_payload_depth=8`、`timeout_ms=30000`。
 - 计数口径：语句执行 +1；循环每次迭代至少 +1；`continue` 不重置；`|?` 右侧执行照常计数。
 
 ## 3. 错误类别

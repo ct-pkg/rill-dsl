@@ -62,11 +62,11 @@ result.original_size = 本次被截断 ? 切前字节数
 
 ### 2.2 上限与 schema
 
-- `max_emit_bytes`：单条 payload 序列化后的最大字节数；超限 → `ok=0`、`error_kind=limit`，脚本可见，**不得静默丢弃** [D-014]。
-- `max_payload_depth`：payload 最大嵌套深度；超限同上。
+- `max_emit_bytes`：单条 payload 序列化后的最大字节数；默认 `65536`；超限 → `ok=0`、`error_kind=limit`，脚本可见，**不得静默丢弃** [D-014]。
+- `max_payload_depth`：payload 最大嵌套深度；默认 `8`；超限同上。
 - 每条 `# emit:` 可选声明 payload schema：顶层字段名 + 标量类型（`string`/`number`/`bool`/`null`）。声明后，缺字段或类型不符 → `E_EMIT_SCHEMA`。
 - 不做 `additionalProperties: false`：多余顶层字段允许，除非该事件 schema 显式列全后由订阅方自行裁剪 [D-014]。
-- `external_egress`：事件可标记为允许外部订阅方接收；未标记的事件不得投递给外部 webhook，只能进进程内订阅方。
+- `external_egress`：**内核事件注册属性**，按事件名配置，不是脚本 header；脚本不能自行把事件提升为可外发。未标记的事件不得投递给外部 webhook，只能进进程内订阅方。
 
 ### 2.3 订阅方
 
