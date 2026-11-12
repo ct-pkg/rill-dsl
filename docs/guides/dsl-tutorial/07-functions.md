@@ -162,4 +162,4 @@ read "config.json" |> json_parse into {
 | 调用图有环 | `recursion` |
 | `return` 在函数外 | `return_outside_fn` |
 | 给参数/捕获变量赋值 | `immutable_assign` |
-| 调用不存在的名字 | `unknown_callee` |
+| 调用不存在的工具或函数名 | `unknown_tool`（Hint 同时提示工具名与函数名） |

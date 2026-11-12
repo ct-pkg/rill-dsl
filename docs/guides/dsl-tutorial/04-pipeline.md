@@ -12,8 +12,10 @@ x |> grep "pat" =  grep("pat", x)      # grep arity=2；管道值补到第 2 位
 
 - 管道值**追加**在显式实参之后，不替换、不插队。
 - 管道只追加实参，不改变工具 arity：`x |> read "p"` 得到 2 个实参，`read` arity=1 → **加载期** `arity`，脚本不会执行到该调用。写管道时右侧工具的形参个数必须能容纳管道值。
-- 左侧是任意 `expr`；右侧必须是一个**可调用节点**：`call`，或加载期解析为零参调用的裸 `IDENT`，允许分组。
-- 右侧不是调用 → 加载期 `pipe_rhs`，Hint 提示「管道右侧必须是调用」。
+- 右侧必须是**可调用节点**：`call`；加载期解析为**零参调用**的裸 `IDENT`（裸名先解析成零参调用，再把管道值追加进去算 arity）；或首操作数是 `call` 的 fallback 链（如 `a |> (read |? read "f")`，允许分组）。
+- `read p |> json_parse` 合法，是因为 `json_parse` arity=1 拿到 1 个管道值，不是因为 `json_parse` 零参。
+- 管道值追加到右侧 fallback 链**最左侧**的那个 `call`；`|?` 右侧不接收管道值。
+- 右侧不是可调用节点 → 加载期 `pipe_rhs`，Hint 提示「管道右侧必须是调用」。
 
 ```rill
 # allow: read, grep, write
@@ -43,7 +45,8 @@ read "p" |? read "f" |> json_parse
                     =  (read "p" |? read "f") |> json_parse
 ```
 
-- 左侧必须是**单个可调用节点**（`call`，或零参裸名，可分组）；不是 → 加载期 `fallback_lhs`。
+- `|?` 链的左侧检查只作用在**链的最左操作数**：`a |? b |? c` 合法（只检查 `a`）；`(f a |> g) |? h` 非法（最左是分组管道）。
+- 最左操作数必须是可调用节点（`call`，或解析为零参调用的裸名，可分组）；不是 → 加载期 `fallback_lhs`。`|?` 右侧不接收左侧值。
 - 失败单元 = 该 call 的整次求值：实参求值失败、约束拒绝、handler 失败都算；更早的管道阶段失败不算。
 - 左侧成功 → 右侧不执行。
 - 左侧失败且错误可捕获 → 执行右侧，取右侧值，并置 `degraded=1`。
@@ -76,7 +79,7 @@ let cfg = read "primary.json" |? read "fallback.json" |> json_parse
 | 参数值越界/类型不符 | `constraint` | 否 |
 | 审批 | `approval_required` / `approval_denied` | 否 |
 | 资源上限 | `limit` | 否 |
-| 策略撤销/脚本变更 | `revoked` / `script_changed` | 否 |
+| 运行期策略撤销/脚本变更 | `revoked` / `script_changed` | 否 |
 | 内核内部错误 | `internal` | 否 |
 | 加载期错误 | 不适用（阶段类别，具体 `kind` 见 07 §3） | 否（加载阶段根本不执行） |
 

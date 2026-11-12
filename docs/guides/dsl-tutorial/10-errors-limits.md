@@ -39,13 +39,15 @@ src/run.rill:4:1: error: cannot assign to immutable binding 'count'.
 | --- | --- | --- |
 | 词法/文法 | `syntax` | 未闭合定界符、非法 token、空括号、逗号调用 |
 | header | `reserved_name`、`dup_header`、`no_allow_header`、`deny_without_allow`、`version` | 关键字作名字、header 重复、缺 allow、deny 单独出现、版本非 1 |
-| 名字解析 | `unknown_tool`、`tool_not_allowed`、`event_not_declared`、`unknown_callee`、`undefined_name`、`bare_fn_ref`、`shadow_tool`、`dup_decl` | 未注册/未授权工具（含可选的 `json_build` 未注册）、未声明事件、未知调用、未定义名字、有参 fn 裸引用、遮蔽工具名、重复声明 |
+| 名字解析 | `unknown_tool`、`tool_not_allowed`、`event_not_declared`、`undefined_name`、`bare_fn_ref`、`shadow_tool`、`dup_decl` | 未注册工具或函数名（含可选的 `json_build` 未注册）、未授权工具、未声明事件、未定义名字、有参 fn 裸引用、遮蔽工具名、重复声明 |
 | 赋值/控制 | `assign_undefined`、`immutable_assign`、`loop_control`、`return_outside_fn` | 赋值目标不存在、改不可变绑定、break/continue 在 for 外、return 在 fn 外 |
 | 函数/调用 | `recursion`、`arity` | 调用图成环、`fn` 或固定 arity 工具的实参个数不符 |
-| 管道 | `pipe_rhs`、`fallback_lhs` | `\|>` 右侧不是调用、`\|?` 左侧不是单个 call |
+| 管道 | `pipe_rhs`、`fallback_lhs` | `\|>` 右侧不是可调用节点、`\|?` 链最左不是可调用节点 |
 | emit | `dup_key` | payload 重复键 |
-| 执行一致性 | `script_changed`、`policy_expansion_unapproved` | 脚本哈希变化、策略扩张未审批 |
+| 执行一致性 | `policy_expansion_unapproved` | 策略扩张未审批 |
 | 保留语法 | `not_implemented` | `par` 等已保留但 MVP 不实现的语法 |
+
+`unknown_callee` 已并入 `unknown_tool`；它的 Hint 同时提示检查工具名与函数名。`script_changed` 是运行期检查，不在本表。
 
 ## 3. 运行期 `error_kind`
 
@@ -54,7 +56,7 @@ src/run.rill:4:1: error: cannot assign to immutable binding 'count'.
 | 工具结果 | `not_found`、`invalid_input`、`transient` | 是 |
 | 策略/值约束 | `denied`、`constraint`、`unconstrained_arg` | 否 |
 | 审批 | `approval_required`、`approval_denied`、`approval_stale`、`approval_reused` | 否 |
-| 资源/生命周期 | `limit`、`revoked` | 否 |
+| 资源/生命周期 | `limit`、`revoked`、`script_changed` | 否 |
 | 值运算 | `type`、`for_not_array`、`condition_not_bool` | 否 |
 | emit | `emit_schema` | 否 |
 | 兜底 | `internal` | 否 |
@@ -94,7 +96,7 @@ src/run.rill:4:1: error: cannot assign to immutable binding 'count'.
 
 上游结果被截断后作为 `requires_complete_input=1` 工具的实参 → `limit`，handler 不执行；不得降为 `invalid_input`。`max_input_bytes` 超限同样 → `limit`，handler 不执行；`write` 的文件不动。
 
-截断结果不加省略号或标记；截断事实只在侧车。`truncated` 是粘性的：上游截断后，下游即使未截断，结果仍为 `truncated=true`。
+截断结果不加省略号或标记；截断事实只在侧车。`truncated` 是粘性的：上游截断后，下游即使未截断，结果仍为 `truncated=true`。`original_size` 的口径：本次截断取切前字节数；未截断但有上游截断时取上游 `original_size` 的最大值；无上游截断时取本值 JSON 序列化字节数。
 
 ## 6. `DslResult` 字段
 
