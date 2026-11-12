@@ -45,7 +45,7 @@ source ──加载──▶ 词法/文法 ──▶ 静态检查（名字、作
        ──返回──▶ DslResult { ok, value_json, error_kind, error_line/col, degraded, ... }
 ```
 
-- 加载期错误（`syntax`、`unknown_tool`、`no_allow_header` 等）不执行任何工具。
+- 加载期错误（`syntax`、`unknown_tool`、`arity`、`no_allow_header` 等）不执行任何工具。
 - 执行期失败是附着在产生它的那次 call 上的控制信号；它中止最近的块并向外传播。
 - 脚本不能嵌套调用 `dsl_exec`；没有 `await`，工具调用在语义上同步。
 

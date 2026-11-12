@@ -39,9 +39,9 @@ src/run.rill:4:1: error: cannot assign to immutable binding 'count'.
 | --- | --- | --- |
 | 词法/文法 | `syntax` | 未闭合定界符、非法 token、空括号、逗号调用 |
 | header | `reserved_name`、`dup_header`、`no_allow_header`、`deny_without_allow`、`version` | 关键字作名字、header 重复、缺 allow、deny 单独出现、版本非 1 |
-| 名字解析 | `unknown_tool`、`tool_not_allowed`、`event_not_declared`、`unknown_callee`、`undefined_name`、`bare_fn_ref`、`shadow_tool`、`dup_decl` | 未注册/未授权工具、未声明事件、未知调用、未定义名字、有参 fn 裸引用、遮蔽工具名、重复声明 |
+| 名字解析 | `unknown_tool`、`tool_not_allowed`、`event_not_declared`、`unknown_callee`、`undefined_name`、`bare_fn_ref`、`shadow_tool`、`dup_decl` | 未注册/未授权工具（含可选的 `json_build` 未注册）、未声明事件、未知调用、未定义名字、有参 fn 裸引用、遮蔽工具名、重复声明 |
 | 赋值/控制 | `assign_undefined`、`immutable_assign`、`loop_control`、`return_outside_fn` | 赋值目标不存在、改不可变绑定、break/continue 在 for 外、return 在 fn 外 |
-| 函数 | `recursion`、`arity` | 调用图成环、fn 实参个数不符 |
+| 函数/调用 | `recursion`、`arity` | 调用图成环、`fn` 或固定 arity 工具的实参个数不符 |
 | 管道 | `pipe_rhs`、`fallback_lhs` | `\|>` 右侧不是调用、`\|?` 左侧不是单个 call |
 | emit | `dup_key` | payload 重复键 |
 | 执行一致性 | `script_changed`、`policy_expansion_unapproved` | 脚本哈希变化、策略扩张未审批 |
@@ -52,14 +52,14 @@ src/run.rill:4:1: error: cannot assign to immutable binding 'count'.
 | 家族 | `error_kind` | `\|?` 捕获 |
 | --- | --- | --- |
 | 工具结果 | `not_found`、`invalid_input`、`transient` | 是 |
-| 策略/约束 | `denied`、`constraint`、`unconstrained_arg` | 否 |
+| 策略/值约束 | `denied`、`constraint`、`unconstrained_arg` | 否 |
 | 审批 | `approval_required`、`approval_denied`、`approval_stale`、`approval_reused` | 否 |
 | 资源/生命周期 | `limit`、`revoked` | 否 |
 | 值运算 | `type`、`for_not_array`、`condition_not_bool` | 否 |
 | emit | `emit_schema` | 否 |
 | 兜底 | `internal` | 否 |
 
-未知的 `error_kind` 一律按 `internal` 处理，不可捕获。空结果不是错误：`grep` 无匹配是 `[]`、`read` 空文件是 `""`、`get` 缺键是 `null`、`json_parse ""` 是 `invalid_input`；`[]` 与 `null` 不等价，判空用 `.length > 0`。
+未知的 `error_kind` 一律按 `internal` 处理，不可捕获。`constraint` 只覆盖值层（类型、路径等）；实参个数不符已在加载期报 `arity`，不进入运行时。空结果不是错误：`grep` 无匹配是 `[]`、`read` 空文件是 `""`、`get` 缺键是 `null`、`json_parse ""` 是 `invalid_input`；`[]` 与 `null` 不等价，判空用 `.length > 0`。
 
 ## 4. `ExecLimits`
 
@@ -70,8 +70,9 @@ src/run.rill:4:1: error: cannot assign to immutable binding 'count'.
 | `max_fn_depth` | 8 | 函数调用深度 |
 | `max_emit_count` | 100 | emit 条数 |
 | `max_output_bytes` | 262144 | 单次工具 payload 的最大字节数（不是整个 `DslResult`） |
+| `max_input_bytes` | 262144 | 单次调用 `args_json` 与 `ctx_json` 序列化字节数之和 |
 | `max_emit_bytes` | 65536 | 单条 emit payload 序列化后的最大字节数 |
-| `max_payload_depth` | 8 | 单条 JSON payload 最大嵌套深度 |
+| `max_payload_depth` | 8 | 任何 JSON payload（工具结果 + emit）最大嵌套深度 |
 | `timeout_ms` | 30000 | 执行超时，不含审批等待 |
 
 计数口径：
@@ -80,17 +81,18 @@ src/run.rill:4:1: error: cannot assign to immutable binding 'count'.
 - `continue` 不重置计数；`break` 正常结束。
 - `|?` 右侧执行照常计数。
 - 审批等待不计入 `timeout_ms`，单独回显 `approval_wait_ms`。
+- `max_input_bytes` 口径：`args_json` 与 `ctx_json` 各自序列化后的 UTF-8 字节数之和；`ctx_json` 未注入按 0 计。超限 → `limit`，handler 不执行。
 
 超限一律 `ok=0`、`error_kind=limit`，中止整个执行；已完成步骤的副作用保留。
 
-## 5. `max_output_bytes`：截断还是报错
+## 5. `max_output_bytes`、`max_input_bytes` 与截断
 
 | 工具类型 | 超限行为 |
 | --- | --- |
 | `read`、`grep` | 截断 payload，置 `truncated=1`，`original_size` 为切前字节数；不是错误 |
 | `json_parse`、`get`、`json_build` | 不能返回半截 JSON → `limit`，不可捕获 |
 
-上游结果被截断后作为 `json_parse` 输入 → `limit`，handler 不执行；不得降为 `invalid_input`。`write` 的 `content` 序列化后超过工具契约的 `max_input_bytes`（默认 262144）→ `limit`，文件不动。
+上游结果被截断后作为 `requires_complete_input=1` 工具的实参 → `limit`，handler 不执行；不得降为 `invalid_input`。`max_input_bytes` 超限同样 → `limit`，handler 不执行；`write` 的文件不动。
 
 截断结果不加省略号或标记；截断事实只在侧车。`truncated` 是粘性的：上游截断后，下游即使未截断，结果仍为 `truncated=true`。
 

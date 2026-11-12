@@ -11,7 +11,7 @@ x |> grep "pat" =  grep("pat", x)      # grep arity=2；管道值补到第 2 位
 ```
 
 - 管道值**追加**在显式实参之后，不替换、不插队。
-- 管道只追加实参，不改变工具 arity：`x |> read "p"` 得到 2 个实参，`read` arity=1 → `constraint`。写管道时右侧工具的形参个数必须能容纳管道值。
+- 管道只追加实参，不改变工具 arity：`x |> read "p"` 得到 2 个实参，`read` arity=1 → **加载期** `arity`，脚本不会执行到该调用。写管道时右侧工具的形参个数必须能容纳管道值。
 - 左侧是任意 `expr`；右侧必须是一个**可调用节点**：`call`，或加载期解析为零参调用的裸 `IDENT`，允许分组。
 - 右侧不是调用 → 加载期 `pipe_rhs`，Hint 提示「管道右侧必须是调用」。
 
@@ -73,7 +73,7 @@ let cfg = read "primary.json" |? read "fallback.json" |> json_parse
 | 输入不合法 | `invalid_input` | 是 |
 | 瞬时失败 | `transient` | 是 |
 | 策略拒绝 | `denied` | 否 |
-| 参数越界/形状不符 | `constraint` | 否 |
+| 参数值越界/类型不符 | `constraint` | 否 |
 | 审批 | `approval_required` / `approval_denied` | 否 |
 | 资源上限 | `limit` | 否 |
 | 策略撤销/脚本变更 | `revoked` / `script_changed` | 否 |

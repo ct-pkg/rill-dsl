@@ -10,7 +10,7 @@ fn name(p1, p2) { ... }
 
 - 调用仍用空格：`scan "a.c" "TODO"`，不是 `scan("a.c", "TODO")`。
 - 零参函数写 `fn name() { ... }`，调用写裸名 `name`。
-- 实参个数必须等于形参个数；否则加载期 `arity`。
+- 实参个数必须等于形参个数；否则加载期 `arity`。固定 arity 工具同此规则：个数由 `params_schema` 长度与管道/`$` 注入规则静态可算。
 - 函数名不得与已注册工具同名；否则加载期 `shadow_tool`。
 - 同一脚本内不得重名；否则 `dup_decl`。
 
@@ -156,7 +156,7 @@ read "config.json" |> json_parse into {
 
 | 场景 | `error_kind` |
 | --- | --- |
-| 实参个数不符 | `arity` |
+| `fn` 或固定 arity 工具的实参个数不符 | `arity`（加载期） |
 | 函数名与工具同名 | `shadow_tool` |
 | 同一脚本重名函数 | `dup_decl` |
 | 调用图有环 | `recursion` |

@@ -243,7 +243,7 @@ let cfg = { "host": "localhost" }
 let cfg = json_parse "{\"host\": \"localhost\"}"
 ```
 
-**判据**：对象字面量 → `syntax`；`json_parse` 返回 `json_object`。也可以使用工具返回的对象；`json_build` 是否注册由内核决定。
+**判据**：对象字面量 → `syntax`；`json_parse` 返回 `json_object`。也可以使用工具返回的对象；`json_build` 是可选工具，未注册时调用在加载期报 `unknown_tool`。
 
 ## 12. 写递归 `fn`
 

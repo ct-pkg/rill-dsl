@@ -8,9 +8,9 @@
 | --- | --- | --- | --- |
 | 第一层 注册表 | 内核启动 + 加载 | 工具必须在可见 `ToolRegistry` 中 | `unknown_tool` |
 | 第二层 脚本 header | 加载 | 调用工具 ∈ `# allow:`；事件 ∈ `# emit:` | `tool_not_allowed` / `event_not_declared` |
-| 第三层 参数 | 每次调用前 | 参数个数、类型、路径等约束全部通过 | `constraint`，handler 不执行 |
+| 第三层 参数值 | 每次调用前 | 类型、路径等值约束全部通过 | `constraint`，handler 不执行 |
 
-三层都通过才调用 handler；任一层失败都不产生副作用。
+三层都通过才调用 handler；任一层失败都不产生副作用。固定 arity 工具的实参个数另在**加载期**静态校验：显式实参 + 管道值 + `$` 注入 ≠ 形参个数 → `arity`，不进入第三层。
 
 ## 2. 默认拒绝
 
@@ -65,11 +65,11 @@ write "todo.json" hits
 
 ## 4. 参数约束在什么时候拒绝你
 
-第三层约束在每次调用前执行，常见拒绝：
+第三层约束在每次调用前执行，常见拒绝（`arity` 行是加载期例外，不在第三层）：
 
 | 约束 | 例子 | `error_kind` |
 | --- | --- | --- |
-| 实参个数 ≠ 固定 arity | `read` 裸名、`x \|> read "p"`（2≠1） | `constraint` |
+| 实参个数 ≠ 固定 arity | `read` 裸名、`x \|> read "p"`（2≠1） | `arity`（加载期，不是 `constraint`） |
 | 实参类型不符 | `read 1`（path 不是 string） | `constraint` |
 | 路径不在 root 界内 | `read "/workspace/../../etc/passwd"` | `constraint` |
 | 路径经 symlink 逃出 root | `/workspace/link-to-etc/passwd` | `constraint` |

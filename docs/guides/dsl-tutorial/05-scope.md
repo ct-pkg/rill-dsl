@@ -94,7 +94,7 @@ read "config.json" |> json_parse into {
 | `get "port" $` | 2 | 0 | 否 | `["port", $]` |
 | `$ \|> get "port"` | 1 | 1 | 否 | `["port", $]` |
 
-块外调用 `get "port"` 只有 1 个实参且没有 `$`，得到 `constraint`。
+块外调用 `get "port"` 只有 1 个实参且没有 `$`，个数不符 → **加载期** `arity`。
 
 ## 5. 不自动注入的工具怎么写
 
@@ -125,7 +125,7 @@ read "config.json" |> json_parse into {
 }
 ```
 
-反例：`write "a.txt"` 在块内只有 1 个实参，`write` 不注入 → `constraint`，handler 不执行。
+反例：`write "a.txt"` 在块内只有 1 个实参，`write` 不注入 → **加载期** `arity`，handler 不执行。
 
 ## 6. 字段、索引与 `length`
 

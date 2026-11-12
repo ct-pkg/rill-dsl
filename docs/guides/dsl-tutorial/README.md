@@ -35,7 +35,7 @@
 - 代码块语言标记统一用 `rill`；`# allow:` 是脚本 header，不是注释。
 - 标注「反例」的代码块**故意不可加载**，用于说明错误与期望的 `error_kind`；正例都按 rev.1 文法推导过。
 - 错误文案采用规范格式：`<path>:<line>:<col>: error: <message>`，第二行详情，第三行 `Hint:`。
-- 示例中的工具只使用 [工具契约目录](../../spec/tools/README.md) 收录的 `read`、`grep`、`write`、`json_parse`、`get`、`json_build`；不使用未定义工具名。
+- 示例中的工具只使用 [工具契约目录](../../spec/tools/README.md) 收录的 `read`、`grep`、`write`、`json_parse`、`get`、`json_build`（可选）；不使用未定义工具名。
 
 ## 4. 与规范的关系
 

@@ -72,7 +72,7 @@ emit "ping" {}
 | --- | --- | --- |
 | `max_emit_count` | 100 | `ok=0`、`error_kind=limit` |
 | `max_emit_bytes` | 65536 | 单条 payload 序列化超限 → `ok=0`、`error_kind=limit` |
-| `max_payload_depth` | 8 | payload 嵌套超限 → `ok=0`、`error_kind=limit` |
+| `max_payload_depth` | 8 | 任何 JSON payload（工具结果 + emit）嵌套超限 → `ok=0`、`error_kind=limit` |
 
 超限是**脚本可见的错误**，不得静默丢弃；失败位置指向 emit 语句。
 
