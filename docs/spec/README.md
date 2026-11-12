@@ -62,4 +62,4 @@
 
 - 主张层：`docs/requirements/README.md`。
 - 规格层只回答“做什么、怎么判对错”，不重复目标与理由。
-- 未决项只在 `PENDING.md` 出现；`S-*` 与规范正文中不得把待定细节写成已生效规则（正文仅允许 `provisional: P-xxx` 三处编辑补充，见 [dsl/README.md](dsl/README.md) §4）。
+- 未决项只在 `PENDING.md` 出现；`S-*` 与规范正文中不得把待定细节写成已生效规则（正文仅允许 `provisional: P-xxx` 三处编辑补充，见 [dsl/README.md](dsl/README.md) §5）。
