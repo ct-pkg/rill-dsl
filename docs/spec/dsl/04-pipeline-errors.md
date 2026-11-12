@@ -55,7 +55,8 @@ fallback_expr := or_expr ("|?" or_expr)*        # 左结合，高于 |>
 
 - `null` 是值，不是失败：缺键、越界返回 `null`，不触发 `|?`。
 - `denied` 同时覆盖**策略拒绝**（调用点授权检查判定不放行）与 **OS 权限拒绝**（如 `EACCES`/`EPERM`）。两者对脚本的可观察后果相同：调用未发生、错误不可恢复、不得被降级改写；拆成两个 kind 只会把宿主文件系统细节泄漏进脚本，且会让“不可捕获”集合随平台变化，因此不新增 kind。
-- `constraint` 只覆盖**值层**，按判定者分界：运行时第三层（`ParamConstraint`：路径、命令、域名、大小）或变长工具的 handler（逐位类型/成对校验）。它说明“脚本传的值不对”，不得被静默兜底。个数不符不属于这里——加载期已报 `arity`（[07 §3.1](07-runtime.md)）。
+- `constraint` 只覆盖**值层**，判定者是运行时第三层（`ParamConstraint` 与固定 schema 的类型浅校验：路径、命令、域名、大小、固定位的 `string` 类型）。它说明“脚本传的值不对”，不得被静默兜底。**个数不属于这里**：固定 arity 的个数与 `json_build` 的“键值成对”都是静态可算，加载期已报 `arity`。
+- `invalid_input` 覆盖**完整**输入的内容不合法，判定者是 handler：编码、JSON 语法、正则、`json_build` 的键不是 `string`、重复键。
 - `limit` 除 `ExecLimits` 超限外，还覆盖 `requires_complete_input=1` 的工具收到被上游截断的实参（[07 §1/§3.2](07-runtime.md)）。后者由运行时在 handler 之前判定；半截输入不是“内容不合法”，不得降为可捕获的 `invalid_input`。
 - 工具用 `error_kind` 表达失败；返回 `null` 不等价于失败。
 - 不可捕获错误即使出现在 `|?` 左侧，也按 §3 中止块；这是安全要求：`denied`/`limit` 不得被静默改写为正常结果。

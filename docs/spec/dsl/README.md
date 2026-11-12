@@ -51,7 +51,7 @@
 | 17 | `into` 允许嵌套，内层 `$` 覆盖、退出恢复 | D-017 |
 | 18 | `# dsl-version:` 接受 `1`，其他值加载报错 | D-018 |
 | 19 | `par` 保留为关键字，出现即 `not_implemented` | D-019 |
-| 20 | 运行时补 `requires_complete_input` 与 `max_input_bytes`；`max_payload_depth` 泛化为通用深度上限；`arity` 前移到加载期并覆盖工具调用；`constraint`/`limit` 按判定者与截断归属对齐 | 工具契约 T-001..T-006 跟进项 |
+| 20 | 运行时补 `requires_complete_input` 与 `max_input_bytes`；`max_payload_depth` 泛化为通用深度上限；`arity` 前移到加载期并覆盖工具（含 `json_build` 偶数实参）；`constraint`/`invalid_input`/`limit` 按判定者与截断归属对齐；`args_json`/`ctx_json` 两通道互斥 | 工具契约 T-001..T-006 跟进项 |
 
 ## 4. 非目标（MVP 不做）
 

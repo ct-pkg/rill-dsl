@@ -18,7 +18,7 @@ struct ToolDef {
     char *params_schema;   // 固定位置形参个数与类型；可变长为 NULL
     int   accepts_context; // 是否接受隐式 $
     int   requires_approval;
-    int   requires_complete_input; // 1 = 实参含 truncated 时拒绝执行（limit）
+    int   requires_complete_input; // 1 = 任一实参 meta.truncated=1 时拒绝执行（limit）
     ParamConstraint *constraints;
     ToolResult (*handler)(char *args_json, char *ctx_json);
 };
@@ -66,6 +66,7 @@ struct ExecLimits {
 - rev.1 基线默认值（内核可覆盖）：`max_steps=10000`、`max_tool_calls=200`、`max_fn_depth=8`、`max_emit_count=100`、`max_output_bytes=262144`、`max_input_bytes=262144`、`max_emit_bytes=65536`、`max_payload_depth=8`、`timeout_ms=30000`。
 - 计数口径：语句执行 +1；循环每次迭代至少 +1；`continue` 不重置；`|?` 右侧执行照常计数。
 - `max_input_bytes` 口径：一次工具调用的输入总量 = `args_json` 与 `ctx_json` 各自序列化后的 UTF-8 字节数之和；`ctx_json` 未注入时按 0 计。单参数字节数不会超过总量，因此任一实参超限必然使本次调用超限。
+- 两个通道**互斥**：`args_json` 只放显式实参（书写序）与管道值；`ctx_json` 只放注入的 `$`，未注入时为 NULL。同一个值不会同时出现在两个通道，注入不会重复计入总量。
 - `max_payload_depth` 口径：按对象/数组嵌套层数计，字符串内部的括号与转义不计；工具返回 payload 与 emit payload 共用同一上限。
 
 ## 3. 错误类别
@@ -93,7 +94,7 @@ struct ExecLimits {
 | `loop_control` | `break`/`continue` 不在 `for` 内 |
 | `return_outside_fn` | `return` 不在 `fn` 内 |
 | `recursion` | 调用图有环 |
-| `arity` | `fn` 或固定 arity 工具的实际实参个数（含管道值与 `$` 注入）与形参个数不符 |
+| `arity` | `fn` 或固定 arity 工具的实际实参个数（含管道值与 `$` 注入）与形参个数不符；`json_build` 收到奇数个实参（契约要求键值成对，静态可算） |
 | `not_implemented` | `par` 等已保留但 MVP 不实现的语法 |
 | `pipe_rhs` | `\|>` 右侧不是调用 |
 | `fallback_lhs` | `\|?` 左侧不是单个调用 |
@@ -107,8 +108,8 @@ struct ExecLimits {
 
 - `limit` 覆盖两类：① `ExecLimits` 任一计数超限；② `requires_complete_input=1` 的工具收到被上游截断的实参（`meta.truncated=1`）。第 ② 类由运行时在 handler 之前判定，handler 不执行。
 - 半截输入**不得**降为可捕获的 `invalid_input`：截断是上游资源上限造成的，脚本若能用 `|?` 兜底，就会把不完整数据当正常结果继续处理。需要全量输入时，脚本应调大 `max_output_bytes` 或改用分页工具。
-- `invalid_input` 只用于**完整**输入的内容不合法（编码、JSON 语法、正则、键值对）。
-- `constraint` 只用于**值层**：实参值不满足 `ParamConstraint` 或 schema 浅校验。个数不符已在加载期报 `arity`，不进入运行时。
+- `invalid_input` 只用于**完整**输入的内容不合法，判定者是 handler：编码、JSON 语法、正则、`json_build` 的键不是 `string`、重复键。
+- `constraint` 只用于**值层**：实参值不满足 `ParamConstraint` 或 schema 浅校验。个数（含 `json_build` 的键值成对性）已在加载期报 `arity`，不进入运行时。
 
 ## 4. 错误格式
 
