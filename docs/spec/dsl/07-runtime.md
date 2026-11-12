@@ -100,7 +100,7 @@ struct ExecLimits {
 | `pipe_rhs` | `\|>` 右侧不是可调用节点（call、零参调用裸名、首操作数是可调用节点的 fallback 链） |
 | `fallback_lhs` | `\|?` 链的最左操作数不是单个调用 |
 | `dollar_outside` | `$` 出现在任何 `into` 块之外 |
-| `dup_key` | emit payload 的**对象字面量内重复键**（静态可判，位置在 emit 语句的 payload 处） |
+| `dup_key` | emit payload 的**对象字面量内重复键**（静态可判，位置规则见 [10 §5](10-ast-position.md)） |
 | `policy_expansion_unapproved` | 策略扩张未审批 |
 
 `unknown_callee` 已并入 `unknown_tool`：加载期名字解析只有一个失败点——名字既不在工具注册表也不在脚本 `fn`。拆成两个 kind 会让同一条调用因注册状态不同而换类别，且没有独立判据；`unknown_tool` 的 Hint 同时提示检查工具名与函数名。
