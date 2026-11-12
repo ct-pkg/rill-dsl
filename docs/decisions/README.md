@@ -23,6 +23,7 @@
 | D-017 | 2026-11-12 | accepted | EDITOR | 嵌套 `into` 允许，内层 `$` 覆盖、退出恢复 | [D-017](D-017.md) |
 | D-018 | 2026-11-12 | accepted | EDITOR | `# dsl-version:` 接受 `1`，其他值 `E_VERSION` | [D-018](D-018.md) |
 | D-019 | 2026-11-12 | accepted | EDITOR | `par` 保留为关键字，出现即 `not_implemented` | [D-019](D-019.md) |
+| D-020 | 2026-11-12 | accepted | EDITOR | AST 节点、稳定 `sexpr`、UTF-8 字节列与错误阶段；新增 10 卷 | [D-020](D-020.md) |
 
 ## 状态说明
 
@@ -32,4 +33,4 @@
 
 ## 未决项
 
-D-002..D-014 覆盖 B1/B2/B3 的 13 条争点；D-015..D-019 是定稿所需的技术裁定（judge 为 EDITOR，不挂用户名义）。仍无决策的条目见 [PENDING](../spec/PENDING.md)（P-013/P-014/P-017，以及 P-020/P-021 两个 undecidable 项）。
+D-002..D-014 覆盖 B1/B2/B3 的 13 条争点；D-015..D-020 是定稿所需的技术裁定（judge 为 EDITOR，不挂用户名义）。仍无决策的条目见 [PENDING](../spec/PENDING.md)（P-013/P-014/P-017，以及 P-020/P-021 两个 undecidable 项）。

@@ -2,7 +2,7 @@
 
 - **状态**：`unverified` —— 本仓库没有 lexer/parser/解释器，正文中的行为均无门禁证据。
 - **规范版本**：仍为 `v0.1`；本轮改动标记 `rev.1`（2026-11-12）。**不升版本号**，不新增其他版本编号。
-- **依据**：D-001、D-002..D-014（B1/B2/B3 battle 判决）、D-015（错误格式，用户本轮指示）。
+- **依据**：D-001、D-002..D-014（B1/B2/B3 battle 判决）、D-015（错误格式）、D-020（AST 与位置），其余见各卷。
 - **历史输入**：[dsl-spec-v0.1.md](../../design/dsl-spec-v0.1.md)（v0.1 原文，只归档不改写）。
 - **可验收条目**：[S-001..S-024](../README.md)；工具契约见 [T-001..T-006](../tools/README.md)。每条状态 `unverified`。
 - **未决项**：[PENDING.md](../PENDING.md)。
@@ -20,6 +20,7 @@
 | [07 运行时](07-runtime.md) | 接口、ExecLimits、错误格式、版本策略 | D-010、D-013、D-014、D-015 |
 | [08 示例](08-examples.md) | 五个示例及新文法下的解析说明 | D-002、D-006、D-009 |
 | [09 里程碑](09-milestones.md) | M0–M10 重排、退出判据、样例门禁 | 全部决策 |
+| [10 AST 与位置](10-ast-position.md) | 节点集合、稳定 S-expression、位置口径、错误阶段 | D-020 |
 
 ## 2. 规范用语
 
@@ -52,6 +53,9 @@
 | 18 | `# dsl-version:` 接受 `1`，其他值加载报错 | D-018 |
 | 19 | `par` 保留为关键字，出现即 `not_implemented` | D-019 |
 | 20 | 运行时补 `requires_complete_input` 与 `max_input_bytes`；`max_payload_depth` 泛化为通用深度上限；`arity` 前移到加载期并覆盖工具（含 `json_build` 偶数实参）；`constraint`/`invalid_input`/`limit` 按判定者与截断归属对齐；`args_json`/`ctx_json` 两通道互斥 | 工具契约 T-001..T-006 跟进项 |
+| 21 | header 只认 `allow`/`deny`/`emit`/`dsl-version` 四种前缀，其余 `#` 行（含 `# approval:`）按注释 | D-013、D-020 |
+| 22 | `unknown_callee` 并入 `unknown_tool`，加载期名字解析单一失败点 | D-020 |
+| 23 | 新增 10 卷：AST 节点、稳定 `sexpr`、UTF-8 字节列、错误阶段 | D-020 |
 
 ## 4. 非目标（MVP 不做）
 

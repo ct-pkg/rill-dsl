@@ -1,7 +1,7 @@
 # 主张层：Rill DSL（讨论阶段）
 
 > 状态：**规范正文已有 `v0.1 rev.1` 草案（unverified，无实现）**。本文件只做主张层索引，不替代规范正文。
-> 已拍板项为 [D-001](../decisions/D-001.md) 与 [D-002..D-019](../decisions/README.md)；其中 D-015..D-019 多为裁判席技术裁定，不挂用户名义。
+> 已拍板项为 [D-001](../decisions/D-001.md) 与 [D-002..D-020](../decisions/README.md)；其中 D-015..D-020 多为裁判席技术裁定，不挂用户名义。
 > 仍未决的问题登记在 [docs/spec/PENDING.md](../spec/PENDING.md)；规范正文已无 `provisional` 文本。
 
 ## 1. 目标（一句话）
@@ -59,6 +59,7 @@
 | D-017 | accepted | 嵌套 `into` 允许，内层 `$` 覆盖、退出恢复 | [D-017](../decisions/D-017.md) |
 | D-018 | accepted | `# dsl-version:` 接受 `1`，其他值报错 | [D-018](../decisions/D-018.md) |
 | D-019 | accepted | `par` 保留为关键字，出现即 `not_implemented` | [D-019](../decisions/D-019.md) |
+| D-020 | accepted | AST 节点、稳定 `sexpr`、UTF-8 字节列与错误阶段 | [D-020](../decisions/D-020.md) |
 
 未决问题仍登记在待定条目里，避免伪装成 accepted：P-013/P-014/P-017、P-020/P-021（undecidable）。P-007/P-009/P-010 已由 D-019/D-018/D-017 收口。
 
