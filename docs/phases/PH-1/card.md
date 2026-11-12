@@ -201,7 +201,7 @@ Phase 1 只消费静态元数据：`read` arity=1、`grep` arity=2、`write` ari
 | LD-12 | S-017 | 裸 `read`；`x \|> read "p"`；into 内 `grep "m"`；into 外 `get "k"`；`fn f(a, b) { return a }` + `f 1` | 全部拒绝 | `arity`@callee；文案含实际数/期望数 |
 | LD-13 | S-023 | into 内 `get "k"`；`get "k" $`；into 内裸 `read`；`$ \|> write "out"` | 第一、二、四句合法；第三句 `arity`（0≠1） | `arity`@裸 `read`；文案含实际数/期望数 |
 | LD-14 | S-023 | `json_build "a"`；`json_build "a" 1`；`json_build` | 奇数拒绝；偶数/零个合法 | `arity`@`json_build`；文案含“even” |
-| LD-15 | S-007 | `a \|> (a + b)`；`a \|> f`（f 有参数） | 两例都拒绝 | `pipe_rhs`@RHS 首 token（结构错）；`bare_fn_ref`@`f`（有参 fn 被裸名引用，优先于 `pipe_rhs`，04 §2.1） |
+| LD-15 | S-007 | `a \|> (a + b)`；`a \|> f`（f 有参数） | 两例都拒绝 | `pipe_rhs`@RHS 首 token（结构错）；`bare_fn_ref`@`f`（有参 fn 被裸名引用，优先于 `pipe_rhs`，04 §1） |
 | LD-16 | S-007 | `(a \|> b) \|? c`；`a + b \|? c`；`a \|? b`（a 为变量） | 拒绝 | `fallback_lhs`@LHS 首 token；Hint 用 `fn` 包裹 |
 | LD-17 | S-023 | into 外 `$`；into 外 `$ = 1` | 拒绝 | `dollar_outside`@`$`；Hint 用 `into { … }` |
 | LD-18 | S-022 | `par { … }`；`let par = 1`；裸 `par`；`x.par` | 全部拒绝 | `not_implemented`@`par`；Hint 指向内核调度 |
