@@ -121,7 +121,7 @@ Phase 1 只消费静态元数据：`read` arity=1、`grep` arity=2、`write` ari
 - 单条命令：`tools/check-phase1.sh --case <ID>`（跑该 case 的全部 fixture）；Phase 1 全量：`tools/check-phase1.sh --all`；仓库全量：`tools/check-all.sh`（g3/g5/g7/g8 在收口时启用）。
 - 负例同时断言：`ok=0`、精确 `error_kind`/`line`/`col`、`message` 包含表中“文案要点”子串、`hint` 非空。
 - 位置与 span 口径完全以 [10 §4/§5](../../spec/dsl/10-ast-position.md) 为准；词法/解析为 `syntax`，加载用 07 §3.1 的 kind；未闭合定界符指向最内层未匹配的开定界符（10 §5）。各负例的精确 `line`/`col` 由 `.err.json` 固定。
-- 加载期 `dup_key` 只指 emit payload 对象字面量内的重复键（静态可判，位置在 emit 语句的 payload 处）；运行期 `dup_key_json` 覆盖 `args_json` 与 `ctx_json` 两处协议重复键，不在 Phase 1。header 语义错误与 `recursion` 的位置按 10 §5/§6。
+- 加载期 `dup_key` 只指 emit payload 对象字面量内的重复键（静态可判，位置指向重复出现的键字面量 token start，即第二个及以后同名键，10 §5）；运行期 `dup_key_json` 覆盖 `args_json` 与 `ctx_json` 两处协议重复键，不在 Phase 1。header 语义错误与 `recursion` 的位置按 10 §5/§6。
 
 ### 5.1 01 词法
 
@@ -181,7 +181,7 @@ Phase 1 只消费静态元数据：`read` arity=1、`grep` arity=2、`write` ari
 | EM-02 | S-006 | 多行 `emit "e" { "path": "src/a.c", "count": n + 1 }` | `(pobj …)`；值位为 `(binary + …)` | — |
 | EM-03 | S-006 | `emit "e" { "items": [1, 2, 3] }` | `(pobj …)` 含 `(parr …)` | — |
 | EM-04 | S-006 | `emit "e" { "a": 1, }`；`emit "e" { a: 1 }`；`emit "e" { "a": 1 }.x` | 全部拒绝 | `syntax`@`}`/键 token/`.`；文案含“trailing comma”/“string key”/“payload suffix” |
-| EM-05 | S-006/S-019 | `emit "e" { "a": 1, "a": 2 }`；未声明事件 | 拒绝 | `dup_key`@第二个 `"a"`（加载期，emit 对象字面量）；`event_not_declared`@事件字符串 |
+| EM-05 | S-006/S-019 | `emit "e" { "a": 1, "a": 2 }`；未声明事件 | 拒绝 | `dup_key`@第二个及以后同名键字面量 token start（加载期，emit 对象字面量）；`event_not_declared`@事件字符串 |
 
 ### 5.5 03/06/07 加载期校验
 
@@ -201,7 +201,7 @@ Phase 1 只消费静态元数据：`read` arity=1、`grep` arity=2、`write` ari
 | LD-12 | S-017 | 裸 `read`；`x \|> read "p"`；into 内 `grep "m"`；into 外 `get "k"`；`fn f(a, b) { return a }` + `f 1` | 全部拒绝 | `arity`@callee；文案含实际数/期望数 |
 | LD-13 | S-023 | into 内 `get "k"`；`get "k" $`；into 内裸 `read`；`$ \|> write "out"` | 第一、二、四句合法；第三句 `arity`（0≠1） | `arity`@裸 `read`；文案含实际数/期望数 |
 | LD-14 | S-023 | `json_build "a"`；`json_build "a" 1`；`json_build` | 奇数拒绝；偶数/零个合法 | `arity`@`json_build`；文案含“even” |
-| LD-15 | S-007 | `a \|> (a + b)`；`a \|> f`（f 有参数） | 拒绝 | `pipe_rhs`@RHS 首 token；Hint 用 call |
+| LD-15 | S-007 | `a \|> (a + b)`；`a \|> f`（f 有参数） | 两例都拒绝 | `pipe_rhs`@RHS 首 token（结构错）；`bare_fn_ref`@`f`（有参 fn 被裸名引用，优先于 `pipe_rhs`，04 §2.1） |
 | LD-16 | S-007 | `(a \|> b) \|? c`；`a + b \|? c`；`a \|? b`（a 为变量） | 拒绝 | `fallback_lhs`@LHS 首 token；Hint 用 `fn` 包裹 |
 | LD-17 | S-023 | into 外 `$`；into 外 `$ = 1` | 拒绝 | `dollar_outside`@`$`；Hint 用 `into { … }` |
 | LD-18 | S-022 | `par { … }`；`let par = 1`；裸 `par`；`x.par` | 全部拒绝 | `not_implemented`@`par`；Hint 指向内核调度 |
