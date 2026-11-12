@@ -25,7 +25,7 @@ read path
 ```
 
 - `path` 必须是 `string`，否则 `constraint`，handler 不执行。
-- 相对路径以 **workspace root** 为基准解析，不以进程 cwd 为基准；`..` 在解析时消解（[06 §5.1](../dsl/06-security.md) 只规定判定对象是解析后的绝对路径，未规定相对路径基准，本条目取 root）。
+- 相对路径以 **workspace root** 为基准解析，不以进程 cwd 为基准；绝对路径直接判定。`..` 在解析时消解（[06 §5.1](../dsl/06-security.md)，该基准已写入正文）。
 - 不接受 `$` 注入：`into` 块内调用 `read` 不会补参数。管道值只追加不替换，因此 `x |> read "p"` = `read("p", x)`，两个实参 → `constraint`。
 - 裸名 `read` 是零参调用（[03 §2](../dsl/03-semantics.md)），`[]` ≠ 1 → `constraint`。
 
@@ -82,9 +82,9 @@ read path
 
 | 证据 | 锚点 | 性质 |
 | --- | --- | --- |
-| 调用形态 | [08 §1](../dsl/08-examples.md) L10、L39、L65 | 规范示例 |
+| 调用形态 | [08 §1](../dsl/08-examples.md) L10、L41、L64 | 规范示例 |
 | 工具边界与侧车 | [05 §1.1–1.2](../dsl/05-data-metadata.md) L9-L25 | 规范正文 |
-| 截断与粘性 | [05 §1.4](../dsl/05-data-metadata.md) L40-L51、[D-008](../../decisions/D-008.md) L48-L56 | 规范 + 决策 |
-| 路径约束 | [06 §5.1](../dsl/06-security.md) L81-L91 | 规范正文 |
+| 截断与粘性 | [05 §1.4](../dsl/05-data-metadata.md) L41-L53、[D-008](../../decisions/D-008.md) L48-L56 | 规范 + 决策 |
+| 路径约束 | [06 §5.1](../dsl/06-security.md) L81-L93 | 规范正文 |
 | `ToolDef` 字段 | [07 §1](../dsl/07-runtime.md) L15-L23 | 规范正文 |
-| 可捕获集 | [04 §2.1](../dsl/04-pipeline-errors.md) L41-L52 | 规范正文 |
+| 可捕获集 | [04 §2.1](../dsl/04-pipeline-errors.md) L41-L54 | 规范正文 |

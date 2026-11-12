@@ -28,7 +28,7 @@ json_build k 3                         # 键可以来自变量
 ```
 
 - 实参按书写顺序成对解释：第 0、2、4… 位是键，必须是 `string`；第 1、3、5… 位是值，可为任意六类 payload。
-- 0 个实参 → `{}`，合法。
+- 0 个实参 → `{}`，合法（空结果契约见 [README](README.md) §4.1）。
 - 变长：`params_schema` 为 NULL。按 [03 §6](../dsl/03-semantics.md)，schema 没有固定 arity 或为变长时 **不注入 `$`**；即使声明 `accepts_context: true` 也不会注入，故契约为 `false`，避免脚本误以为可以省略末参。
 - 没有“分隔符”“类型标记”等额外参数；不带键的类型推断，`1` 是 number、`"1"` 是 string。
 - **注册状态（本条目主张）**：`json_build` 属于**可选注册集**，不是 MVP 必备五件套。未注册时脚本调用报加载期 `unknown_tool`（[07 §3.1](../dsl/07-runtime.md)），不产生运行期行为；本目录不把它计入 M2/M10 的必过夹具，避免把未定项变成门禁。需正文跟进：在 07 §4 的 `Available:` 示例或 §7 用一句标注“可选工具”。
@@ -53,7 +53,7 @@ json_build k 3                         # 键可以来自变量
 | `max_tool_calls`/`timeout_ms` 超限、策略强杀 | `limit`/`revoked` | 边界检查 | 否 |
 | 未归类 | `internal` | — | 否 |
 
-- **不产生 `constraint`**：该工具没有固定 arity 与 schema，运行时没有可执行的形状检查；逐位校验只能由 handler 做，因此失败一律归 `invalid_input`。这与固定 arity 工具“schema 不符 → `constraint`”的划分不同，是 [README](README.md) §5 规则 3 的直接结果。
+- **不产生 `constraint`**：变长工具没有固定 `m`，加载期不做个数校验；逐位校验（成对、键为 `string`、键不重复）只能由 handler 做，因此失败归 `invalid_input`。固定 arity 工具的个数不符按现行正文归运行期 `constraint`（见 [README](README.md) §2.1），两者的分界是“是否有固定 schema”。
 - 重复键归 `invalid_input` 而非 `dup_key`：`dup_key` 是加载期类别，只用于 emit 字面量与 args JSON（[07 §3.1](../dsl/07-runtime.md)）；运行期枚举里没有它，且这里的重复是 handler 在数据里发现的。
 - 嵌套深度不设 `json_build` 专属上限；调用层数由 `max_tool_calls` 与 `timeout_ms` 兜底，**结果深度**按 `max_payload_depth` 校验（该字段语义扩为通用 JSON payload 深度上限，见 [T-004](T-004-tool-json-parse.md) §2），超限 → `limit`。
 

@@ -80,10 +80,10 @@ ReDoS 风险明确记录为“本期不主张”：没有长度上限与超时�
 | --- | --- | --- |
 | 管道追加 | [04 §1](../dsl/04-pipeline-errors.md) L8-L14、[08 §1](../dsl/08-examples.md) L11 | 规范正文 + 示例 |
 | 空数组 | [S-009](../S-009-truncation.md) L14 | 规格条目 |
-| 数组内建字段 | [03 §8](../dsl/03-semantics.md) L83-L85、[08 §4](../dsl/08-examples.md) L67 | 规范正文 |
-| 截断与粘性 | [D-008](../../decisions/D-008.md) L48-L56、[05 §1.4](../dsl/05-data-metadata.md) L40-L51 | 决策 + 规范 |
+| 数组内建字段 | [03 §8](../dsl/03-semantics.md) L83-L85、[08 §4](../dsl/08-examples.md) L66 | 规范正文 |
+| 截断与粘性 | [D-008](../../decisions/D-008.md) L48-L56、[05 §1.4](../dsl/05-data-metadata.md) L41-L53 | 决策 + 规范 |
 | 正则作为字符串 | `docs/design/dsl-spec-v0.1.md` L434 | 历史输入 |
 
-### 与示例的已知不一致
+### 空匹配的判定
 
-[08 §1](../dsl/08-examples.md) L12、L41、L66 用 `matches != null` 判断“有没有匹配”。本条目按 [S-009](../S-009-truncation.md) 把无匹配定义为 `[]`，而 `[] != null` 恒为 `true`，条件不起过滤作用。正确写法是 `matches.length > 0`（`length` 见 [03 §8](../dsl/03-semantics.md)）。这是正文示例的问题，本目录不修改正文。
+`grep` 无匹配返回 `[]`，不是 `null`；因此 `matches != null` 恒真。08 示例 1 与 4 已改为 `matches.length > 0`（[08 §1](../dsl/08-examples.md) L12、[08 §4](../dsl/08-examples.md) L65）；示例 3 改为直接 `return content |> grep "TODO"`（[08 §3](../dsl/08-examples.md) L42），不再判空。[03 §8](../dsl/03-semantics.md) 也补了“空数组与 null 不等价”。本条目固定 `[]` 的定义，不随示例写法变化。

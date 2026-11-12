@@ -86,12 +86,12 @@ $ |> get "port"                 # = get("port", $)
 
 | 证据 | 锚点 | 性质 |
 | --- | --- | --- |
-| 逃逸写法 | [05 §1.3](../dsl/05-data-metadata.md) L29-L38、[D-008](../../decisions/D-008.md) L51 | 规范 + 决策 |
+| 逃逸写法 | [05 §1.3](../dsl/05-data-metadata.md) L29-L39、[D-008](../../decisions/D-008.md) L51 | 规范 + 决策 |
 | 注入规则 | [03 §6](../dsl/03-semantics.md) L57-L72、[D-007](../../decisions/D-007.md) L58 | 规范 + 决策 |
 | 字段/索引语义 | [03 §8](../dsl/03-semantics.md) L83-L85 | 规范正文 |
 | `accepts_context` 字段 | [07 §1](../dsl/07-runtime.md) L15-L23 | 规范正文 |
-| 旧文点分路径写法 | `docs/design/dsl-spec-v0.1.md` L143-L145 | 历史输入（**未被 rev.1 沿用**） |
+| 与旧文的差异 | `docs/design/dsl-spec-v0.1.md` L143-L145 | 历史输入（**未被 rev.1 沿用**） |
 
 ### 与旧文的差异
 
-`v0.1` 的 `get "server.port"` 把字符串当点分路径。rev.1 没有采纳该语义：`$.server.port` 已由字段访问承担（[08 §2](../dsl/08-examples.md) L25-L26），`get` 在 [D-008](../../decisions/D-008.md) 中被重新定义为“读 payload 自带键”的逃逸通道。因此本条目只定义单键查找；点分路径不实现，也不作为兼容别名保留。
+`v0.1` 的 `get "server.port"` 把字符串当点分路径。rev.1 没有采纳该语义：`$.server.port` 已由字段访问承担（[08 §2](../dsl/08-examples.md) L27-L28），`get` 在 [D-008](../../decisions/D-008.md) 中被重新定义为“读 payload 自带键”的逃逸通道。因此本条目只定义单键查找；点分路径不实现，也不作为兼容别名保留。

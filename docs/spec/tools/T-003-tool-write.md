@@ -28,7 +28,8 @@ write "issues.txt" (a + b)              # 第二个实参是分组表达式
 
 - `path` 必须是 `string`；`content` 可以是任意六类 payload。任一参数缺失（个数 ≠ 2）或 `path` 非 `string` → `constraint`，handler 不执行。
 - `content` 为 `string` 时，写入其原始 UTF-8 字节，不额外加引号或换行；为其他五类时，写入该值的 JSON 序列化结果（紧凑、无尾随换行）。因此 `write "x" matches`（`matches` 为数组）写出的字节与其 JSON 文本相同。
-- `write` **不声明** `accepts_context`（[08 §2](../dsl/08-examples.md) L31）：`into` 块内 `write "out.txt"` 只有 1 个实参，不注入 → `constraint`；要写 `$` 必须显式写或走管道。
+- 空内容：`content == ""` 时写 0 字节，仍返回 `null`，不是错误（空结果契约见 [README](README.md) §4.1）。
+- `write` **不声明** `accepts_context`（[08 §2](../dsl/08-examples.md) L33）：`into` 块内 `write "out.txt"` 只有 1 个实参，不注入 → `constraint`；要写 `$` 必须显式写或走管道。
 - 没有追加、偏移、权限、编码等可选参数；这些属于内核工具注册的扩展决定，不在本契约。
 
 ## 2. 输出
@@ -48,12 +49,12 @@ write "issues.txt" (a + b)              # 第二个实参是分组表达式
 | `content` 序列化 > `max_input_bytes` | `limit` | 未执行 | 否 |
 | 父目录不存在（`ENOENT`/`ENOTDIR`） | `not_found` | 执行并失败 | 是 |
 | 目标是目录（`EISDIR`） | `invalid_input` | 执行并失败 | 是 |
-| 操作系统拒绝访问（`EACCES`/`EPERM`）、空间耗尽（`ENOSPC`） | `denied` | 执行并失败 | 否 |
-| 可重试 I/O（`EIO`/`EBUSY`） | `transient` | 执行并失败 | 是 |
+| 操作系统拒绝访问（`EACCES`/`EPERM`） | `denied` | 执行并失败 | 否 |
+| 磁盘/配额耗尽（`ENOSPC`/`EDQUOT`）、可重试 I/O（`EIO`/`EBUSY`） | `transient` | 执行并失败 | 是 |
 | `max_tool_calls`/`timeout_ms` 超限、策略强杀 | `limit`/`revoked` | 边界检查 | 否 |
 | 未归类 | `internal` | — | 否 |
 
-- `ENOSPC` 归 `denied` 而不是 `transient`：重试不会成功，且静默降级会掩盖磁盘故障。
+- 磁盘/配额耗尽（`ENOSPC`/`EDQUOT`）归 `transient`，不归 `denied`：这不是权限问题；清理空间或改写备用路径后可重试，且必须可捕获，脚本才能降级。`denied` 只用于策略拒绝与 OS 权限拒绝（`EACCES`/`EPERM`）。
 - 本工具**不承诺原子写**（无临时文件 + rename）。`transient` 失败时目标可能已被截断或留下部分内容。原子性属于实现增强，不在本期契约主张。
 - 失败前已发生的截断不可回滚，与 [04 §3](../dsl/04-pipeline-errors.md)“副作用不回滚”一致。
 
@@ -76,6 +77,7 @@ write "issues.txt" (a + b)              # 第二个实参是分组表达式
   - 路径 6/6；写不存在的 `/workspace/new.txt` 必须允许，父目录是 symlink 指向界外必须拒绝；
   - 字符串与非字符串内容各 1 例，落盘字节逐字节比对；
   - 粘性 1 例：`read` 截断 → `write` → `(write ...).truncated == true`；
+  - 空内容 1 例：`content == ""` 时目标为 0 字节且返回 `null`；
   - `into` 内 `write "out.txt"`（不写 `$`）必须报 `constraint` 且 handler 未执行；
   - `content` 超 `max_input_bytes` 1 例：报 `limit`、不可捕获、handler 未执行，且目标文件保持原样（不得先截断再失败）。
 
@@ -83,10 +85,10 @@ write "issues.txt" (a + b)              # 第二个实参是分组表达式
 
 | 证据 | 锚点 | 性质 |
 | --- | --- | --- |
-| 调用形态 | [08 §1](../dsl/08-examples.md) L13、L27、L49、L83 | 规范示例 |
-| 不声明 context | [08 §2](../dsl/08-examples.md) L31 | 规范示例说明 |
+| 调用形态 | [08 §1](../dsl/08-examples.md) L13、L29、L47、L82 | 规范示例 |
+| 不声明 context | [08 §2](../dsl/08-examples.md) L33 | 规范示例说明 |
 | 管道追加 | `docs/design/dsl-spec-v0.1.md` L117-L121 | 历史输入 |
-| 路径规则 | [06 §5.1](../dsl/06-security.md) L81-L91、[D-014](../../decisions/D-014.md) L50 | 规范 + 决策 |
+| 路径规则 | [06 §5.1](../dsl/06-security.md) L81-L93、[D-014](../../decisions/D-014.md) L50 | 规范 + 决策 |
 | 侧车与粘性 | [05 §1.1–1.4](../dsl/05-data-metadata.md) L9-L51 | 规范正文 |
 | `params_schema`/`accepts_context` | [07 §1](../dsl/07-runtime.md) L15-L23 | 规范正文 |
 | 输入上限（本条目主张） | [07 §2](../dsl/07-runtime.md) 的 `ExecLimits` 无输入字段 | 规范缺口 |
