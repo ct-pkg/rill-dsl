@@ -3,7 +3,7 @@
 - battle：B3
 - judge：EDITOR
 - 立案依据：AGENTS.md §7.2 B-5
-- 审理对象：`battle/B3/seats/advocate.md`、`challenger.md`、`pragmatist.md`
+- 审理对象：`battle/B3/seats/advocate.md`、`battle/B3/seats/challenger.md`、`battle/B3/seats/pragmatist.md`
 - 基线：`rill-dsl` HEAD `033e5860406b91bbf226a5aa42a1818d520d28c0`；`ct-lang` 当前 HEAD `6c21f26d505fff782d4f51e4d20a95f6710794f8`
 - 范围：缺省授权、热更新 | 快照 vs 实时、审批归属、参数约束强度
 
@@ -47,11 +47,11 @@
 
 ## 3. 主张书（claim.md 索引）
 
-未落盘 `claim.md`；主张以 `seats/advocate.md` 为准（§3–§6 逐条判据 C1.1–C4.6、§7 落点清单）。
+未落盘 `claim.md`；主张以 `battle/B3/seats/advocate.md` 为准（§3–§6 逐条判据 C1.1–C4.6、§7 落点清单）。
 
 ## 4. 反证清单（counter.md 索引）
 
-未落盘 `counter.md`；反证以 `seats/challenger.md` 为准（§1 三层断点、§2–§5 攻击矩阵、§6 失效层分布、§7 反向锚点）。
+未落盘 `counter.md`；反证以 `battle/B3/seats/challenger.md` 为准（§1 三层断点、§2–§5 攻击矩阵、§6 失效层分布、§7 反向锚点）。
 
 ## 5. 出证（核实命令 / 输出 / 环境）
 

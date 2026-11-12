@@ -3,7 +3,7 @@
 - battle：B1
 - judge：EDITOR（裁判席）
 - 立案依据：AGENTS.md §7.2 B-5（用户指定 `battle: B1/B2/B3`）
-- 审理对象：`battle/B1/seats/advocate.md`、`challenger.md`、`pragmatist.md`
+- 审理对象：`battle/B1/seats/advocate.md`、`battle/B1/seats/challenger.md`、`battle/B1/seats/pragmatist.md`
 - 基线：`rill-dsl` HEAD `033e5860406b91bbf226a5aa42a1818d520d28c0`（工作树仅 `?? battle/`）；`ct-lang` 当前 HEAD `6c21f26d505fff782d4f51e4d20a95f6710794f8`
 - 已拍板前置：D-001（调用统一空格、括号只分组），不复审
 
@@ -45,11 +45,11 @@
 
 ## 3. 主张书（claim.md 索引）
 
-未落盘 `claim.md`；主张以上述 `seats/advocate.md` 为准（§0 结论速览、§2–§6 逐条主张、§7 合并文法）。
+未落盘 `claim.md`；主张以上述 `battle/B1/seats/advocate.md` 为准（§0 结论速览、§2–§6 逐条主张、§7 合并文法）。
 
 ## 4. 反证清单（counter.md 索引）
 
-未落盘 `counter.md`；反证以 `seats/challenger.md` 为准（§1–§5 的 S/R/L 分级反例、§6 交叉耦合、§8 可证伪预测）。
+未落盘 `counter.md`；反证以 `battle/B1/seats/challenger.md` 为准（§1–§5 的 S/R/L 分级反例、§6 交叉耦合、§8 可证伪预测）。
 
 ## 5. 出证（核实命令 / 输出 / 环境）
 
