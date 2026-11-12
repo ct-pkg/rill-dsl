@@ -4,7 +4,7 @@
 > 状态词严格区分：
 >
 > - `accepted`：已拍板且已验收；当前 **0 条**。
-> - `unverified`：已拍板、但尚无实现或无门禁证据；当前 S-001..S-024 与 `dsl/` 全部正文。
+> - `unverified`：已拍板、但尚无实现或无门禁证据；当前 S-001..S-024、T-001..T-006 与 `dsl/` 全部正文。
 > - `pending`：未拍板，验收判据未定；见 [PENDING](PENDING.md)。不得当作已生效规则引用。
 
 ## 1. 规范正文
@@ -43,7 +43,15 @@
 | S-022 | `par` 保留字 | unverified | D-019 | [S-022](S-022-par-keyword.md) |
 | S-023 | 嵌套 `into` | unverified | D-017 | [S-023](S-023-nested-into.md) |
 | S-024 | 值层：拼接与 `length` | unverified | D-016 | [S-024](S-024-value-concat-length.md) |
+| T-001 | 工具 `read` 契约 | unverified | 工具层 | [T-001](tools/T-001-tool-read.md) |
+| T-002 | 工具 `grep` 契约 | unverified | 工具层 | [T-002](tools/T-002-tool-grep.md) |
+| T-003 | 工具 `write` 契约 | unverified | 工具层 | [T-003](tools/T-003-tool-write.md) |
+| T-004 | 工具 `json_parse` 契约 | unverified | 工具层 | [T-004](tools/T-004-tool-json-parse.md) |
+| T-005 | 工具 `get` 契约 | unverified | 工具层 | [T-005](tools/T-005-tool-get.md) |
+| T-006 | 工具 `json_build` 契约 | unverified | 工具层 | [T-006](tools/T-006-tool-json-build.md) |
 | P-001..P-021 | 未决问题 | pending | 无 | [PENDING](PENDING.md) |
+
+命名空间：`S-*` 是 DSL 对外行为条目，`T-*` 是工具契约条目，两者独立编号、互不复用（工具目录曾用 `S-021..S-026`，已改为 `T-001..T-006`）。`T-*` 的状态规则、条目格式与验收约定同本文 §3、§4。
 
 ## 3. 条目格式
 
