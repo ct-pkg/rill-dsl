@@ -121,7 +121,7 @@ Phase 1 只消费静态元数据：`read` arity=1、`grep` arity=2、`write` ari
 - 单条命令：`tools/check-phase1.sh --case <ID>`（跑该 case 的全部 fixture）；Phase 1 全量：`tools/check-phase1.sh --all`；仓库全量：`tools/check-all.sh`（g3/g5/g7/g8 在收口时启用）。
 - 负例同时断言：`ok=0`、精确 `error_kind`/`line`/`col`、`message` 包含表中“文案要点”子串、`hint` 非空。
 - 位置与 span 口径完全以 [10 §4/§5](../../spec/dsl/10-ast-position.md) 为准；词法/解析为 `syntax`，加载用 07 §3.1 的 kind；未闭合定界符指向最内层未匹配的开定界符（10 §5）。各负例的精确 `line`/`col` 由 `.err.json` 固定。
-- 加载期 `dup_key` 只指 emit payload 对象字面量内的重复键（静态可判，位置在 emit 语句的 payload 处）；运行期 `dup_key` 只指 `args_json`/`ctx_json` 协议重复键，不在 Phase 1。header 语义错误与 `recursion` 的位置按 10 §5/§6。
+- 加载期 `dup_key` 只指 emit payload 对象字面量内的重复键（静态可判，位置在 emit 语句的 payload 处）；运行期 `dup_key_json` 覆盖 `args_json` 与 `ctx_json` 两处协议重复键，不在 Phase 1。header 语义错误与 `recursion` 的位置按 10 §5/§6。
 
 ### 5.1 01 词法
 
