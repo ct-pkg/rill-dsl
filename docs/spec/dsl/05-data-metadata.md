@@ -33,7 +33,7 @@ meta    := { truncated: bool, original_size: number }
 | `get "truncated" x` | 读 `payload` 自带的 `truncated` 键（逃逸写法，普通工具调用） |
 | `x.value` | 不特殊处理；按普通字段访问，通常是 `null` |
 
-- 伪字段对六类 payload 都合法：`truncated` 返回 `false`/`true`，`original_size` 返回本值序列化字节数（不是 `0`），都不返回 `null`（`meta` 总有值）。
+- 伪字段对六类 payload 都合法，都不返回 `null`：`truncated` 返回 `false`/`true`；`original_size` 按 §1.4 公式——本次未截断且无上游截断时是**本值序列化字节数**（不是 `0`），有上游截断时取上游 `original_size` 的最大值。
 - 读取伪字段必须先分组：`(read "big").truncated`；`read "big".truncated` 是 `read("big".truncated)`。
 - 对象 payload 自身含 `truncated` 键时，字段访问返回 `meta` 值；要业务值必须用 `get "truncated" x`。
 - `get` 只做**单键**查找：`get "server.port" x` 查的是名为 `server.port` 的键，不会拆成 `server` → `port`。v0.1 的点分路径语义已废弃（未被 rev.1 沿用）；已知路径用字段访问 `x.server.port`，动态嵌套键串联 `get "port" (get "server" x)`。

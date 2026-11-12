@@ -47,7 +47,7 @@ fallback_expr := or_expr ("|?" or_expr)*        # 左结合，高于 |>
 | 瞬时失败（可重试） | `transient` | 捕获 |
 | 策略拒绝或 OS 权限拒绝 | `denied` | **不捕获** |
 | 参数值不满足约束（路径/命令/域名/类型/大小） | `constraint` | **不捕获** |
-| 审批 | `approval_required` / `approval_denied` | **不捕获** |
+| 审批 | `approval_required` / `approval_denied` / `approval_stale` / `approval_reused` | **不捕获** |
 | 资源上限，或输入被上游截断 | `limit` | **不捕获** |
 | 策略撤销/脚本变更 | `revoked` / `script_changed` | **不捕获** |
 | 内核内部错误 | `internal` | **不捕获** |

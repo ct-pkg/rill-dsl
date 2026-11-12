@@ -83,7 +83,7 @@ fn name(p1, p2) { ... }
 
 - `x.k`：`json_object` 取键，缺键返回 `null`；`json_array` 支持内建字段 `length` 与侧车伪字段 `truncated`/`original_size`；其他类型 → `null`（不报错）。
 - `x[i]`：`json_array` 取第 `i` 个元素（0 基），越界返回 `null`；`json_object` 用 `x["k"]` 取键；其他类型返回 `null`。
-- `length`：唯一内建字段，只挂在 `json_array` 上，返回元素个数（`number`）。`json_object`、`string`、`null` 及其他值访问 `.length` → `null`；`string` 长度由工具取 [D-016]。
+- `length`：唯一内建字段，只挂在 `json_array` 上，返回元素个数（`number`）。`json_object`、`string`、`null` 及其他值访问 `.length` → `null`；`string` 长度由工具取 [D-016]。侧车伪字段 `truncated`/`original_size` 对六类值都可用，规则见 [05 §1.3](05-data-metadata.md)。
 - 空数组与 `null` 不等价：搜索类工具“无匹配”返回空数组（如 `grep` 返回 `[]`），不是 `null`；因此 `x != null` 对空数组恒真，判断有无结果必须写 `x.length > 0`。
 - `x.length` 与 `$.length` 是同一条规则：`$.length` 只在 `$` 持有数组时成立，不是特殊语法；数组绑定给变量后写 `deps.length` 等价。
 - 字段名可以是关键字之外的任意 `IDENT`；`x.if` 是语法错误。
