@@ -39,11 +39,7 @@ read "config.json" |> json_parse into {
 
 fn find_issues(path) {
     let content = read path
-    let matches = content |> grep "TODO"
-    if matches.length > 0 {
-        return matches
-    }
-    return null
+    return content |> grep "TODO"
 }
 
 let a = find_issues "src/a.c"
@@ -57,7 +53,7 @@ write "issues.txt" (a + b)
 | --- | --- |
 | `find_issues("src/a.c")` → `find_issues "src/a.c"` | D-001/D-002：括号只分组；统一空格形态，避免示例教两套写法 |
 | `write "issues.txt" a + b` → `write "issues.txt" (a + b)` | 旧写法在新文法下是 `write("issues.txt", a)` 再 `+ b`，会先调用再相加；加括号才是“把 `a + b` 作为一个实参” [D-002] |
-| `if matches != null` → `if matches.length > 0` | `grep` 无匹配返回空数组，`!= null` 恒真，分支永远进入；`length` 只挂 `json_array` [D-016] |
+| 删除 `if matches != null { ... } return null`，改为直接 `return` 匹配数组 | 两处问题：`!= null` 对空数组恒真；且无匹配时返回 `null` 会让下游 `a + b` 变成 `null + json_array`，运行时 `E_TYPE`。`grep` 无匹配已返回 `[]`，直接返回数组即可用数组拼接 [D-016] |
 
 ## 4. 示例 4：emit 事件
 
@@ -104,7 +100,7 @@ read "pkg.json" |> json_parse into {
 | --- | --- | --- | --- |
 | 1 | D-001/D-002 | 空格实参、管道、if/块、隐式 await | S-001、S-002、S-004 |
 | 2 | D-005、D-007 | into、`$`、管道 + into 组合 | S-005、S-007 |
-| 3 | D-002、D-005、D-009 | fn、return、分组实参、函数调用 | S-002、S-005、S-010、S-024 |
+| 3 | D-002、D-005、D-016 | fn、return、分组实参、函数调用、数组拼接 | S-002、S-005、S-024 |
 | 4 | D-006、D-008 | emit payload、数组内建字段 | S-006、S-009 |
 | 5 | D-006、D-009 | 嵌套 into、字符串拼接、数组 `.length` | S-006、S-011、S-023、S-024 |
 
