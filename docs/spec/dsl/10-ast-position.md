@@ -103,6 +103,7 @@ let x = read "a" |> grep "m"
 - `# allow: *` → `(entry allow *)`；`# allow:` 后为空 → `(entry allow)`（AST 合法，加载期 `no_allow_header`）。
 - `# dsl-version: 1` 校验通过后**擦除**，不进入 AST；其他数字 → `version`，位置指数字 token；非数字 → `syntax`。
 - 不匹配四种前缀的 `#` 行是注释，不产生 `entry`；`# approval:` 因此不出现、不报错。
+- header 解析只做词法与结构：`# allow:` 列表里的名字**不在解析期校验**是否注册；未注册名不报错、不产生诊断，按 [06 §2](06-security.md) 在加载期被忽略。
 
 ## 7. 验收锚点
 
