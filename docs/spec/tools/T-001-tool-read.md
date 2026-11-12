@@ -67,7 +67,7 @@ read path
 | `path` | argv / 域名 / emit 类 | 不适用 | 不声明 |
 
 - 夹具沿用 [S-017](../S-017-path-constraint.md) 六例：`/workspace/a.txt` 允、`/workspace/../../etc/passwd` 拒、symlink→`/etc` 拒、symlink→`/workspace/sub` 允、`/workspace-evil/x` 拒、`/workspace/new.txt` 允。最后一条对 `read` 只证明**约束放行**；文件不存在时 handler 随后报 `not_found`，两者不矛盾。
-- `args_json` 只解析一次；重复键 `E_DUP_KEY` 由运行时统一执行（[06 §5.4](../dsl/06-security.md)）。
+- `args_json` 只解析一次；协议级重复键 `dup_key_json` 由运行时在 handler 之前判定（[07 §3.2](../dsl/07-runtime.md)）。
 
 ## 5. 验收命令与阈值
 

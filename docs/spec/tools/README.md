@@ -162,7 +162,7 @@
 | `write.path` | 同上，另加父目录 realpath、basename 非 symlink | 必做 | 声明 |
 | 固定 arity 工具与 `json_build` 的 arity | 加载期 `arity`，不属于第三层（§2.1） | 必做 | 声明 |
 | 固定 arity 工具的标量类型 | 运行期 schema 浅校验（`string`） | 必做 | 声明 |
-| `args_json` 单次解析、重复键 `E_DUP_KEY`、约束与 handler 同源 | 双通道 | 必做 | 运行时统一执行 |
+| `args_json` 单次解析、协议重复键 `dup_key_json`、约束与 handler 同源 | 双通道 | 必做 | 运行时统一执行 |
 | 隐式 `$` 具名并进入同一套 schema | 双通道 | 必做 | `get.obj` |
 | `read.path` 的 `DENY_PATTERN`（如 `*.key`） | 正则黑名单 | 本期不主张 | 不声明 |
 | `grep.pattern` 长度/复杂度上限（ReDoS） | 正则黑名单类 | 本期不主张 | 不声明；风险另记 |
