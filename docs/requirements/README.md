@@ -15,7 +15,7 @@
 | ID | 类型 | 内容 | 状态 | 依据 |
 | --- | --- | --- | --- | --- |
 | R-001 | 目标 | 以最少 token 表达工具调用与流程编排，语法边界由内核严格控制，安全由三层白名单兜底 | baseline | v0.1 开篇、§1 |
-| R-002 | 非目标 | agent 主循环、上下文压缩、记忆/跨脚本状态、审批、调度归内核，不进单次执行语法 | pending | [讨论稿 P1-4](../design/dsl-discussion.md#L269-L276)、[P1-9](../design/dsl-discussion.md#L317-L324) |
+| R-002 | 非目标 | agent 主循环、上下文压缩、记忆/跨脚本状态、审批、调度归内核，不进单次执行语法 | decided | [06 §2](../spec/dsl/06-security.md)、[D-013](../decisions/D-013.md)、[P1-4](../design/dsl-discussion.md#L269-L276)、[P1-9](../design/dsl-discussion.md#L317-L324) |
 | R-003 | 非目标 | MVP 不做并行；`par` 只讨论预留，不产生可执行能力 | pending | [讨论稿 P1-5](../design/dsl-discussion.md#L277-L284)、[P1-10](../design/dsl-discussion.md#L325-L332) |
 | R-004 | 非目标 | 不做类型系统、模块/import、try/catch、递归、通用对象字面量、正则字面量 | baseline | v0.1 §9（尚未重新拍板） |
 | R-005 | 约束 | 实现语言为 CT；但 CT 只作实现语言，运行期语义（动态值、管道、工具注册、事件）需自建 | pending | [讨论稿 §5](../design/dsl-discussion.md#L349-L366) |
@@ -28,6 +28,7 @@
 
 - `baseline`：v0.1 原文里的主张，当前只作讨论基线，**不等于用户已重新拍板**。
 - `pending`：方向被评审或用户提过，但结论未定，登记在 PENDING。
+- `decided`：已由决策记录或规范正文定死，但尚未实现/验收；与 `unverified` 的区别是后者专指可验收条目。
 - `active`：当前仓库治理规则，已生效。
 
 ## 3. 术语

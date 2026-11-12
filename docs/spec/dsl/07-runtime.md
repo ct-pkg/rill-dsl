@@ -73,6 +73,8 @@ struct ExecLimits {
 
 ## 3. 错误类别
 
+命名约定：`kind` 字段一律**小写 snake_case**（`arity`、`dup_key_json`）；`E_<KIND>` 是同一个 kind 的大写写法，只在需要错误常量/宏的地方使用（`E_ARITY` = `arity`），**不是两个 kind**。本表与 [04](04-pipeline-errors.md) 可以互写这两种形式。
+
 ### 3.1 加载期 `error_kind`
 
 | `error_kind` | 触发 |

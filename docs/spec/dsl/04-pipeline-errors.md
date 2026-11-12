@@ -1,6 +1,8 @@
 # 04 管道与错误
 
 > 规范版本 `v0.1 rev.1`；状态 `unverified`。本卷对应旧文 §4 R1/R2/R4，依据 D-007 与 D-010。
+>
+> 命名约定：本卷的 `E_PIPE_RHS`、`E_FALLBACK_LHS`、`E_ARITY` 等与 [07 §3](07-runtime.md) 的 `pipe_rhs`、`fallback_lhs`、`arity` 是**同一个 kind** 的两种写法；`kind` 字段一律小写 snake_case，`E_<KIND>` 只是需要错误常量时的大写形式，不是另一个 kind。
 
 ## 1. R1 隐式 await 与 R2 管道传参
 
