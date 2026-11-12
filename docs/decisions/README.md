@@ -18,7 +18,11 @@
 | D-012 | 2026-11-12 | accepted | EDITOR | 策略热更新用不可变快照 + 调用边界强杀 | [D-012](D-012.md) |
 | D-013 | 2026-11-12 | accepted | EDITOR | 审批在内核，DSL 零审批语法；边界一节 | [D-013](D-013.md) |
 | D-014 | 2026-11-12 | accepted | EDITOR | 参数约束按“必做/不做/deferred”分档硬化 | [D-014](D-014.md) |
-| D-015 | 2026-11-12 | accepted | USER | 错误格式统一为 `path:line:col: error:` + 详情 + Hint | [D-015](D-015.md) |
+| D-015 | 2026-11-12 | accepted | EDITOR | 错误格式统一为 `path:line:col: error:` + 详情 + Hint（技术裁定） | [D-015](D-015.md) |
+| D-016 | 2026-11-12 | accepted | EDITOR | 值层：`string + 标量` 拼接、`json_array.length` | [D-016](D-016.md) |
+| D-017 | 2026-11-12 | accepted | EDITOR | 嵌套 `into` 允许，内层 `$` 覆盖、退出恢复 | [D-017](D-017.md) |
+| D-018 | 2026-11-12 | accepted | EDITOR | `# dsl-version:` 接受 `1`，其他值 `E_VERSION` | [D-018](D-018.md) |
+| D-019 | 2026-11-12 | accepted | EDITOR | `par` 保留为关键字，出现即 `not_implemented` | [D-019](D-019.md) |
 
 ## 状态说明
 
@@ -28,4 +32,4 @@
 
 ## 未决项
 
-D-002..D-014 覆盖 B1/B2/B3 的 13 条争点；D-015 由用户指示定错误格式。仍无决策的条目见 [PENDING](../spec/PENDING.md)（P-007/P-009/P-010/P-013/P-014/P-017，以及 P-020/P-021 两个 undecidable 项）。
+D-002..D-014 覆盖 B1/B2/B3 的 13 条争点；D-015..D-019 是定稿所需的技术裁定（judge 为 EDITOR，不挂用户名义）。仍无决策的条目见 [PENDING](../spec/PENDING.md)（P-013/P-014/P-017，以及 P-020/P-021 两个 undecidable 项）。
