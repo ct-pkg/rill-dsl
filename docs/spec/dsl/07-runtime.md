@@ -83,7 +83,6 @@ struct ExecLimits {
 | `dup_decl` | 同作用域重复声明 |
 | `assign_undefined` | 赋值目标不存在 |
 | `immutable_assign` | 对不可变绑定/参数/循环变量/`$` 赋值 |
-| `condition_not_bool` | 条件不是 bool（可能延后到运行期） |
 | `loop_control` | `break`/`continue` 不在 `for` 内 |
 | `return_outside_fn` | `return` 不在 `fn` 内 |
 | `recursion` | 调用图有环 |
@@ -96,7 +95,7 @@ struct ExecLimits {
 
 ### 3.2 运行期 `error_kind`
 
-`not_found`、`invalid_input`、`transient`、`denied`、`constraint`、`approval_required`、`approval_denied`、`approval_stale`、`approval_reused`、`limit`、`revoked`、`internal`、`type`、`emit_schema`、`for_not_array`、`unconstrained_arg`。
+`not_found`、`invalid_input`、`transient`、`denied`、`constraint`、`approval_required`、`approval_denied`、`approval_stale`、`approval_reused`、`limit`、`revoked`、`internal`、`type`、`emit_schema`、`for_not_array`、`unconstrained_arg`、`condition_not_bool`。
 
 ## 4. 错误格式
 

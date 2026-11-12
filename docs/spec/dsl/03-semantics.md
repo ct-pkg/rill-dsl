@@ -10,7 +10,7 @@
 - 对象与数组是值，不是引用：`let` 绑定、`for` item、`fn` 参数、`fn` 返回值一律值拷贝（深拷贝）。项目已有的“item 值拷贝”硬约束在此沿用。
 - 相等：`null == null` 为 `true`；跨类型 `==` 为 `false`（不隐式转换）；对象/数组按结构化深比较。`<`/`>` 只接受 `number` 或 `string`，其他类型 → 运行时 `E_TYPE`。
 - 算术：`+` 支持 `number + number`（加）、`string + 标量`（拼接，标量按规范文本：`true`/`false`/`null`/数字无多余零）、`json_array + json_array`（连接）；`-` `*` `/` `%` 只接受 `number`；其他组合 → 运行时 `E_TYPE`。
-- 真值：条件位置只接受 `bool`；`null`/`number`/`string` 作条件 → 加载期 `E_CONDITION_NOT_BOOL`（示例中一律写显式比较）。
+- 真值：条件位置只接受 `bool`；非 `bool` → 运行时 `condition_not_bool`（值是动态的，加载期无法判定类型；示例中一律写显式比较）。
 
 ## 2. 名字解析
 
