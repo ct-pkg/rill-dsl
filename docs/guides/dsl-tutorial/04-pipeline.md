@@ -12,9 +12,10 @@ x |> grep "pat" =  grep("pat", x)      # grep arity=2；管道值补到第 2 位
 
 - 管道值**追加**在显式实参之后，不替换、不插队。
 - 管道只追加实参，不改变工具 arity：`x |> read "p"` 得到 2 个实参，`read` arity=1 → **加载期** `arity`，脚本不会执行到该调用。写管道时右侧工具的形参个数必须能容纳管道值。
-- 右侧必须是**可调用节点**：`call`；加载期解析为**零参调用**的裸 `IDENT`（裸名先解析成零参调用，再把管道值追加进去算 arity）；或首操作数是 `call` 的 fallback 链（如 `a |> (read |? read "f")`，允许分组）。
+- 右侧必须是**可调用节点**：`call`、加载期解析为**零参调用**的裸 `IDENT`（裸名先解析成零参调用，再把管道值追加进去算 arity），或首操作数是**可调用节点**的 `fallback_expr`（如 `a |> (read |? read "f")`、`a |> (f b |? g c)`，允许分组）。
 - `read p |> json_parse` 合法，是因为 `json_parse` arity=1 拿到 1 个管道值，不是因为 `json_parse` 零参。
-- 管道值追加到右侧 fallback 链**最左侧**的那个 `call`；`|?` 右侧不接收管道值。
+- 裸 `IDENT` 作右值时先做名字检查：若它解析为**有参数的 `fn`**，报 `bare_fn_ref`，不报 `pipe_rhs`；`a |> f`（`f` 有参）属于这种。
+- 管道值追加到右侧 fallback 链**最左侧**的那个调用；`|?` 右侧不接收管道值。
 - 右侧不是可调用节点 → 加载期 `pipe_rhs`，Hint 提示「管道右侧必须是调用」。
 
 ```rill
@@ -143,7 +144,10 @@ let cfg = load_config |? null
 | `if` 条件失败/非 `bool` | 中止包含该 `if` 的块 | 0 |
 | `for` 集合非数组 | 中止，`for_not_array` | 0 |
 | 循环体失败 | 中止 `for` 块，不继续下一轮 | 0 |
-| emit 超限 | 中止，`limit` | 0 |
+| emit 无订阅方/队列满 | 丢弃并记日志，继续执行 | 不变 |
+| emit 字节/深度超限 | 中止，`limit` | 0 |
+| emit schema 不符 | 中止，`emit_schema` | 0 |
+| emit 条数超 `max_emit_count` | 中止，`limit` | 0 |
 | 步数/调用数/超时/深度超限 | 中止整个执行，`limit` | 0 |
 | 策略在调用边界撤销 | 中止，`revoked` | 0 |
 

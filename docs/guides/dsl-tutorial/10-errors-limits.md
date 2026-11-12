@@ -42,7 +42,7 @@ src/run.rill:4:1: error: cannot assign to immutable binding 'count'.
 | 名字解析 | `unknown_tool`、`tool_not_allowed`、`event_not_declared`、`undefined_name`、`bare_fn_ref`、`shadow_tool`、`dup_decl` | 未注册工具或函数名（含可选的 `json_build` 未注册）、未授权工具、未声明事件、未定义名字、有参 fn 裸引用、遮蔽工具名、重复声明 |
 | 赋值/控制 | `assign_undefined`、`immutable_assign`、`loop_control`、`return_outside_fn` | 赋值目标不存在、改不可变绑定、break/continue 在 for 外、return 在 fn 外 |
 | 函数/调用 | `recursion`、`arity` | 调用图成环、`fn` 或固定 arity 工具的实参个数不符 |
-| 管道 | `pipe_rhs`、`fallback_lhs` | `\|>` 右侧不是可调用节点、`\|?` 链最左不是可调用节点 |
+| 管道 | `pipe_rhs`、`fallback_lhs` | `\|>` 右侧不是可调用节点（有参 `fn` 裸名另报 `bare_fn_ref`）、`\|?` 链最左不是可调用节点 |
 | emit | `dup_key` | payload 重复键 |
 | 执行一致性 | `policy_expansion_unapproved` | 策略扩张未审批 |
 | 保留语法 | `not_implemented` | `par` 等已保留但 MVP 不实现的语法 |
@@ -111,7 +111,7 @@ src/run.rill:4:1: error: cannot assign to immutable binding 'count'.
 | `policy_generation` | 本次执行使用的策略代 |
 | `approval_wait_ms` | 审批等待耗时 |
 
-注意：`let` 与 `emit` 是语句，不是 `expr_stmt`；`write` 是调用表达式语句，会作为 `expr_stmt` 贡献 `null`。只有最后一条表达式语句的值进入 `value_json`。
+注意：`let` 与 `emit` 是语句，不是 `expr_stmt`；`write` 是调用表达式语句，会作为 `expr_stmt` 贡献 `null`；`into` 块的值被丢弃，不进入 `value_json`。只有最后一条顶层表达式语句的值进入 `value_json`。
 
 ## 7. 读错误时的顺序
 

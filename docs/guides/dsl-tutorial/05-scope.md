@@ -8,9 +8,9 @@
 into_stmt := expr "into" block
 ```
 
-求值 `expr`，进入块，把结果绑定为块内只读的 `$`。块内最后一条 `expr_stmt` 的值是块的值（没有则为 `null`）。
+求值 `expr`，进入块，把结果绑定为块内只读的 `$`。`into` 是语句，块的值被丢弃（即使块内最后一条是 `expr_stmt`）；块内需要保留的结果请显式 `let` 绑定到变量，不要依赖块值。
 
-`into` 是**语句**，不是表达式。不要写 `let x = read "a" into { ... }`；需要保留结果就在块内 `let`。
+`into` 不是表达式。不要写 `let x = read "a" into { ... }`；需要保留结果就在块内 `let`。
 
 ```rill
 # allow: read, json_parse, get, write
