@@ -12,7 +12,7 @@ allow_line    := "# allow:" allow_list TERM
 allow_list    := "*" | ident_list
 deny_line     := "# deny:" ident_list TERM
 emit_line     := "# emit:" ident_list TERM
-version_line  := "# dsl-version:" NUMBER TERM          # [provisional: P-009]
+version_line  := "# dsl-version:" NUMBER TERM          # [D-018]
 ident_list    := IDENT ("," IDENT)*
 TERM          := NEWLINE | &EOF
 ```
@@ -23,7 +23,7 @@ TERM          := NEWLINE | &EOF
 - 缺少 `# allow:` 时有效工具集为空，加载拒绝 `E_NO_ALLOW_HEADER`（见 [06](06-security.md)）[D-011]。
 - `# deny:` 单独出现（无 `# allow:`）→ `E_DENY_WITHOUT_ALLOW` [D-011]。
 - `# allow: *` 表示“继承注册表级”，必须产出一条审计记录 [D-011]。
-- `# dsl-version:` 只接受 `1`；其他值 → `E_VERSION` [provisional: P-009]。
+- `# dsl-version:` 的文本必须严格为 `1`；其他数字 → `E_VERSION`，Hint：`only '# dsl-version: 1' is supported`；非数字 → `syntax` [D-018]。
 
 ## 2. 语句
 

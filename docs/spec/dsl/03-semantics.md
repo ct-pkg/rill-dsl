@@ -9,7 +9,7 @@
 - `number` 为 IEEE-754 双精度；±2^53 内的整数按整数语义比较、格式化为无小数点形式。
 - 对象与数组是值，不是引用：`let` 绑定、`for` item、`fn` 参数、`fn` 返回值一律值拷贝（深拷贝）。项目已有的“item 值拷贝”硬约束在此沿用。
 - 相等：`null == null` 为 `true`；跨类型 `==` 为 `false`（不隐式转换）；对象/数组按结构化深比较。`<`/`>` 只接受 `number` 或 `string`，其他类型 → 运行时 `E_TYPE`。
-- 算术：`+` 支持 `number + number`（加）、`string + 标量`（拼接，标量按规范文本：`true`/`false`/`null`/数字无多余零）、`json_array + json_array`（连接）；`-` `*` `/` `%` 只接受 `number`；其他组合 → 运行时 `E_TYPE`。
+- 算术：`+` 支持 `number + number`（加）、`string + 标量`（拼接，标量按规范文本：`true`/`false`/`null`/数字无多余零）、`json_array + json_array`（连接）；`-` `*` `/` `%` 只接受 `number`；其他组合 → 运行时 `E_TYPE` [D-016]。
 - 真值：条件位置只接受 `bool`；非 `bool` → 运行时 `condition_not_bool`（值是动态的，加载期无法判定类型；示例中一律写显式比较）。
 
 ## 2. 名字解析
@@ -75,14 +75,15 @@ fn name(p1, p2) { ... }
 
 - `expr into { ... }`：求值 `expr`，在块内把 `$` 绑定为该值；块的值是块内最后一条 `expr_stmt` 的值（无则为 `null`）。
 - `$` 在块内只读；`$ = ...` → `E_IMMUTABLE_ASSIGN`；块外使用 `$` → 加载期 `E_DOLLAR_OUTSIDE`。
-- `into` 允许嵌套；内层 `$` 覆盖外层，内层块结束后恢复外层 [provisional: P-010]。
+- `into` 允许嵌套；内层 `$` 覆盖外层，内层块结束后恢复外层 [D-017]。`$` 是环境帧里的词法绑定，不做编译期脱糖；CT 的嵌套禁令来自其脱糖实现，不适用于本解释器。
 - `expr` 为 `null` 时仍可进入块，`$.x` 返回 `null`（不报错）；对 `null` 调用字段访问返回 `null`，便于缺省处理。
 
 ## 8. 字段、索引与内建字段
 
 - `x.k`：`json_object` 取键，缺键返回 `null`；`json_array` 仅支持内建字段 `length`；其他类型 → `null`（不报错）。
 - `x[i]`：`json_array` 取第 `i` 个元素（0 基），越界返回 `null`；`json_object` 用 `x["k"]` 取键；其他类型返回 `null`。
-- `length`：`json_array` 的元素个数（`number`）；`string.length` 未提供，用工具取长度。
+- `length`：唯一内建字段，只挂在 `json_array` 上，返回元素个数（`number`）。`json_object`、`string`、`null` 及其他值访问 `.length` → `null`；`string` 长度由工具取 [D-016]。
+- `x.length` 与 `$.length` 是同一条规则：`$.length` 只在 `$` 持有数组时成立，不是特殊语法；数组绑定给变量后写 `deps.length` 等价。
 - 字段名可以是关键字之外的任意 `IDENT`；`x.if` 是语法错误。
 
 ## 9. 执行顺序与副作用

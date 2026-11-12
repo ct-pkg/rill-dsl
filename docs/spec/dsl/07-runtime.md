@@ -88,6 +88,7 @@ struct ExecLimits {
 | `return_outside_fn` | `return` 不在 `fn` 内 |
 | `recursion` | 调用图有环 |
 | `arity` | `fn` 实参个数不符 |
+| `not_implemented` | `par` 等已保留但 MVP 不实现的语法 |
 | `pipe_rhs` | `\|>` 右侧不是调用 |
 | `fallback_lhs` | `\|?` 左侧不是单个调用 |
 | `dup_key` | emit payload 重复键 |
@@ -148,7 +149,7 @@ src/run.rill:4:1: error: cannot assign to immutable binding 'count'.
 ## 5. 版本策略
 
 - 规范版本仍为 `v0.1`，本轮为 `rev.1`；**不新增其他版本编号**，也不 bump 任何产品版本。
-- `# dsl-version:` 在 header 中预留；MVP 只接受 `1`，其他值 `E_VERSION` [provisional: P-009]。
+- `# dsl-version:` 在 header 中可选；只接受 `1`，其他值 `E_VERSION` [D-018]。
 - 向后兼容：新语法增量添加；旧脚本不写新语法照常跑。rev.1 的默认拒绝发生在首个实现发布前，不属于兼容性破坏（仓库 `.rill`/`.dsl` 计数为 0）。
 - 热更新：脚本监听 + 加载校验 + 原子替换 + 自动回滚；策略按 [06 §3](06-security.md) 的快照语义。
 - 规范正文的每次改动递增 `rev.N` 并在 [README §3](README.md) 留一行；不移动产品版本号。

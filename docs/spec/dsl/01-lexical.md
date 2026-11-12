@@ -28,7 +28,7 @@
 
 `let` `mut` `if` `else` `for` `in` `into` `fn` `return` `emit` `break` `continue` `and` `or` `not` `true` `false` `null`
 
-保留但 MVP 不实现：`par` [provisional: P-007]。
+保留但 MVP 不实现：`par` [D-019]。`par` 不能作工具名/变量名/函数名/字段名/参数名（注册时 `reserved_name`）；脚本中出现 `par` → 加载期 `not_implemented`，Hint 指向“并行由内核调度”。
 
 规则：
 

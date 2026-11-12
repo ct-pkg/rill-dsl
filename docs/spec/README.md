@@ -4,7 +4,7 @@
 > 状态词严格区分：
 >
 > - `accepted`：已拍板且已验收；当前 **0 条**。
-> - `unverified`：已拍板、但尚无实现或无门禁证据；当前 S-001..S-020 与 `dsl/` 全部正文。
+> - `unverified`：已拍板、但尚无实现或无门禁证据；当前 S-001..S-024 与 `dsl/` 全部正文。
 > - `pending`：未拍板，验收判据未定；见 [PENDING](PENDING.md)。不得当作已生效规则引用。
 
 ## 1. 规范正文
@@ -39,6 +39,10 @@
 | S-018 | 命令与域名约束 | unverified | D-014 | [S-018](S-018-command-domain.md) |
 | S-019 | emit 上限、双通道与重复键 | unverified | D-014 | [S-019](S-019-emit-limits.md) |
 | S-020 | 错误格式与 `error_kind` | unverified | D-015 | [S-020](S-020-error-format.md) |
+| S-021 | `# dsl-version:` 头 | unverified | D-018 | [S-021](S-021-dsl-version.md) |
+| S-022 | `par` 保留字 | unverified | D-019 | [S-022](S-022-par-keyword.md) |
+| S-023 | 嵌套 `into` | unverified | D-017 | [S-023](S-023-nested-into.md) |
+| S-024 | 值层：拼接与 `length` | unverified | D-016 | [S-024](S-024-value-concat-length.md) |
 | P-001..P-021 | 未决问题 | pending | 无 | [PENDING](PENDING.md) |
 
 ## 3. 条目格式
@@ -62,4 +66,4 @@
 
 - 主张层：`docs/requirements/README.md`。
 - 规格层只回答“做什么、怎么判对错”，不重复目标与理由。
-- 未决项只在 `PENDING.md` 出现；`S-*` 与规范正文中不得把待定细节写成已生效规则（正文仅允许 `provisional: P-xxx` 三处编辑补充，见 [dsl/README.md](dsl/README.md) §5）。
+- 未决项只在 `PENDING.md` 出现；`S-*` 与规范正文中不得把待定细节写成已生效规则。rev.1 正文不含 `provisional` 文本；原先三处已由 D-017/D-018/D-019 收口。

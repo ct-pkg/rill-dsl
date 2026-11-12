@@ -77,8 +77,9 @@ if matches != null {
 
 read "pkg.json" |> json_parse into {
     let name = $.name
-    $.dependencies into {
-        let dep_count = $.length
+    let deps = $.dependencies
+    deps into {
+        let dep_count = deps.length
         write "summary.txt" (name + ":" + dep_count)
     }
 }
@@ -90,8 +91,9 @@ read "pkg.json" |> json_parse into {
 | --- | --- |
 | `write "summary.txt" name + ":" + dep_count` → `write "summary.txt" (name + ":" + dep_count)` | 同示例 3：不加括号会先调用 `write` 再相加 |
 | `# allow:` 去掉未使用的 `get` | 示例只用到 `read`/`json_parse`/`write`；allow 列表应是实际调用集 |
+| `$.length` → 先 `let deps = $.dependencies` 再 `deps.length` | 与示例 4 的 `matches.length` 统一为“数组值 + `.length`”，避免 `$` 与变量两种写法并存 |
 
-解析要点：`into` 嵌套按 [provisional: P-010] 允许，内层 `$` 覆盖外层；`name + ":" + dep_count` 依赖字符串拼接规则（[03 §1](03-semantics.md)）。
+解析要点：`deps into {` 是 `expr into block`；`into` 嵌套按 [D-017](../../decisions/D-017.md) 允许，内层 `$` 覆盖外层；`deps.length` 是数组内建字段（[03 §8](03-semantics.md)），`name + ":" + dep_count` 依赖字符串拼接规则（[D-016](../../decisions/D-016.md)）。
 
 ## 6. 自证矩阵
 
@@ -99,8 +101,8 @@ read "pkg.json" |> json_parse into {
 | --- | --- | --- | --- |
 | 1 | D-001/D-002 | 空格实参、管道、if/块、隐式 await | S-001、S-002、S-004 |
 | 2 | D-005、D-007 | into、`$`、管道 + into 组合 | S-005、S-007 |
-| 3 | D-002、D-005、D-009 | fn、return、分组实参、函数调用 | S-002、S-005、S-010 |
+| 3 | D-002、D-005、D-009 | fn、return、分组实参、函数调用 | S-002、S-005、S-010、S-024 |
 | 4 | D-006、D-008 | emit payload、数组内建字段 | S-006、S-009 |
-| 5 | D-006、D-009 | 嵌套 into、字符串拼接、数组 `.length` | S-006、S-011 |
+| 5 | D-006、D-009 | 嵌套 into、字符串拼接、数组 `.length` | S-006、S-011、S-023、S-024 |
 
-说明：`provisional: P-010` 的嵌套 `into` 若被否决，示例 5 需改为单层 `into` 或改用 `fn`；改动只影响本示例与 [03 §7](03-semantics.md)。
+说明：嵌套 `into` 已由 [D-017](../../decisions/D-017.md) 定稿，示例 5 不再依赖临时文本。
