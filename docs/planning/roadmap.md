@@ -48,7 +48,7 @@ Phase 1 把 09 的 M1（lexer）与 M2（parser + 静态检查）合并为一个
 ### Phase 5：截断 + emit + 事件总线（09 M6）
 
 - **范围**：截断侧车 `(payload, meta)`、伪字段优先、`get` 逃逸、粘性传播、`original_size` 两种字节口径；emit fire-and-forget、事件声明、`max_emit_bytes`/`max_payload_depth`；脚本侧不做 schema 校验（schema 由内核配置）。
-- **依赖**：PH-2/P3 收口；PH-1 已解析 emit payload 与 `dup_key`；PH-4 的 `$` 可用于 payload 值。
+- **依赖**：PH-2/P3 收口；PH-1 已解析 emit payload 与加载期 `dup_key`（emit 字面量重复键）；PH-4 的 `$` 可用于 payload 值。
 - **退出条件**：伪字段/逃逸/粘性/字节口径 6 例；emit 无订阅方/队列满、字节与深度超限各 1 例；`external_egress` 1 例；meta 不泄漏进 `args_json`；超限不得静默丢弃。
 - **与 09 的关系**：对应 M6；09 §2 的 M6 退出判据全部在本 phase 门禁内。
 

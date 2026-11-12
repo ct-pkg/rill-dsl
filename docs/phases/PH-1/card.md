@@ -14,7 +14,7 @@
 | 交付物清单 | 见 §3；每项一个路径。 |
 | 任务清单 | 见 §4；每项一个交付物、一条 `verify`、一次实现提交、可单独回滚。 |
 | 退出判据 | 见 §9；每条带命令或 golden 锚点。 |
-| 依赖 | Phase 0 的 `tools/check.sh` 基线（g0/g1/g4/g6/g9 已绿）与 `tools/check-all.sh` 全量入口；Phase 1 需启用 g3/g5/g7/g8；CT 工具链；T-001..T-006 的静态元数据；`src/` 与构建入口由 P1-T01 建立。 |
+| 依赖 | Phase 0 的 `tools/check.sh` 基线（g0/g1/g4/g6/g9 已绿）与 `tools/check-all.sh` 全量入口；Phase 1 需启用 g3/g5/g7/g8；CT 工具链；T-001..T-006 的静态元数据（`accepts_context=1` 必须有 `context_param`）；`src/` 与构建入口由 P1-T01 建立。 |
 | 规范版本 | `1.7.0`（生成块头 `version` 快照；`v0.1 rev.1` 是 DSL 规范版本，不改）。 |
 | version-minor | `1`（`PH-1` 收口目标 `0.1.0`；产品版本落点由 Phase 0/G0 声明，本卡不执行 bump）。 |
 | 已知风险 | 换行与空格调用交互、emit payload 与块界定消歧、错误位置计算；见 §8。 |
@@ -33,7 +33,7 @@
 | Header | 只认 `# allow:` / `# deny:` / `# emit:` / `# dsl-version:` 四种前缀，其余 `#` 行按注释（含 `# approval:`）；整行解析；`TERM`；重复键；默认拒绝（无 allow/空列表拒绝）；`*` 与 deny 列表只记录集合，不计算有效集；版本只接受 `1` | [01](../../spec/dsl/01-lexical.md) §6、[02](../../spec/dsl/02-grammar.md) §1、[06](../../spec/dsl/06-security.md) §2、[10](../../spec/dsl/10-ast-position.md) §6、[D-011](../../decisions/D-011.md)、[D-018](../../decisions/D-018.md) |
 | 文法 | 全部语句：`let`/`let mut`/赋值/`if`/`for`/`into`/`fn`/`return`/`emit`/`break`/`continue`/表达式语句；完整表达式优先级；空格实参不递归；无 postfix `()`；字段与索引；`\|>` 与 `\|?`；emit 受限 JSON；`approve` 不是文法语句（写了 → `syntax`） | [02](../../spec/dsl/02-grammar.md) §2–§4、[06](../../spec/dsl/06-security.md) §6、[S-016](../../spec/S-016-approval.md)、[D-001..D-009](../../decisions/README.md) |
 | AST | 节点集合、字段顺序、`sexpr`/`sexpr-loc`、分组/注释/版本头擦除、header 保序与 `*` 表示全部以 10 卷为准；`--dump-ast` 与 `--dump-tokens` 两种 golden | [10](../../spec/dsl/10-ast-position.md) §2–§6、[D-020](../../decisions/D-020.md) |
-| 加载期校验 | `unknown_tool`（名字解析失败统一用此 kind，Hint 同时提示工具名与函数名）、`tool_not_allowed`、`event_not_declared`、`undefined_name`、`bare_fn_ref`、`shadow_tool`、`dup_decl`、`assign_undefined`、`immutable_assign`、`loop_control`、`return_outside_fn`、`recursion`、`arity`（含管道与 `$` 注入）、`not_implemented`、`pipe_rhs`、`fallback_lhs`、`dollar_outside`、`reserved_name`、`dup_header`、`no_allow_header`、`deny_without_allow`、`version`、`dup_key` | [03](../../spec/dsl/03-semantics.md) §2–§7、[04](../../spec/dsl/04-pipeline-errors.md)、[06](../../spec/dsl/06-security.md)、[07](../../spec/dsl/07-runtime.md) §3.1、[T-001..T-006](../../spec/tools/README.md) |
+| 加载期校验 | `unknown_tool`（名字解析失败统一用此 kind，Hint 同时提示工具名与函数名）、`tool_not_allowed`、`event_not_declared`、`undefined_name`、`bare_fn_ref`、`shadow_tool`、`dup_decl`、`assign_undefined`、`immutable_assign`、`loop_control`、`return_outside_fn`、`recursion`、`arity`（含管道与 `$` 注入）、`not_implemented`、`pipe_rhs`、`fallback_lhs`、`dollar_outside`、`reserved_name`、`dup_header`、`no_allow_header`、`deny_without_allow`、`version`、`dup_key`（加载期，emit 字面量） | [03](../../spec/dsl/03-semantics.md) §2–§7、[04](../../spec/dsl/04-pipeline-errors.md)、[06](../../spec/dsl/06-security.md)、[07](../../spec/dsl/07-runtime.md) §3.1、[T-001..T-006](../../spec/tools/README.md) |
 | 错误 | 统一格式、1 基行列、`col`/span 按 10 §4、只报第一个错误、强制 `Hint:` | [07](../../spec/dsl/07-runtime.md) §4、[10](../../spec/dsl/10-ast-position.md) §4–§5、[D-015](../../decisions/D-015.md)、[S-020](../../spec/S-020-error-format.md) |
 | 样例 | 五个 08 示例解析成功并产出 AST golden；解析器 CLI 是 Phase 1 唯一可运行形态 | [08](../../spec/dsl/08-examples.md)、[09](../../spec/dsl/09-milestones.md) §1 原则 3 |
 
@@ -75,7 +75,7 @@ rill parse --check --json       [--registry R] FILE
 
 ### 2.4 registry fixture
 
-Phase 1 只消费静态元数据：`read` arity=1、`grep` arity=2、`write` arity=2、`json_parse` arity=1、`get` arity=2 且 `accepts_context=true`、`json_build` 变长（`params_schema=null`，偶数校验）。字段：`{"tools":[{"name":"read","arity":1,"accepts_context":false,"variadic":false}, …]}`。
+Phase 1 只消费静态元数据：`read` arity=1、`grep` arity=2、`write` arity=2、`json_parse` arity=1、`get` arity=2 且 `accepts_context=true`（`context_param="obj"`）、`json_build` 变长（`params_schema=null`，偶数校验）。字段：`{"tools":[{"name":"read","arity":1,"accepts_context":false,"context_param":null,"variadic":false}, …]}`。`accepts_context=1` 必须有具名槽 `context_param`（如 `get` 的 `obj`）且该名在 `params_schema` 中；缺失或名字不在 schema → 注册期拒绝（07 §1）。
 
 ## 3. 交付物清单
 
@@ -120,7 +120,8 @@ Phase 1 只消费静态元数据：`read` arity=1、`grep` arity=2、`write` ari
 - 每个 case 的输入是 `tests/phase1/cases/<ID>-<n>.rill`；一个 case 可含多个 fixture（表中用“；”分隔的每个片段各是一个 fixture），每个 fixture 配同名 `.tok`/`.sexpr`/`.sexpr-loc`（仅位置用例）/`.err.json`。
 - 单条命令：`tools/check-phase1.sh --case <ID>`（跑该 case 的全部 fixture）；Phase 1 全量：`tools/check-phase1.sh --all`；仓库全量：`tools/check-all.sh`（g3/g5/g7/g8 在收口时启用）。
 - 负例同时断言：`ok=0`、精确 `error_kind`/`line`/`col`、`message` 包含表中“文案要点”子串、`hint` 非空。
-- 位置与 span 口径完全以 [10 §4/§5](../../spec/dsl/10-ast-position.md) 为准；词法/解析为 `syntax`，加载用 07 §3.1 的 kind；未闭合定界符指向最内层未匹配的开定界符（10 §5）。各负例的精确 `line`/`col` 由 `.err.json` 固定；header 语义错误、`dup_key`、`recursion` 的位置按 10 §5/§6 与 07 §3.1。
+- 位置与 span 口径完全以 [10 §4/§5](../../spec/dsl/10-ast-position.md) 为准；词法/解析为 `syntax`，加载用 07 §3.1 的 kind；未闭合定界符指向最内层未匹配的开定界符（10 §5）。各负例的精确 `line`/`col` 由 `.err.json` 固定。
+- 加载期 `dup_key` 只指 emit payload 对象字面量内的重复键（静态可判，位置在 emit 语句的 payload 处）；运行期 `dup_key` 只指 `args_json`/`ctx_json` 协议重复键，不在 Phase 1。header 语义错误与 `recursion` 的位置按 10 §5/§6。
 
 ### 5.1 01 词法
 
@@ -158,7 +159,7 @@ Phase 1 只消费静态元数据：`read` arity=1、`grep` arity=2、`write` ari
 | GR-03 | S-002 | `f (g "x")` | `(call f (call g (str "x")))` | — |
 | GR-04 | S-005 | `f(a)(b)`；`f()`；`a.b()` | 前者 `(call f (ident a) (ident b))` | `syntax`@`(`；文案含“argument or grouped expression”/“method call” |
 | GR-05 | S-002/S-005 | `read path.field`；`(read "x").y`；`arr[0]` | 前者实参为 `(field …)`；中者为 `(field (call read …) y)`；后者 `(index …)` | — |
-| GR-06 | S-003 | `f 1 - 2`；`f -1`；`read -1` | 前者 `(binary - (call f (num 1)) (num 2))`；后两者先解析为减法 | `undefined_name`@工具名（A-6）；文案含“tool name cannot be used as a value”；Hint `read (-1)` |
+| GR-06 | S-003 | `f 1 - 2`；`f -1`；`read -1` | 前者 `(binary - (call f (num 1)) (num 2))`；后两者先解析为减法 | `arity`@`read`（A-6）；裸 `read` 先按零参工具调用，0≠1 |
 | GR-07 | S-010 | `x = 1`；`x == 1`；`let mut y = 0` + 换行 + `y = y + 1`；`let mut x = 0` + 换行 + `if true { x = 1 }` | 赋值与比较区分；`let mut` 序列化为 `(let … true …)`（10 §3.7）；同函数外层块的可变绑定可赋值 | — |
 | GR-08 | S-007/S-008/S-012 | `a \|> f b \|? g c`；`read "p" \|? read "f" \|> json_parse`；`a \|? b \|? c`；`read "p" \|? "fallback"` | `\|?` 高于 `\|>`；左结合；`\|?` 右侧可为任意值；AST 为 pipe/fallback 组合 | —（运行期求值延后） |
 | GR-09 | S-009 | `(read "big").truncated`；`read "big".truncated` | 前者 field 作用于 call，后者是 call 的实参为 field | —（meta 读取延后） |
@@ -179,7 +180,7 @@ Phase 1 只消费静态元数据：`read` arity=1、`grep` arity=2、`write` ari
 | EM-02 | S-006 | 多行 `emit "e" { "path": "src/a.c", "count": n + 1 }` | `(pobj …)`；值位为 `(binary + …)` | — |
 | EM-03 | S-006 | `emit "e" { "items": [1, 2, 3] }` | `(pobj …)` 含 `(parr …)` | — |
 | EM-04 | S-006 | `emit "e" { "a": 1, }`；`emit "e" { a: 1 }`；`emit "e" { "a": 1 }.x` | 全部拒绝 | `syntax`@`}`/键 token/`.`；文案含“trailing comma”/“string key”/“payload suffix” |
-| EM-05 | S-006/S-019 | `emit "e" { "a": 1, "a": 2 }`；未声明事件 | 拒绝 | `dup_key`@第二个 `"a"`；`event_not_declared`@事件字符串 |
+| EM-05 | S-006/S-019 | `emit "e" { "a": 1, "a": 2 }`；未声明事件 | 拒绝 | `dup_key`@第二个 `"a"`（加载期，emit 对象字面量）；`event_not_declared`@事件字符串 |
 
 ### 5.5 03/06/07 加载期校验
 
@@ -242,7 +243,7 @@ Phase 1 只消费静态元数据：`read` arity=1、`grep` arity=2、`write` ari
 
 | 类型 | 内容 |
 | --- | --- |
-| 依赖 | Phase 0 已交付 `tools/check.sh`/`tools/check-all.sh`；g3/g5/g7/g8 当前为 DISABLED，Phase 1 收口必须启用；构建骨架由 P1-T01 建立；CT 工具链可用；本卡 §2.4 的 registry 元数据与 T-001..T-006 一致；`AGENTS.md` 版本落点由 Phase 0/G0 补齐。 |
+| 依赖 | Phase 0 已交付 `tools/check.sh`/`tools/check-all.sh`；g3/g5/g7/g8 当前为 DISABLED，Phase 1 收口必须启用；构建骨架由 P1-T01 建立；CT 工具链可用；本卡 §2.4 的 registry 元数据与 T-001..T-006 一致，`accepts_context=1` 必须给具名 `context_param`，否则注册期拒绝（07 §1）；`AGENTS.md` 版本落点由 Phase 0/G0 补齐。 |
 | 风险 1 | **换行与空格调用交互**：`read "a"` 换行 `"b"` 必须是两条语句，`read "a"` 换行 `\|> f` 必须续行；`f 1 - 2` 是减法，`f 1` 换行 `- 2` 不是合法延续。探针：`LX-06` 的 `let d = a` 换行 `\|> f b`，期望单条 pipe；`LX-04` 的 `read "a"` 换行 `"b"`，期望两条 expr_stmt。触发信号：token golden 多/少一个 NEWLINE。 |
 | 风险 2 | **emit payload 与块界定**：`emit "e"` 换行 `{}` 是空 payload，不是空块；`if x` 换行 `{}` 是块；`emit "e" {}.x` 是语法错误。探针：`EM-01`/`LX-08`/`EM-04` 的 AST 与错误位置。触发信号：`{}` 被解析成 block，或 payload 后接受 `.x`。 |
 | 风险 3 | **错误位置计算**：UTF-8 字节列、CRLF 归一、EOF、开定界符、第二个重复键。探针：`LX-10` 的 `let s = "中文" x`（`col` 按字节）、`ER-03` 的未闭合 `{`、`EM-05` 的第二个 `"a"`。触发信号：`col` 按字符计或未闭合指向 EOF。 |
@@ -277,4 +278,4 @@ AST 形态、擦除、位置、错误阶段、header 保序与 `*` 表示已由 
 | A-1 | Phase 1 覆盖 09 的 M1+M2，并提前落地 M5/M7 的静态子集（arity/注入/递归/遮蔽/header 默认拒绝），而不是只做 lexer | 合并交付 | 用户指示“完整文法 + AST + 加载期名字校验”；09 §1 原则 3 要求可运行样例；M2 的加载校验依赖 M1 token；这些静态检查没有运行期依赖 | 无（范围定义） |
 | A-2 | `$` 注入按词法位置静态判定，不按运行时调用点 | 词法 | 03 §6 要求“个数静态可算”；D-017 `$` 是词法绑定 | LD-13 |
 | A-3 | `# allow:` 中的未注册工具不报错 | 允许 | 06 §1 第一层以调用为对象；S-014 C 的 `# deny: exec` 明确允许“即使注册”的未注册名，allow 同理 | HD-01 |
-| A-6 | `read -1` 的 `error_kind` 取 `undefined_name` | 取 S-003 已列类别 | S-003 §3 写“undefined_name / 值位错误”；07 §3.1 无专用 kind，10 §5 加载阶段沿用 07 kind | GR-06 |
+| A-6 | `read -1` 的 `error_kind` 取 `arity` | 取 arity | 裸 `read` 先解析为零参工具调用（03 §2）；`read` arity=1，0≠1（03 §6、07 §3.1） | GR-06 |
