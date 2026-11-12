@@ -11,6 +11,7 @@
 | 第三层 参数 | 每次调用前 | `ParamConstraint` 全部通过 | `E_CONSTRAINT`，handler 不执行 |
 
 - 加载期做第一、二层；执行期做第三层。执行期不得重新计算第一、二层集合（见 §3 快照）。
+- 实参个数不属于三层：`fn` 与固定 arity 工具的个数由 `params_schema` 长度与注入规则静态判定，在加载期报 `arity`；第三层 `constraint` 只处理参数值（[07 §3](07-runtime.md)）。
 - 三层都通过才调用 handler；任一层失败都不产生副作用。
 
 ## 2. 第二层：header 三态与默认拒绝
