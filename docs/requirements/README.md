@@ -15,7 +15,7 @@
 | ID | 类型 | 内容 | 状态 | 依据 |
 | --- | --- | --- | --- | --- |
 | R-001 | 目标 | 以最少 token 表达工具调用与流程编排，语法边界由内核严格控制，安全由三层白名单兜底 | baseline | v0.1 开篇、§1 |
-| R-002 | 非目标 | agent 主循环、上下文压缩、记忆/跨脚本状态、审批、调度归内核，不进单次执行语法 | decided | [06 §2](../spec/dsl/06-security.md)、[D-013](../decisions/D-013.md)、[P1-4](../design/dsl-discussion.md#L269-L276)、[P1-9](../design/dsl-discussion.md#L317-L324) |
+| R-002 | 非目标 | agent 主循环、上下文压缩、记忆/跨脚本状态、审批、调度归内核，不进单次执行语法 | decided | [06 §6](../spec/dsl/06-security.md)、[D-013](../decisions/D-013.md)、[P1-4](../design/dsl-discussion.md#L269-L276)、[P1-9](../design/dsl-discussion.md#L317-L324) |
 | R-003 | 非目标 | MVP 不做并行；`par` 只讨论预留，不产生可执行能力 | pending | [讨论稿 P1-5](../design/dsl-discussion.md#L277-L284)、[P1-10](../design/dsl-discussion.md#L325-L332) |
 | R-004 | 非目标 | 不做类型系统、模块/import、try/catch、递归、通用对象字面量、正则字面量 | baseline | v0.1 §9（尚未重新拍板） |
 | R-005 | 约束 | 实现语言为 CT；但 CT 只作实现语言，运行期语义（动态值、管道、工具注册、事件）需自建 | pending | [讨论稿 §5](../design/dsl-discussion.md#L349-L366) |
@@ -24,12 +24,14 @@
 | R-008 | 约束 | 文档四层与单份 ≤300 行（DOC-S2）；本仓库当前存在候选偏离，见 §6 | active | `AGENTS.md` 50-57、980 |
 | R-009 | 约束 | 未拍板项不得写成 accepted 决策；只能登记为 pending | active | 用户 2026-11-12 指示 |
 
-状态词：
+状态词按对象分维度，不跨类混用：
 
-- `baseline`：v0.1 原文里的主张，当前只作讨论基线，**不等于用户已重新拍板**。
-- `pending`：方向被评审或用户提过，但结论未定，登记在 PENDING。
-- `decided`：已由决策记录或规范正文定死，但尚未实现/验收；与 `unverified` 的区别是后者专指可验收条目。
-- `active`：当前仓库治理规则，已生效。
+- **R-\* 需求条目**用 `baseline` / `pending` / `decided` / `active`：
+  - `baseline`：v0.1 原文里的主张，当前只作讨论基线，**不等于用户已重新拍板**。
+  - `pending`：结论未定，登记在 PENDING。
+  - `decided`：已由决策记录或规范正文定死，但尚未实现。
+  - `active`：当前仓库治理规则，已生效。
+- **S-\* / T-\* 规格条目**只用 `unverified` / `verified`（`accepted` 是决策记录的状态词，不用于规格条目）：见 §3 术语表。
 
 ## 3. 术语
 
@@ -43,9 +45,10 @@
 | into / `$` | 词法作用域绑定；`$` 指代当前绑定值；嵌套允许、内层覆盖退出恢复（D-017）；块外使用报 `dollar_outside` |
 | 策略快照 | 加载时绑定的 allow/deny/registry/constraint 版本，执行期不随热更新改变；见 D-012 |
 | trace_id | 一次执行生成的关联 id，随 emit 事件传播，供因果链查询（P-014 未定；非规范术语，仅是讨论名） |
-| accepted | 已拍板且已验收；当前 **0 条** |
-| unverified | 已拍板但未实现/无门禁；当前 S-001..S-024 与规范正文 |
-| pending | 未拍板；没有验收判据；当前 PENDING 除已定稿项外的条目 |
+| accepted | 决策记录的状态词：已拍板（不用于 S/T 规格条目） |
+| unverified | S/T 规格条目已写、尚无实现门禁；当前 S-001..S-024 与规范正文 |
+| verified | S/T 规格条目已通过验收命令；当前 **0 条** |
+| pending | R-\* 需求条目：结论未定；当前 PENDING 除已定稿项外的条目 |
 | 候选偏离 | 与主规范有张力但未取得用户签字，**不计为已登记 deviation** |
 
 ## 4. 决策记录索引
