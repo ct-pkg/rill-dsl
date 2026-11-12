@@ -57,7 +57,7 @@
 3. 字符串用 JSON 字符串字面量：`\"`、`\\`、`\n`、`\r`、`\t` 转义；其余 U+0000–U+001F 写 `\u00xx`（小写十六进制）；非 ASCII 原样输出 UTF-8，不转义。
 4. `num` 输出源 lexeme（如 `(num 3.14)`），不补零、不改写指数（本文法不接受指数）。
 5. 标识符、运算符、header 的 `*` 以裸 token 输出；`true`/`false` 小写。
-6. 空列表写作 `(block)`、`(pobj)`、`(parr)`、`(header)`、`(allow)`；`null` 值写作 `(null)`。
+6. 空列表写作 `(block)`、`(pobj)`、`(parr)`、`(header)`；`null` 值写作 `(null)`。header 的空列表条目写作 `(entry allow)`。
 7. `let` 的不可变与可变分别是 `(let x false …)`、`(let x true …)`。
 
 示例：

@@ -38,8 +38,8 @@
 | 工具调用 | 内核注册表里的工具被脚本调用；参数空格分隔，见 S-001 |
 | 管道 | `a \|> f b`，把左侧值追加到右侧调用参数末尾；见 D-007 | 已定稿（unverified） |
 | 降级 | `left \|? right`，左侧单 call 失败则尝试右侧；高于 `\|>`，见 D-007 | 已定稿（unverified） |
-| 结果元数据 | `{ value, truncated, original_size }`，侧车伪字段，见 D-008 | 已定稿（unverified） |
-| into / `$` | 词法作用域绑定；`$` 指代当前绑定值；嵌套与块外规则待定 |
+| 结果元数据 | `{ value_json, truncated, original_size }`，侧车伪字段，见 D-008 | 已定稿（unverified） |
+| into / `$` | 词法作用域绑定；`$` 指代当前绑定值；嵌套允许、内层覆盖退出恢复（D-017）；块外使用报 `dollar_outside` |
 | 策略快照 | 加载时绑定的 allow/deny/registry/constraint 版本，执行期不随热更新改变；见 D-012 |
 | trace_id | 一次执行生成的关联 id，随 emit 事件传播，供因果链查询（P-014 未定；非规范术语，仅是讨论名） |
 | accepted | 已拍板且已验收；当前 **0 条** |
@@ -61,7 +61,7 @@
 | D-019 | accepted | `par` 保留为关键字，出现即 `not_implemented` | [D-019](../decisions/D-019.md) |
 | D-020 | accepted | AST 节点、稳定 `sexpr`、UTF-8 字节列与错误阶段 | [D-020](../decisions/D-020.md) |
 
-未决问题仍登记在待定条目里，避免伪装成 accepted：P-013/P-014/P-017、P-020/P-021（undecidable）。P-007/P-009/P-010 已由 D-019/D-018/D-017 收口。
+未决问题仍登记在待定条目里，避免伪装成 accepted：P-013/P-014、P-020/P-021（undecidable）。P-007/P-009/P-010/P-017/P-018/P-019 已收口。
 
 - Q1–Q10 与 P0/P1 清单：[docs/spec/PENDING.md](../spec/PENDING.md)
 - 各方意见与倾向：[dsl-discussion.md](../design/dsl-discussion.md)
