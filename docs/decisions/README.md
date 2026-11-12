@@ -18,6 +18,7 @@
 | D-012 | 2026-11-12 | accepted | EDITOR | 策略热更新用不可变快照 + 调用边界强杀 | [D-012](D-012.md) |
 | D-013 | 2026-11-12 | accepted | EDITOR | 审批在内核，DSL 零审批语法；边界一节 | [D-013](D-013.md) |
 | D-014 | 2026-11-12 | accepted | EDITOR | 参数约束按“必做/不做/deferred”分档硬化 | [D-014](D-014.md) |
+| D-015 | 2026-11-12 | accepted | USER | 错误格式统一为 `path:line:col: error:` + 详情 + Hint | [D-015](D-015.md) |
 
 ## 状态说明
 
@@ -27,4 +28,4 @@
 
 ## 未决项
 
-D-002..D-014 覆盖 B1/B2/B3 的 13 条争点。仍无决策的条目见 [PENDING](../spec/PENDING.md)（P-007/P-008/P-009/P-010/P-013/P-014/P-017，以及 P-020/P-021 两个 undecidable 项）。
+D-002..D-014 覆盖 B1/B2/B3 的 13 条争点；D-015 由用户指示定错误格式。仍无决策的条目见 [PENDING](../spec/PENDING.md)（P-007/P-009/P-010/P-013/P-014/P-017，以及 P-020/P-021 两个 undecidable 项）。
