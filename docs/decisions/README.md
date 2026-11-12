@@ -5,6 +5,19 @@
 | id | date | status | judge | 一句话 | 文件 |
 | --- | --- | --- | --- | --- | --- |
 | D-001 | 2026-11-12 | accepted | USER | 调用统一空格形态；括号只作分组与 fn 参数表 | [D-001](D-001.md) |
+| D-002 | 2026-11-12 | accepted | EDITOR | 实参文法 `arg := postfix_atom`，空格应用不递归 | [D-002](D-002.md) |
+| D-003 | 2026-11-12 | accepted | EDITOR | 数字无符号，负号只作运算符 | [D-003](D-003.md) |
+| D-004 | 2026-11-12 | accepted | EDITOR | NEWLINE 作语句终止符，N1–N7 抑制 | [D-004](D-004.md) |
+| D-005 | 2026-11-12 | accepted | EDITOR | 删除 postfix `()`；零参写裸名；禁止遮蔽工具名 | [D-005](D-005.md) |
+| D-006 | 2026-11-12 | accepted | EDITOR | emit payload 用受限 JSON 字面量，JSON 内换行忽略 | [D-006](D-006.md) |
+| D-007 | 2026-11-12 | accepted | EDITOR | `\|?` 高于 `\|>`，左侧单 call，可捕获集显式 | [D-007](D-007.md) |
+| D-008 | 2026-11-12 | accepted | EDITOR | 截断元数据用侧车伪字段（C 方案），粘性传播 | [D-008](D-008.md) |
+| D-009 | 2026-11-12 | accepted | EDITOR | 赋值限 `let mut`；`for` + break/continue；无 `while` | [D-009](D-009.md) |
+| D-010 | 2026-11-12 | accepted | EDITOR | R4 重述为“调用级降级、无块级恢复” | [D-010](D-010.md) |
+| D-011 | 2026-11-12 | accepted | EDITOR | `# allow:` 缺省默认拒绝，`*` 显式且审计 | [D-011](D-011.md) |
+| D-012 | 2026-11-12 | accepted | EDITOR | 策略热更新用不可变快照 + 调用边界强杀 | [D-012](D-012.md) |
+| D-013 | 2026-11-12 | accepted | EDITOR | 审批在内核，DSL 零审批语法；边界一节 | [D-013](D-013.md) |
+| D-014 | 2026-11-12 | accepted | EDITOR | 参数约束按“必做/不做/deferred”分档硬化 | [D-014](D-014.md) |
 
 ## 状态说明
 
@@ -14,4 +27,4 @@
 
 ## 未决项
 
-Q1–Q10 与 P0/P1 清单**没有**决策记录。当前只有一条已拍板决定；其余全部 pending，按用户指示登记在 [PENDING](../spec/PENDING.md)，不得伪装成 accepted。
+D-002..D-014 覆盖 B1/B2/B3 的 13 条争点。仍无决策的条目见 [PENDING](../spec/PENDING.md)（P-007/P-008/P-009/P-010/P-013/P-014/P-017，以及 P-020/P-021 两个 undecidable 项）。
