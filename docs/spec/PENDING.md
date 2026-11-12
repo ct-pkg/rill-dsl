@@ -42,8 +42,8 @@
 | P-017 | MVP 不做并行是否写成规范条款 | pending | 能力边界 | [讨论稿 P1-10](../design/dsl-discussion.md#L325-L332) |
 | P-018 | 工具/函数同名解析、零参调用、嵌套实参 | **partial**：嵌套实参与括号单原子 → D-002；零参与工具名遮蔽 → D-005；关键字/字段名冲突仍 pending | S-001 边界、M1/M6 | [讨论稿 §2.1](../design/dsl-discussion.md#L44-L50) |
 | P-019 | 截断与重试如何落成正式规格 | **partial**：方向已被 D-007/D-008 固定；尚未新增对应 `S-*` 与验收判据 | M2/M3 | [讨论稿 §2.2/§2.3](../design/dsl-discussion.md#L52-L80) |
-| P-020 | 外部授权主体（`principal_id` + `grant_set`）能否约束 `# allow:` 自授权 | **undecidable**：需改 `dsl_exec` 签名与主体模型，无用户拍板。重开条件：首次多租户部署，或内核接口 CR 明确主体字段；届时按“header 是能力请求、外部集是授予”重建 B3-1 | 默认拒绝的诚实边界 | [D-011](../decisions/D-011.md)、[D-013](../decisions/D-013.md)、[B3 反证席 §2](../battle/B3/seats/challenger.md) |
-| P-021 | 跨 exec payload 的污点/能力标签（taint） | **undecidable**：规范无主体、无标签模型。重开条件：启用外部 webhook 订阅方，或发生“低权脚本经事件把数据送入特权工具”的事件 | emit `external_egress` 的后续 | [D-014](../decisions/D-014.md)、[B3 反证席 §5](../battle/B3/seats/challenger.md) |
+| P-020 | 外部授权主体（`principal_id` + `grant_set`）能否约束 `# allow:` 自授权 | **undecidable**：需改 `dsl_exec` 签名与主体模型，无用户拍板。重开条件：首次多租户部署，或内核接口 CR 明确主体字段；届时按“header 是能力请求、外部集是授予”重建 B3-1 | 默认拒绝的诚实边界 | [D-011](../decisions/D-011.md)、[D-013](../decisions/D-013.md)、[B3 反证席 §2](../../battle/B3/seats/challenger.md) |
+| P-021 | 跨 exec payload 的污点/能力标签（taint） | **undecidable**：规范无主体、无标签模型。重开条件：启用外部 webhook 订阅方，或发生“低权脚本经事件把数据送入特权工具”的事件 | emit `external_egress` 的后续 | [D-014](../decisions/D-014.md)、[B3 反证席 §5](../../battle/B3/seats/challenger.md) |
 
 ## 3. 状态规则
 
