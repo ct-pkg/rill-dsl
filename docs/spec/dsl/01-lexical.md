@@ -34,7 +34,7 @@
 
 - 关键字永远是关键字，不能作工具名、变量名、函数名、字段名或参数名。
 - 内核注册工具时若名字是关键字 → 注册失败（`E_RESERVED_NAME`），不得等到加载脚本才报。
-- `into` 在表达式末尾按上下文关键字处理：它终止 `expr`，由 `into_stmt` 消费（见 [02 §3](02-grammar.md)）。
+- `into` 是**保留关键字**，不是上下文关键字：`let into = 1`、`x.into`、`fn into()` 都非法（加载期 `syntax`）；它终止 `expr`，由 `into_stmt` 消费（见 [02 §2](02-grammar.md)）。
 
 ## 4. 数字
 
@@ -53,7 +53,7 @@
 ## 6. 注释
 
 - `#` 到行尾为注释；**注释只吃字符，不吃换行**——`\n` 仍然产出 `NEWLINE` [D-004]。
-- 文件开头的 header 行不是注释：在“header 模式”下，`#` 后紧跟 `allow`/`deny`/`emit`/`dsl-version` 与 `:` 的行按 header 解析（见 [02 §2](02-grammar.md)）。header 模式在遇到第一条非 header、非空行、非注释行时结束。
+- 文件开头的 header 行不是注释：在“header 模式”下，`#` 后紧跟 `allow`/`deny`/`emit`/`dsl-version` 与 `:` 的行按 header 解析（见 [02 §1](02-grammar.md)）。header 模式在遇到第一条非 header、非空行、非注释行时结束。
 - header 只认 `# allow:`、`# deny:`、`# emit:`、`# dsl-version:` 四种前缀。其余 `#` 行一律当注释，不报错、不参与校验——包括 `# approval:`（审批在内核，DSL 零审批语法，[D-013](../../decisions/D-013.md)）。
 - 除 header 行外，任何 `#` 都开始注释；不支持块注释。
 
@@ -86,4 +86,4 @@ CT 现有 lexer 把 `\n` 直接当空白吞掉（`Lexer.h.ct:70`，ct-lang HEAD 
 ## 9. 验收锚点
 
 - 行为条目：[S-003](../S-003-numbers.md)、[S-004](../S-004-newline.md)。
-- 夹具：数字边界 6 例、NEWLINE 抑制 8 例、注释吞行 2 例、关键字作工具名 1 例（见 [09 §3](09-milestones.md)）。
+- 夹具：数字边界 6 例、NEWLINE 抑制 8 例、注释吞行 2 例、关键字作工具名 1 例（见 [09 §2](09-milestones.md)）。

@@ -1,6 +1,6 @@
 # 待定条目（Pending）
 
-> 状态：**大部分仍 pending**。已拍板项为 [D-001](../decisions/D-001.md)、[D-002..D-015](../decisions/README.md)；规范正文 [docs/spec/dsl/](dsl/README.md) 为 `v0.1 rev.1`（unverified）。
+> 状态：**大部分仍 pending**。已拍板项为 [D-001](../decisions/D-001.md)、[D-002..D-020](../decisions/README.md)；规范正文 [docs/spec/dsl/](dsl/README.md) 为 `v0.1 rev.1`（unverified）。
 > 下表逐行标注状态；标 `decided → D-xxx` 的条目可被引用，标 `partial` 的只对已列子项生效，其余仍 pending。
 > `undecidable` 项（P-020、P-021）没有决策记录，重开条件写在对应行。
 

@@ -34,14 +34,14 @@
 
 | 术语 | 含义 |
 | --- | --- |
-| 单次执行 | 一次 `dsl_load` + `dsl_exec` 的生命周期；本规范的范围上限 |
+| 单次执行 | 一次加载（parse + 静态检查）与 `dsl_exec` 的生命周期；本规范的范围上限 |
 | 工具调用 | 内核注册表里的工具被脚本调用；参数空格分隔，见 S-001 |
 | 管道 | `a \|> f b`，把左侧值追加到右侧调用参数末尾；见 D-007 | 已定稿（unverified） |
 | 降级 | `left \|? right`，左侧单 call 失败则尝试右侧；高于 `\|>`，见 D-007 | 已定稿（unverified） |
 | 结果元数据 | `{ value, truncated, original_size }`，侧车伪字段，见 D-008 | 已定稿（unverified） |
 | into / `$` | 词法作用域绑定；`$` 指代当前绑定值；嵌套与块外规则待定 |
 | 策略快照 | 加载时绑定的 allow/deny/registry/constraint 版本，执行期不随热更新改变；见 D-012 |
-| trace_id | 一次执行生成的关联 id，随 emit 事件传播，供因果链查询（P-014 未定） |
+| trace_id | 一次执行生成的关联 id，随 emit 事件传播，供因果链查询（P-014 未定；非规范术语，仅是讨论名） |
 | accepted | 已拍板且已验收；当前 **0 条** |
 | unverified | 已拍板但未实现/无门禁；当前 S-001..S-024 与规范正文 |
 | pending | 未拍板；没有验收判据；当前 PENDING 除已定稿项外的条目 |
@@ -73,7 +73,7 @@
 | 正文 | Rill DSL 规范 `v0.1 rev.1`（词法/文法/语义/安全/运行时/示例/里程碑） | unverified | [dsl/README.md](../spec/dsl/README.md) |
 | S-001 | 调用形态：空格参数，括号仅分组 | unverified | [S-001](../spec/S-001-call-form.md) |
 | S-002..S-024 | 文法、语义、安全、错误、值层的可验收条目 | unverified | [规格索引](../spec/README.md) |
-| P-001..P-021 | 未决问题清单 | pending / partial | [PENDING](../spec/PENDING.md) |
+| P-001..P-022 | 未决问题清单 | pending / partial | [PENDING](../spec/PENDING.md) |
 
 ## 6. 候选偏离（未签字，不计为已登记 deviation）
 

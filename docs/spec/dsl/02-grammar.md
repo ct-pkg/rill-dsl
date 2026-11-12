@@ -9,7 +9,7 @@ program       := header? statement* EOF
 header        := header_line+
 header_line   := allow_line | deny_line | emit_line | version_line
 allow_line    := "# allow:" allow_list TERM
-allow_list    := "*" | ident_list
+allow_list    := "*" | ident_list?
 deny_line     := "# deny:" ident_list TERM
 emit_line     := "# emit:" ident_list TERM
 version_line  := "# dsl-version:" NUMBER TERM          # [D-018]
@@ -54,7 +54,7 @@ param_list    := IDENT ("," IDENT)*
 - `if`/`for`/`into`/`fn` 的块 `{` 与语句结束都由 `stmt_end` 与 `block` 表达，不额外接受 `;`。
 - `assign_stmt` 与 `expr_stmt` 的前缀都是 `IDENT`；解析用两 token 前瞻：`IDENT` 后紧跟 `=`（不是 `==`）→ 赋值，否则按 `expr` 解析。
 - `return` 无表达式时返回 `null`。
-- `break`/`continue` 只允许出现在 `for` 块内；位置检查在加载期（见 [03 §5](03-semantics.md)）。
+- `break`/`continue` 只允许出现在 `for` 块内；位置检查在加载期（见 [03 §4](03-semantics.md)）。
 
 ## 3. 表达式
 

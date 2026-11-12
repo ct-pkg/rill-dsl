@@ -30,7 +30,7 @@
 - `# deny:` 单独出现（无 `# allow:`）→ `E_DENY_WITHOUT_ALLOW`；不得静默变成空集。
 - `# deny:` 优先于 `# allow:`；`# deny:` 里的工具即使不在 allow 也合法（冗余无副作用）。
 - header 由脚本作者自书：默认拒绝阻止的是“无意识授权”和“静默扩大”，不阻止作者显式申请危险工具。外部授权主体（`principal_id`/`grant_set`）未定，见 PENDING P-020。
-- `# allow: *` 的审计记录字段：脚本路径、内容哈希、`policy_generation`、有效工具数、时间戳。
+- `# allow: *` 的审计记录 6 个字段：脚本路径、内容哈希、`policy_generation`、有效工具数、时间戳、理由。理由由内核执行上下文提供（任务/会话标识），脚本 header 不新增 `reason:` 语法；上下文无理由时记空串并标 `reason_missing=true`，加载仍允许但审计可筛出。
 
 ## 3. 策略快照
 

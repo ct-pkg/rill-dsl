@@ -49,7 +49,7 @@
 | T-004 | 工具 `json_parse` 契约 | unverified | 工具层 | [T-004](tools/T-004-tool-json-parse.md) |
 | T-005 | 工具 `get` 契约 | unverified | 工具层 | [T-005](tools/T-005-tool-get.md) |
 | T-006 | 工具 `json_build` 契约 | unverified | 工具层 | [T-006](tools/T-006-tool-json-build.md) |
-| P-001..P-021 | 未决问题 | pending | 无 | [PENDING](PENDING.md) |
+| P-001..P-022 | 未决问题 | pending / partial | 无 | [PENDING](PENDING.md) |
 
 命名空间：`S-*` 是 DSL 对外行为条目，`T-*` 是工具契约条目，两者独立编号、互不复用（工具目录曾用 `S-021..S-026`，已改为 `T-001..T-006`）。`T-*` 的状态规则、条目格式与验收约定同本文 §3、§4。
 
