@@ -52,7 +52,7 @@ json_parse text
 | 未归类 | `internal` | — | 否 |
 
 - 空文本 `""` 不是空结果：按语法错误归 `invalid_input`（可捕获），不返回 `null`；合法 JSON 字面量 `null` 则是成功返回 `null`，两者不同（空结果契约见 [README](README.md) §4.1）。
-- 重复键不采用“后者覆盖”：这与 emit 字面量的加载期 `E_DUP_KEY`（[02 §4](../dsl/02-grammar.md) L108）和 args JSON 的重复键规则（[06 §5.4](../dsl/06-security.md)）保持同一取向——同一份文本不允许两个值。运行期没有 `dup_key` 类别，故归 `invalid_input`。
+- 重复键不采用“后者覆盖”。三种“重复键”分属不同阶段，不得混用：emit 对象字面量 → 加载期 `dup_key`；参数协议（`args_json`/`ctx_json`）→ 运行期 `dup_key_json`（handler 之前，不捕获）；本工具解析的业务 JSON 文本 → `invalid_input`（handler）。本条目只涉及第三种，故归 `invalid_input`。
 - 不产生 `not_found`/`transient`/`denied`：无文件、无网络、无权限面。
 
 ### 上游截断的归一（已落正文）
@@ -94,6 +94,6 @@ json_parse text
 | 值模型与数字 | [03 §1](../dsl/03-semantics.md) L7-L12 | 规范正文 |
 | 工具边界只拿 payload | [05 §1.2](../dsl/05-data-metadata.md) L21-L25 | 规范正文 |
 | 可捕获集 | [04 §2.1](../dsl/04-pipeline-errors.md) L41-L54 | 规范正文 |
-| 重复键取向 | [02 §4](../dsl/02-grammar.md) L108、[06 §5.4](../dsl/06-security.md) | 规范正文 |
+| 重复键分层 | [02 §4](../dsl/02-grammar.md) L108（加载期 `dup_key`）、[07 §3.2](../dsl/07-runtime.md)（运行期 `dup_key_json`）、[06 §5.4](../dsl/06-security.md)（双通道） | 规范正文 |
 | 解析工具存在性 | `docs/design/dsl-spec-v0.1.md` L129、L415 | 历史输入 |
 | 截断归一 | [07 §1](../dsl/07-runtime.md) `requires_complete_input`、[07 §3.2](../dsl/07-runtime.md) `limit` | 规范正文 |

@@ -55,7 +55,7 @@ json_build k 3                         # 键可以来自变量
 | 未归类 | `internal` | — | 否 |
 
 - **三个负例分属两层**：奇数个实参 → 加载期 `arity`（个数静态，脚本不执行）；键位不是 `string` → handler 的 `invalid_input`（键类型是运行期值）；同名键重复 → handler 的 `invalid_input`（数据内容）。不产生 `constraint`：本工具没有 `ParamConstraint`，值层也没有可声明的约束。
-- 重复键归 `invalid_input` 而非 `dup_key`：`dup_key` 是加载期类别，只用于 emit 字面量与 args JSON（[07 §3.1](../dsl/07-runtime.md)）；运行期枚举里没有它，且这里的重复是 handler 在数据里发现的。
+- 重复键归 `invalid_input`（handler 构造时），不是 `dup_key` 也不是 `dup_key_json`：`dup_key` 是加载期类别，只覆盖 emit 对象字面量；`args_json`/`ctx_json` 的协议级重复键是运行期 `dup_key_json`（handler 之前、不捕获）；本工具的同名业务键是第三种，发生在 handler 构造阶段。三者不同阶段，不得混用（[07 §3.2](../dsl/07-runtime.md)）。
 - 嵌套深度不设 `json_build` 专属上限；调用层数由 `max_tool_calls` 与 `timeout_ms` 兜底，**结果深度**按 `max_payload_depth` 校验（07 §2 已定为通用上限，见 [T-004](T-004-tool-json-parse.md) §2），超限 → `limit`。
 
 ## 4. 参数约束
@@ -67,7 +67,7 @@ json_build k 3                         # 键可以来自变量
 | 路径 / argv / 域名 / emit 类 | — | 不适用 | 不声明 |
 | `args_json` 单次解析、约束与 handler 同源 | 双通道 | 必做（运行时统一） | 由运行时执行 |
 
-`args_json` 里的重复键指**协议层**的 JSON 对象重复键（本工具的实参是数组，正常不会出现）；emit payload 字面量的重复键是加载期 `E_DUP_KEY`，与本工具的“同名业务键”是两件事。
+`args_json` 里的重复键指**协议层**的 JSON 对象重复键（由运行时在 handler 之前判为 `dup_key_json`；本工具的实参是数组，正常不会出现）；emit payload 字面量的重复键是加载期 `dup_key`；本工具的“同名业务键”是 handler 构造时的 `invalid_input`。三者不同阶段。
 
 ## 5. 验收命令与阈值
 
@@ -87,5 +87,5 @@ json_build k 3                         # 键可以来自变量
 | 工具存在性 | `docs/design/dsl-spec-v0.1.md` L201（“其他场景需要构造 JSON 时，用 `json_build` 工具”） | 历史输入 |
 | 无通用对象字面量 | [02 §4](../dsl/02-grammar.md) L110、[dsl/README §4](../dsl/README.md) L64 | 规范正文 |
 | 变长不注入 | [03 §6](../dsl/03-semantics.md) L70、[D-007](../../decisions/D-007.md) L58 | 规范 + 决策 |
-| 重复键取向 | [D-006](../../decisions/D-006.md) L58、[02 §4](../dsl/02-grammar.md) L108 | 决策 + 规范 |
+| 重复键分层 | [D-006](../../decisions/D-006.md) L58、[02 §4](../dsl/02-grammar.md) L108、[07 §3.2](../dsl/07-runtime.md) | 决策 + 规范 |
 | 唯一提及事实 | [D-006](../../decisions/D-006.md) L41（全仓一次提及，无接口无 schema） | 决策出证 |

@@ -114,6 +114,7 @@
 | `denied` | runtime（策略层）+ handler（仅 OS 权限 `EACCES`/`EPERM`） | 调用被拒绝执行 | 否 | `read`、`write`（仅 OS 侧） |
 | `constraint` | runtime（第三层） | 参数值不符合值层声明（路径、标量类型、大小） | 否 | 全部固定 arity 工具 |
 | `arity`（加载期） | loader | 实际实参个数（显式 + 管道 + `$`）≠ 固定形参数，或 `json_build` 的个数为奇数 | 否 | 全部固定 arity 工具；`json_build`（奇数个） |
+| `dup_key_json`（运行期） | runtime | `args_json`/`ctx_json` 协议级重复键，解析即失败、handler 之前 | 否 | 不涉及（工具只收已解析参数） |
 | `limit` | runtime（ExecLimits）+ handler（构造型不可截断） | 资源上限 | 否 | `json_parse`、`get`、`json_build` 的结果上限；`write` 的每次调用输入总量上限；全部工具的 `ExecLimits` |
 | `internal` | runtime / handler | 未归类失败、未知 `error_kind` | 否 | 全部 |
 | `type` | runtime（DSL 运算） | 运算/比较的类型不符 | 否 | 工具不得产生 |
@@ -129,7 +130,7 @@
 
 1. **单一归属**：handler 只允许返回上表“归属”含 handler 的行；返回其他 kind 一律由运行时归一为 `internal`。
 2. **未知字符串**：handler 返回枚举外的字符串 → `internal`，且不可捕获（沿用 [S-008 §3](../S-008-capturable-errors.md)）。
-3. **`constraint` 与 `invalid_input` 的机械判据**：值层的约束失败（运行时 `ParamConstraint`、schema 浅校验）→ `constraint`；失败来自数据内容或运行期值（编码、JSON 语法、正则、键不是 `string`、重复键）→ `invalid_input`。前者说明脚本传的参数值不对，不应被 `|?` 静默兜底；后者说明输入数据有问题，允许兜底。个数不符（含 `json_build` 的奇数个）不在两类中——加载期已报 `arity`。
+3. **`constraint` 与 `invalid_input` 的机械判据**：值层的约束失败（运行时 `ParamConstraint`、schema 浅校验）→ `constraint`；失败来自数据内容或运行期值（编码、JSON 语法、正则、键不是 `string`、业务 JSON 文本重复键）→ `invalid_input`。前者说明脚本传的参数值不对，不应被 `|?` 静默兜底；后者说明输入数据有问题，允许兜底。个数不符（含 `json_build` 的奇数个）不在两类中——加载期已报 `arity`；协议级重复键由 `dup_key_json` 单独承担。
 4. **不得为可降级改类**：工具不能把 `denied`/`limit` 改写成可捕获类别来绕过 [04 §2.1](../dsl/04-pipeline-errors.md)。
 5. **空结果不是错误**：缺键、空匹配、空文件都返回合法 payload，不产生任何 `error_kind`；空集合用 `[]`、缺失用 `null`，见 §4.1。
 6. **一次调用一个类别**：失败只归一到一个 kind，不聚合、不带错误值回脚本。
@@ -144,7 +145,8 @@
 | OS 拒绝（`EACCES`/`EPERM`） | `denied` | handler |
 | 磁盘/配额耗尽（`ENOSPC`/`EDQUOT`） | `transient` | handler |
 | 可重试 I/O（`EIO`/`EBUSY`/`EAGAIN`） | `transient` | handler |
-| 目标是目录、字节非 UTF-8、正则非法、JSON 非法、键不是 `string`、重复键 | `invalid_input` | handler |
+| 参数协议（`args_json`/`ctx_json`）重复键 | `dup_key_json`（运行期） | runtime |
+| 目标是目录、字节非 UTF-8、正则非法、JSON 非法、键不是 `string`、业务 JSON 文本重复键 | `invalid_input` | handler |
 | 构造型结果超 `max_output_bytes`；`write` 的本次调用输入总量超 `max_input_bytes`；`ExecLimits` 任一超限 | `limit` | handler / runtime |
 | handler 返回枚举外的字符串 | `internal` | runtime 归一 |
 
