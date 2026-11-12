@@ -20,7 +20,7 @@ Phase 1 把 09 的 M1（lexer）与 M2（parser + 静态检查）合并为一个
 ### Phase 1：完整文法切片（09 M1+M2）
 
 - **范围**：词法、header、全部语句与表达式、emit payload、AST、加载期名字/头部/arity 校验、统一错误格式。不含任何执行语义。
-- **依赖**：Phase 0 的 `tools/check.sh`/`tools/check-all.sh` 基线（g3/g5/g7/g8 当前 DISABLED，本 phase 收口启用）；CT 工具链；T-001..T-006 的静态元数据。Phase 0 未交付则不开工。
+- **依赖**：Phase 0 的 `tools/check.sh`/`tools/check-all.sh` 基线（g3/g5/g7/g8 当前 DISABLED，本 phase 收口启用）；CT 工具链；构建骨架由 PH-1 T01 建立；T-001..T-006 的静态元数据。Phase 0 未交付则不开工。
 - **退出条件**：PH-1 卡 §9 全绿；`tools/check-phase1.sh --all` 与 `tools/check-all.sh` 退出 0；S-001..S-024 每条至少 1 个 case；五个 08 示例 AST golden 相等；每个任务有红证。
 - **与 09 的关系**：覆盖 M1+M2，并提前落地 M5/M7 的静态子集（arity/注入/递归/遮蔽/header 默认拒绝）；M1 的 token golden 与 M2 的 AST/加载负例都在 Phase 1 门禁内，运行期部分仍留在 M5/M7。
 
@@ -67,7 +67,7 @@ Phase 1 把 09 的 M1（lexer）与 M2（parser + 静态检查）合并为一个
 
 | 项 | 内容 | 触发信号 / 处置 |
 | --- | --- | --- |
-| Phase 0 | 可构建骨架、`tools/check.sh`/`tools/check-all.sh`、`docs/session-map.md`、版本落点；g3/g5/g7/g8 由 Phase 1 启用 | 缺任一：PH-1 不开工；由 G0/G1 拦 |
+| Phase 0 | `tools/check.sh`/`tools/check-all.sh` 门禁基线、`docs/session-map.md`、版本落点；构建骨架由 PH-1 建立；g3/g5/g7/g8 由 Phase 1 启用 | 缺任一：PH-1 不开工；由 G0/G1 拦 |
 | CT 工具链 | 编译器版本固定；无网络依赖 | 构建失败即 P0，先修 Phase 0 |
 | registry 元数据 | T-001..T-006 的 arity/`accepts_context`/变长 | 元数据变更 → PH-1 的 arity golden 同步；不得只改实现 |
 | 规范冲突 | `# approval:`（U-1）、`unknown_tool`/`unknown_callee`（U-2） | 已在 PH-1 卡 §10 记为未决；不在实现中擅自定规则 |

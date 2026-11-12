@@ -14,7 +14,7 @@
 | 交付物清单 | 见 §3；每项一个路径。 |
 | 任务清单 | 见 §4；每项一个交付物、一条 `verify`、一次实现提交、可单独回滚。 |
 | 退出判据 | 见 §9；每条带命令或 golden 锚点。 |
-| 依赖 | Phase 0 的 `tools/check.sh` 基线（g0/g1/g4/g6/g9 已绿）与 `tools/check-all.sh` 全量入口；Phase 1 需启用 g3/g5/g7/g8；CT 工具链；T-001..T-006 的静态元数据。 |
+| 依赖 | Phase 0 的 `tools/check.sh` 基线（g0/g1/g4/g6/g9 已绿）与 `tools/check-all.sh` 全量入口；Phase 1 需启用 g3/g5/g7/g8；CT 工具链；T-001..T-006 的静态元数据；`src/` 与构建入口由 P1-T01 建立。 |
 | 规范版本 | `1.7.0`（生成块头 `version` 快照；`v0.1 rev.1` 是 DSL 规范版本，不改）。 |
 | version-minor | `1`（`PH-1` 收口目标 `0.1.0`；产品版本落点由 Phase 0/G0 声明，本卡不执行 bump）。 |
 | 已知风险 | 换行与空格调用交互、emit payload 与块界定消歧、错误位置计算；见 §8。 |
@@ -257,7 +257,7 @@ Phase 1 只消费静态元数据：`read` arity=1、`grep` arity=2、`write` ari
 
 | 类型 | 内容 |
 | --- | --- |
-| 依赖 | Phase 0 已交付 `tools/check.sh`/`tools/check-all.sh`；g3/g5/g7/g8 当前为 DISABLED，Phase 1 收口必须启用；CT 工具链可用；本卡 §2.4 的 registry 元数据与 T-001..T-006 一致；`AGENTS.md` 版本落点由 Phase 0/G0 补齐。 |
+| 依赖 | Phase 0 已交付 `tools/check.sh`/`tools/check-all.sh`；g3/g5/g7/g8 当前为 DISABLED，Phase 1 收口必须启用；构建骨架由 P1-T01 建立；CT 工具链可用；本卡 §2.4 的 registry 元数据与 T-001..T-006 一致；`AGENTS.md` 版本落点由 Phase 0/G0 补齐。 |
 | 风险 1 | **换行与空格调用交互**：`read "a"` 换行 `"b"` 必须是两条语句，`read "a"` 换行 `\|> f` 必须续行；`f 1 - 2` 是减法，`f 1` 换行 `- 2` 不是合法延续。探针：`LX-06` 的 `let d = a` 换行 `\|> f b`，期望单条 pipe；`LX-04` 的 `read "a"` 换行 `"b"`，期望两条 expr_stmt。触发信号：token golden 多/少一个 NEWLINE。 |
 | 风险 2 | **emit payload 与块界定**：`emit "e"` 换行 `{}` 是空 payload，不是空块；`if x` 换行 `{}` 是块；`emit "e" {}.x` 是语法错误。探针：`EM-01`/`LX-08`/`EM-04` 的 AST 与错误位置。触发信号：`{}` 被解析成 block，或 payload 后接受 `.x`。 |
 | 风险 3 | **错误位置计算**：UTF-8 字节列、CRLF 归一、EOF、开定界符、第二个重复键。探针：`LX-10` 的 `let s = "中文" x`（`col` 按字节）、`ER-03` 的未闭合 `{`、`EM-05` 的第二个 `"a"`。触发信号：`col` 按字符计或未闭合指向 EOF。 |
