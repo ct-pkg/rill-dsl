@@ -1,4 +1,4 @@
-# S-021 工具 `read`
+# T-001 工具 `read`
 
 - **状态**：`unverified`
 - **决策**：[D-002](../../decisions/D-002.md)、[D-008](../../decisions/D-008.md)、[D-014](../../decisions/D-014.md)

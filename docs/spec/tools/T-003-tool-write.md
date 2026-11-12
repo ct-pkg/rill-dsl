@@ -1,4 +1,4 @@
-# S-023 工具 `write`
+# T-003 工具 `write`
 
 - **状态**：`unverified`
 - **决策**：[D-002](../../decisions/D-002.md)、[D-008](../../decisions/D-008.md)、[D-014](../../decisions/D-014.md)
@@ -37,6 +37,7 @@ write "issues.txt" (a + b)              # 第二个实参是分组表达式
 - `truncated`：本工具不产生截断。但运行时按 [05 §1.4](../dsl/05-data-metadata.md) 归并粘性：若 `content` 的 payload 来自被截断的 `read`，则 `(write ...).truncated == true`，`original_size` 取该输入的最大值。这是调用方检测“写入了半截内容”的唯一手段。
 - 未发生粘性时：`truncated=0`，`original_size` = `"null"` 的序列化字节数 `4`（[05 §1.4](../dsl/05-data-metadata.md) 第三条分支）。
 - 覆盖语义：目标存在则截断重写，不存在则创建；写入的就是 `content` 的 payload，不是原始文件内容。
+- 输入上限：**本条目主张** `content` 序列化后的 UTF-8 字节数不得超过 `ExecLimits.max_input_bytes`（新增字段，默认 `262144`，与 `max_output_bytes` 同口径）。超限 → `limit`，不可捕获，handler 未执行，目标文件不被创建或截断。需正文跟进 07 §2 增加该字段、默认值表与“输入”计数口径。
 
 ## 3. 失败语义
 
@@ -44,6 +45,7 @@ write "issues.txt" (a + b)              # 第二个实参是分组表达式
 | --- | --- | --- | --- |
 | 路径解析后不在 root 界内、指向界外的 symlink、basename 是 symlink | `constraint` | 未执行 | 否 |
 | 实参个数 ≠ 2，或 `path` 非 `string` | `constraint` | 未执行 | 否 |
+| `content` 序列化 > `max_input_bytes` | `limit` | 未执行 | 否 |
 | 父目录不存在（`ENOENT`/`ENOTDIR`） | `not_found` | 执行并失败 | 是 |
 | 目标是目录（`EISDIR`） | `invalid_input` | 执行并失败 | 是 |
 | 操作系统拒绝访问（`EACCES`/`EPERM`）、空间耗尽（`ENOSPC`） | `denied` | 执行并失败 | 否 |
@@ -62,7 +64,7 @@ write "issues.txt" (a + b)              # 第二个实参是分组表达式
 | `path` | `CONSTRAINT_PATH_PREFIX`：canonical 绝对路径、等于 root 或 `root + "/"` 前缀；写不存在文件时解析父目录 realpath，basename 不是 symlink；判定与打开同源 | 必做（D-014 §5.1） | 声明 |
 | `path` | `CONSTRAINT_DENY_PATTERN`（如 `*.key`） | 本期不主张 | 不声明 |
 | `content` | 类型不设约束：六类 payload 都可写 | — | 不声明 |
-| `content` 大小上限 | 无对应约束类；`ExecLimits.max_output_bytes` 只约束**输出** | 本期不主张 | 不声明；风险另记 |
+| `content` 序列化字节数 | `max_input_bytes`（新增 `ExecLimits` 字段，默认 `262144`） | 必做（本条目主张） | 声明 |
 
 `write` 是路径约束的第二个宿主，夹具与 [S-017](../S-017-path-constraint.md) 共享六例；其中 `/workspace/new.txt` 一例专门覆盖“写不存在文件时解析父目录”的分支。
 
@@ -74,7 +76,8 @@ write "issues.txt" (a + b)              # 第二个实参是分组表达式
   - 路径 6/6；写不存在的 `/workspace/new.txt` 必须允许，父目录是 symlink 指向界外必须拒绝；
   - 字符串与非字符串内容各 1 例，落盘字节逐字节比对；
   - 粘性 1 例：`read` 截断 → `write` → `(write ...).truncated == true`；
-  - `into` 内 `write "out.txt"`（不写 `$`）必须报 `constraint` 且 handler 未执行。
+  - `into` 内 `write "out.txt"`（不写 `$`）必须报 `constraint` 且 handler 未执行；
+  - `content` 超 `max_input_bytes` 1 例：报 `limit`、不可捕获、handler 未执行，且目标文件保持原样（不得先截断再失败）。
 
 ## 6. 证据锚点
 
@@ -86,3 +89,4 @@ write "issues.txt" (a + b)              # 第二个实参是分组表达式
 | 路径规则 | [06 §5.1](../dsl/06-security.md) L81-L91、[D-014](../../decisions/D-014.md) L50 | 规范 + 决策 |
 | 侧车与粘性 | [05 §1.1–1.4](../dsl/05-data-metadata.md) L9-L51 | 规范正文 |
 | `params_schema`/`accepts_context` | [07 §1](../dsl/07-runtime.md) L15-L23 | 规范正文 |
+| 输入上限（本条目主张） | [07 §2](../dsl/07-runtime.md) 的 `ExecLimits` 无输入字段 | 规范缺口 |

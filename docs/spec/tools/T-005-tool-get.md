@@ -1,4 +1,4 @@
-# S-025 工具 `get`
+# T-005 工具 `get`
 
 - **状态**：`unverified`
 - **决策**：[D-007](../../decisions/D-007.md)、[D-008](../../decisions/D-008.md)、[D-014](../../decisions/D-014.md)

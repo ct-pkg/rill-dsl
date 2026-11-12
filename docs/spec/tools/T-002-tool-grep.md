@@ -1,4 +1,4 @@
-# S-022 工具 `grep`
+# T-002 工具 `grep`
 
 - **状态**：`unverified`
 - **决策**：[D-002](../../decisions/D-002.md)、[D-008](../../decisions/D-008.md)、[D-014](../../decisions/D-014.md)

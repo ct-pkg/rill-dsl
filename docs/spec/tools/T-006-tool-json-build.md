@@ -1,10 +1,10 @@
-# S-026 工具 `json_build`
+# T-006 工具 `json_build`
 
 - **状态**：`unverified`
 - **决策**：[D-006](../../decisions/D-006.md)、[D-008](../../decisions/D-008.md)、[D-014](../../decisions/D-014.md)
 - **规范**：[02 §4](../dsl/02-grammar.md)、[03 §6](../dsl/03-semantics.md)、[07 §1](../dsl/07-runtime.md)
 - **契约总则**：[README](README.md) §2–§6
-- **里程碑**：无排期（`v0.1` 提及，rev.1 未排里程碑）
+- **里程碑**：无排期（可选注册集；`v0.1` 提及，rev.1 未引用）
 - **工具名**：`json_build`（非关键字）
 - **arity**：**变长**（`params_schema=NULL`），键值成对；required：无单个必填位，但必须成对
 - **accepts_context**：否（变长工具不参与 `$` 注入）
@@ -31,13 +31,14 @@ json_build k 3                         # 键可以来自变量
 - 0 个实参 → `{}`，合法。
 - 变长：`params_schema` 为 NULL。按 [03 §6](../dsl/03-semantics.md)，schema 没有固定 arity 或为变长时 **不注入 `$`**；即使声明 `accepts_context: true` 也不会注入，故契约为 `false`，避免脚本误以为可以省略末参。
 - 没有“分隔符”“类型标记”等额外参数；不带键的类型推断，`1` 是 number、`"1"` 是 string。
+- **注册状态（本条目主张）**：`json_build` 属于**可选注册集**，不是 MVP 必备五件套。未注册时脚本调用报加载期 `unknown_tool`（[07 §3.1](../dsl/07-runtime.md)），不产生运行期行为；本目录不把它计入 M2/M10 的必过夹具，避免把未定项变成门禁。需正文跟进：在 07 §4 的 `Available:` 示例或 §7 用一句标注“可选工具”。
 
 ## 2. 输出
 
 - payload：`json_object`。键序 = 书写顺序（不排序）。正文没有规定对象序列化是否排序，本条目取插入序；该点属正文待补项。
 - 同名键重复 → 见 §3，不采用“后者覆盖”。
 - `truncated=0`；`original_size` = 对象序列化后的 UTF-8 字节数。
-- 不截断：序列化超过 `max_output_bytes` → `limit`；半截 JSON 不能作为合法 payload。
+- 不截断：序列化超过 `max_output_bytes` → `limit`；结果嵌套深度超过 `max_payload_depth` → `limit`。半截 JSON 不能作为合法 payload。
 - 嵌套对象由值位传入另一个 `json_build` 的结果构成；**本期不主张数组构造**（没有 `json_build_array`），需要数组时只能来自工具结果或既有值。
 
 ## 3. 失败语义
@@ -48,12 +49,13 @@ json_build k 3                         # 键可以来自变量
 | 键位不是 `string` | `invalid_input` | 执行并失败 | 是 |
 | 同名键出现两次 | `invalid_input` | 执行并失败 | 是 |
 | 结果序列化 > `max_output_bytes` | `limit` | 执行并失败 | 否 |
+| 结果嵌套深度 > `max_payload_depth` | `limit` | 执行并失败 | 否 |
 | `max_tool_calls`/`timeout_ms` 超限、策略强杀 | `limit`/`revoked` | 边界检查 | 否 |
 | 未归类 | `internal` | — | 否 |
 
 - **不产生 `constraint`**：该工具没有固定 arity 与 schema，运行时没有可执行的形状检查；逐位校验只能由 handler 做，因此失败一律归 `invalid_input`。这与固定 arity 工具“schema 不符 → `constraint`”的划分不同，是 [README](README.md) §5 规则 3 的直接结果。
 - 重复键归 `invalid_input` 而非 `dup_key`：`dup_key` 是加载期类别，只用于 emit 字面量与 args JSON（[07 §3.1](../dsl/07-runtime.md)）；运行期枚举里没有它，且这里的重复是 handler 在数据里发现的。
-- 嵌套深度不设 `json_build` 专属上限；深层嵌套由 `max_tool_calls` 与 `timeout_ms` 兜底，构造结果深度是否受 `max_payload_depth` 限制属正文缺口（该上限目前只定义给 emit）。
+- 嵌套深度不设 `json_build` 专属上限；调用层数由 `max_tool_calls` 与 `timeout_ms` 兜底，**结果深度**按 `max_payload_depth` 校验（该字段语义扩为通用 JSON payload 深度上限，见 [T-004](T-004-tool-json-parse.md) §2），超限 → `limit`。
 
 ## 4. 参数约束
 
@@ -73,6 +75,7 @@ json_build k 3                         # 键可以来自变量
   - 4 条合法输入（0 参、2 参、4 参、嵌套）逐字节比对序列化结果，键序与书写序一致；
   - 3 条非法输入（奇数个、非 string 键、重复键）报 `invalid_input` 且可被 `|?` 捕获；
   - 超 `max_output_bytes` 1 例报 `limit`，不可捕获；
+  - 结果深度超 `max_payload_depth` 1 例报 `limit`，不可捕获；
   - `$` 注入计数 0：`into` 内 `json_build "a" 1` 的 `args_json` 不得多出 `$`。
 
 ## 6. 证据锚点

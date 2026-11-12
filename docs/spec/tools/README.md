@@ -3,7 +3,7 @@
 > **状态**：`unverified`。本目录收录的 6 个工具**均无 handler、无 `ToolRegistry` 注册、无夹具**；所有验收命令一律写 `尚未落盘`。
 > **规范正文**：[../dsl/README.md](../dsl/README.md)（`v0.1 rev.1`）。
 > **决策锚点**：[D-002](../../decisions/D-002.md)、[D-007](../../decisions/D-007.md)、[D-008](../../decisions/D-008.md)、[D-014](../../decisions/D-014.md)。
-> **编号**：S-021..S-026，接在 [S-020](../S-020-error-format.md) 之后；编号与状态规则同 [../README.md §3](../README.md)。
+> **编号**：`T-001..T-006`，工具契约独立命名空间（`T` = tool），不复用 `S-*` 规格条目号；状态格式沿用规格层。
 
 本目录只回答“这些工具被调用时，输入是什么、输出是什么、失败归哪一类”。不定义 handler 实现、不定义注册表代码、不新增 DSL 语法。
 
@@ -11,12 +11,12 @@
 
 | 工具 | 条目 | 正文引用 | 状态 |
 | --- | --- | --- | --- |
-| `read` | [S-021](S-021-tool-read.md) | [08 §1/§3/§4](../dsl/08-examples.md)、[07 §4](../dsl/07-runtime.md)、[S-017](../S-017-path-constraint.md) | `unverified` |
-| `grep` | [S-022](S-022-tool-grep.md) | [08 §1/§3/§4](../dsl/08-examples.md)、[07 §4](../dsl/07-runtime.md) | `unverified` |
-| `write` | [S-023](S-023-tool-write.md) | [08 §1/§2/§3/§5](../dsl/08-examples.md)、[07 §4](../dsl/07-runtime.md) | `unverified` |
-| `json_parse` | [S-024](S-024-tool-json-parse.md) | [08 §2/§5](../dsl/08-examples.md)、[07 §4](../dsl/07-runtime.md) | `unverified` |
-| `get` | [S-025](S-025-tool-get.md) | [05 §1.3](../dsl/05-data-metadata.md)、[D-008](../../decisions/D-008.md) | `unverified` |
-| `json_build` | [S-026](S-026-tool-json-build.md) | `v0.1` §4 注（历史输入）、[D-006](../../decisions/D-006.md) 出证 | `unverified` |
+| `read` | [T-001](T-001-tool-read.md) | [08 §1/§3/§4](../dsl/08-examples.md)、[07 §4](../dsl/07-runtime.md)、[S-017](../S-017-path-constraint.md) | `unverified` |
+| `grep` | [T-002](T-002-tool-grep.md) | [08 §1/§3/§4](../dsl/08-examples.md)、[07 §4](../dsl/07-runtime.md) | `unverified` |
+| `write` | [T-003](T-003-tool-write.md) | [08 §1/§2/§3/§5](../dsl/08-examples.md)、[07 §4](../dsl/07-runtime.md) | `unverified` |
+| `json_parse` | [T-004](T-004-tool-json-parse.md) | [08 §2/§5](../dsl/08-examples.md)、[07 §4](../dsl/07-runtime.md) | `unverified` |
+| `get` | [T-005](T-005-tool-get.md) | [05 §1.3](../dsl/05-data-metadata.md)、[D-008](../../decisions/D-008.md) | `unverified` |
+| `json_build` | [T-006](T-006-tool-json-build.md) | `v0.1` §4 注（历史输入）、[D-006](../../decisions/D-006.md) 出证 | `unverified` |
 
 `read`/`grep`/`write`/`json_parse`/`get` 五个出现在 [07 §4](../dsl/07-runtime.md) 的错误示例 `Available:` 行，是正文唯一一次成组列出的工具名；该行是示例，不是注册表定义，实际可见集合仍由内核 `ToolRegistry` 决定。`json_build` 只在 `docs/design/dsl-spec-v0.1.md` 出现，rev.1 正文未直接引用；收录理由：emit payload 之外没有通用对象字面量（[dsl/README §4](../dsl/README.md)），若内核不提供该工具，构造 JSON 就没有任何手段。
 
@@ -44,7 +44,7 @@
 
 **required 的机械含义**：本规范没有可选参数、默认值、命名参数。一个参数“可以省略”只有两种来源——`|>` 追加或 `$` 注入；两者都只是把值补到末尾，不是默认值。补完之后个数仍不等于 `m` → `constraint`，handler 不执行。因此每个固定 arity 工具的所有参数都标 required。
 
-**变长工具的例外**：`json_build` 的 `params_schema` 为 NULL（变长）。变长工具既没有固定 `m`，也不参与 `$` 注入（[03 §6](../dsl/03-semantics.md)）；它的逐位校验由 handler 承担，错误类别因此与固定 arity 工具不同（见 [S-026](S-026-tool-json-build.md)）。
+**变长工具的例外**：`json_build` 的 `params_schema` 为 NULL（变长）。变长工具既没有固定 `m`，也不参与 `$` 注入（[03 §6](../dsl/03-semantics.md)）；它的逐位校验由 handler 承担，错误类别因此与固定 arity 工具不同（见 [T-006](T-006-tool-json-build.md)）。
 
 ## 3. 实参顺序与注入
 
@@ -92,7 +92,7 @@
 | `transient` | handler | 可重试的 I/O 失败 | 是 | `read`、`write` |
 | `denied` | runtime（策略层）+ handler（OS 权限/空间） | 调用被拒绝执行 | 否 | `read`、`write`（仅 OS 侧） |
 | `constraint` | runtime | 调用形状或参数值不符合声明（路径、arity、标量类型） | 否 | 全部固定 arity 工具 |
-| `limit` | runtime（ExecLimits）+ handler（构造型不可截断） | 资源上限 | 否 | `json_parse`、`get`、`json_build` 的结果上限；全部工具的 `ExecLimits` |
+| `limit` | runtime（ExecLimits）+ handler（构造型不可截断） | 资源上限 | 否 | `json_parse`、`get`、`json_build` 的结果上限；`write` 的输入上限；全部工具的 `ExecLimits` |
 | `internal` | runtime / handler | 未归类失败、未知 `error_kind` | 否 | 全部 |
 | `type` | runtime（DSL 运算） | 运算/比较的类型不符 | 否 | 工具不得产生 |
 | `for_not_array` | runtime | `for` 集合不是数组 | 否 | 工具不得产生 |
@@ -121,7 +121,7 @@
 | OS 拒绝（`EACCES`/`EPERM`）或空间耗尽（`ENOSPC`） | `denied` | handler |
 | 可重试 I/O（`EIO`/`EBUSY`/`EAGAIN`） | `transient` | handler |
 | 目标是目录、字节非 UTF-8、正则非法、JSON 非法、重复键、键值未成对 | `invalid_input` | handler |
-| 构造型结果超 `max_output_bytes`；`ExecLimits` 任一超限 | `limit` | handler / runtime |
+| 构造型结果超 `max_output_bytes`；`write` 的 `content` 超 `max_input_bytes`；`ExecLimits` 任一超限 | `limit` | handler / runtime |
 | handler 返回枚举外的字符串 | `internal` | runtime 归一 |
 
 同一次失败只命中一行；若现象同时符合多行，按“判定者更早”的一行归一（runtime 先于 handler）。
@@ -150,3 +150,21 @@
 - 命令：`尚未落盘`。仓库没有构建、没有 `tools/check.sh`、没有任何 `.rill` 夹具。
 - 计划（M 落地后）：`tools/check.sh m3-control`（arity / `constraint`）、`m4-pipeline`（可捕获性）、`m6-events`（截断与粘性）、`m8-constraints`（路径六例）。
 - 在命令存在之前，本目录任何条目都不得标 `accepted`；每条目的“验收命令与阈值”一节同样写 `尚未落盘`。
+
+## 8. 本目录已写死的规则与正文缺口
+
+下列规则属于工具契约职责，本目录已给出可执行的判定；右侧是仍需正文/接口跟进的落点，本目录不修改正文。
+
+| # | 已写死的规则 | 写在哪 | 需正文跟进 |
+| --- | --- | --- | --- |
+| 1 | 上游截断输入 `json_parse` → `limit`、handler 未执行；不得降为 `invalid_input` | [T-004](T-004-tool-json-parse.md) §3 | 07 §1 `ToolDef` 增 `requires_complete_input`；07 §3.2/04 §2.1 明确 `limit` 的这一用法 |
+| 2 | `write.content` 序列化超过 `max_input_bytes`（默认 `262144`）→ `limit`、文件不动 | [T-003](T-003-tool-write.md) §2–§4 | 07 §2 增字段、默认值与输入计数口径 |
+| 3 | `max_payload_depth` 扩为“任何 JSON payload 的深度上限”，emit/parse/json_build 共用 | [T-004](T-004-tool-json-parse.md) §2、[T-006](T-006-tool-json-build.md) §2 | 07 §2 字段注释、05 §2.2 适用范围 |
+| 4 | `json_build` 属可选注册集；未注册调用报加载期 `unknown_tool`，不计入必过夹具 | [T-006](T-006-tool-json-build.md) §1 | 07 §4 或 §7 标注“可选工具” |
+| 5 | `original_size` 截断分支取原始字节、未截断分支取序列化字节 | 本文件 §4、[T-001](T-001-tool-read.md) §2 | 05 §1.4 澄清两分支口径 |
+| 6 | `denied` 同时覆盖策略拒绝与 OS 权限/空间拒绝 | 本文件 §5、[T-001](T-001-tool-read.md) §3、[T-003](T-003-tool-write.md) §3 | 04 §2.1 把“策略拒绝”扩写 |
+| 7 | 相对路径以 workspace root 为基准解析 | [T-001](T-001-tool-read.md) §1、[T-003](T-003-tool-write.md) §4 | 06 §5.1 明确基准 |
+| 8 | `get` 只做单键查找，不提供点分路径 | [T-005](T-005-tool-get.md) §1 | 03 §8 / 05 §1.3 补一句 |
+| 9 | `constraint` 与 `invalid_input` 以“判定者是运行时还是 handler”分界 | 本文件 §5 规则 3 | 04 §2.1 的措辞对齐 |
+
+不属于工具目录职责、由正文线处理的：08 示例的 `matches != null`、04/S-007 的 `parse` 占位、04 §1 的 `x |> read "p"` 示例、05 §1.4 的单位表述本身。

@@ -1,4 +1,4 @@
-# S-024 工具 `json_parse`
+# T-004 工具 `json_parse`
 
 - **状态**：`unverified`
 - **决策**：[D-002](../../decisions/D-002.md)、[D-008](../../decisions/D-008.md)、[D-014](../../decisions/D-014.md)
@@ -35,14 +35,15 @@ json_parse text
 - 数字按 [03 §1](../dsl/03-semantics.md) 转 `number`（IEEE-754 双精度；±2^53 内整数保持整数格式化）。
 - 对象键序保留输入顺序；重复键见 §3。
 - `truncated=0`；`original_size` = 返回值重新序列化后的 UTF-8 字节数。
-- 不截断：结果序列化超过 `max_output_bytes` → `limit`；解析深度超过 `max_payload_depth` → `limit`。半截 JSON 不能作为合法 payload，因此本工具不允许用截断代替上限。
-  - `max_payload_depth` 在 [07 §2](../dsl/07-runtime.md) 只定义为 emit payload 的上限；本条目借用它作为解析深度上限，属于正文未覆盖处的临时解释，见交付说明。
+- 不截断：结果序列化超过 `max_output_bytes` → `limit`；输入文本嵌套深度或结果深度超过 `max_payload_depth` → `limit`。半截 JSON 不能作为合法 payload，因此本工具不允许用截断代替上限。
+  - **本条目主张**：`max_payload_depth` 的语义从“emit payload 上限”扩为“任何进入或离开运行时的 JSON payload 深度上限”，由 `json_parse`、`json_build` 与 emit 共用，不新造 `max_parse_depth`。深度按对象/数组嵌套层数计，字符串内的括号不计。需正文跟进 07 §2 的字段注释与 05 §2.2 的适用范围。
 
 ## 3. 失败语义
 
 | 场景 | `error_kind` | handler | `\|?` 捕获 |
 | --- | --- | --- | --- |
 | 实参个数 ≠ 1，或 `text` 非 `string` | `constraint` | 未执行 | 否 |
+| 任一实参 payload 的 `truncated=true`（上游截断） | `limit` | 未执行 | 否 |
 | JSON 语法错误、尾随垃圾、非法转义、非法数字 | `invalid_input` | 执行并失败 | 是 |
 | 同一对象内重复键 | `invalid_input` | 执行并失败 | 是 |
 | 结果序列化 > `max_output_bytes`，或深度 > `max_payload_depth` | `limit` | 执行并失败 | 否 |
@@ -52,9 +53,16 @@ json_parse text
 - 重复键不采用“后者覆盖”：这与 emit 字面量的加载期 `E_DUP_KEY`（[02 §4](../dsl/02-grammar.md) L108）和 args JSON 的重复键规则（[06 §5.4](../dsl/06-security.md)）保持同一取向——同一份文本不允许两个值。运行期没有 `dup_key` 类别，故归 `invalid_input`。
 - 不产生 `not_found`/`transient`/`denied`：无文件、无网络、无权限面。
 
-### 截断输入的已知缺口
+### 上游截断的归一（本条目主张）
 
-`read` 被截断时，`json_parse` 只收到截断后的 `payload`，看不到 `meta`（[05 §1.2](../dsl/05-data-metadata.md)），因此无法区分“JSON 本身坏”与“上游被截断”。实际表现是：截断后的文本通常不是合法 JSON → `invalid_input` → 可被 `|?` 捕获 → 可能掩盖截断。脚本必须先查 `(read p).truncated` 才能分辨。规范正文目前没有规定这种情形的归一责任，本目录只记录，不改正文。
+`read` 被截断时，`json_parse` 只收到截断后的 `payload`，看不到 `meta`（[05 §1.2](../dsl/05-data-metadata.md)），handler 无法自行判断。本条目把归一责任交给运行时：
+
+- `json_parse` 声明 `requires_complete_input=true`（`ToolDef` 新字段或等价注册属性）。
+- 运行时在参数约束通过后、handler 之前检查任一实参 payload 的 `truncated`；为真 → `limit`，不可捕获，handler 未执行，错误位置指向调用点，详情行为 `Constraint: input was truncated upstream`。
+- 不得降为 `invalid_input`：截断是资源上限的结果，不是数据非法；降级会让 `|?` 静默接管，重新制造 D-008 要消除的假阴性。
+- 需要“截断也能继续”的脚本先显式判断 `(read p).truncated` 再决定下一步；`json_parse` 本身不提供部分解析。
+
+**需正文/接口跟进**：07 §1 的 `ToolDef` 增加该字段；07 §3.2 或 04 §2.1 明确 `limit` 也用于“输入被上游截断”。
 
 ## 4. 参数约束
 
@@ -62,6 +70,7 @@ json_parse text
 | --- | --- | --- | --- |
 | `text` | 固定 arity + `string` 类型浅校验 | 必做（[03 §6](../dsl/03-semantics.md)） | 声明 |
 | `text` 长度上限 | 无对应约束类；结果侧由 `max_output_bytes` 兜底 | 本期不主张 | 不声明 |
+| 上游截断（调用前置条件，非 `ParamConstraint`） | `requires_complete_input` | 必做（本条目主张） | 声明 |
 | 路径 / argv / 域名 / emit 类 | — | 不适用 | 不声明 |
 
 ## 5. 验收命令与阈值
@@ -71,8 +80,8 @@ json_parse text
 - **阈值**：
   - 六类顶层值各 1 例（含字面量 `null` 必须 `ok=1`、值为 `null`）；
   - 4 条非法输入（语法错、尾随垃圾、重复键、非法数字）均报 `invalid_input` 且可被 `|?` 捕获；
-  - 超过 `max_output_bytes` 与超过 `max_payload_depth` 各 1 例报 `limit`，不可捕获；
-  - 截断输入 1 例：断言结果为 `invalid_input`，且 `(read p).truncated == true`，证明缺口可被脚本识别。
+  - 超过 `max_output_bytes` 与超过 `max_payload_depth` 各 1 例报 `limit`，不可捕获；深度超限必须 handler 未执行（不是解析到一半才失败）；
+  - 截断输入 1 例：`read` 截断 → `json_parse`，断言 `ok=0`、`error_kind=limit`、不可捕获、handler 未执行；与“普通非法 JSON → `invalid_input`、可捕获”对照，二者不得互换。
 
 ## 6. 证据锚点
 
@@ -84,3 +93,4 @@ json_parse text
 | 可捕获集 | [04 §2.1](../dsl/04-pipeline-errors.md) L41-L52 | 规范正文 |
 | 重复键取向 | [02 §4](../dsl/02-grammar.md) L108、[06 §5.4](../dsl/06-security.md) | 规范正文 |
 | 解析工具存在性 | `docs/design/dsl-spec-v0.1.md` L129、L415 | 历史输入 |
+| 截断归一（本条目主张） | 07 §1 `ToolDef` 无 `requires_complete_input` 字段 | 规范缺口 |
