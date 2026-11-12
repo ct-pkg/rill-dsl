@@ -2,7 +2,7 @@
 
 - **状态**：`unverified`
 - **决策**：[D-007](../decisions/D-007.md)
-- **规范**：[04 §2](dsl/04-pipeline-errors.md)、[02 §3](dsl/02-grammar.md)
+- **规范**：[04 §1/§2](dsl/04-pipeline-errors.md)、[02 §3](dsl/02-grammar.md)
 - **里程碑**：M4
 
 ## 1. 输入
@@ -13,6 +13,7 @@ a |> f b |? g c
 a |? b |? c
 (f a |> g) |? h
 read "a" |? read "b" |> f |> g
+a |> (read |? read "f")
 ```
 
 ## 2. 输出
@@ -22,6 +23,7 @@ read "a" |? read "b" |> f |> g
 - 第 3 行左结合：`(a |? b) |? c`。
 - 第 4 行 → 加载期 `fallback_lhs`（左侧是分组管道，不是单个 call）。
 - 第 5 行 = `((read "a" |? read "b") |> f) |> g`；`|?` 不捕获 `f` 或 `g` 的失败。
+- 第 6 行 = `(read a |? read "f")`：管道值只追加到 fallback 链最左侧的 `read`（裸名作零参调用），右侧不接收；整条合法，不报 `pipe_rhs`。
 
 ## 3. 失败语义
 
@@ -37,7 +39,7 @@ read "a" |? read "b" |> f |> g
 ## 4. 验收命令与阈值
 
 - **命令**：`尚未落盘`（M4 后 `tools/check.sh m4-pipeline`）。
-- **阈值**：5 条输入逐条 AST/求值轨迹一致；成功路径不得跳过后续管道阶段；不可捕获错误 0 次被吞。
+- **阈值**：6 条输入逐条 AST/求值轨迹一致；成功路径不得跳过后续管道阶段；不可捕获错误 0 次被吞。
 
 ## 5. 证据锚点
 

@@ -97,7 +97,7 @@ struct ExecLimits {
 | `recursion` | 调用图有环 |
 | `arity` | `fn` 或固定 arity 工具的实际实参个数（含管道值与 `$` 注入）与形参个数不符；`json_build` 收到奇数个实参（契约要求键值成对，静态可算） |
 | `not_implemented` | `par` 等已保留但 MVP 不实现的语法 |
-| `pipe_rhs` | `\|>` 右侧不是可调用节点（call、零参调用裸名、首操作数是 call 的 fallback 链） |
+| `pipe_rhs` | `\|>` 右侧不是可调用节点（call、零参调用裸名、首操作数是可调用节点的 fallback 链） |
 | `fallback_lhs` | `\|?` 链的最左操作数不是单个调用 |
 | `dollar_outside` | `$` 出现在任何 `into` 块之外 |
 | `policy_expansion_unapproved` | 策略扩张未审批 |
