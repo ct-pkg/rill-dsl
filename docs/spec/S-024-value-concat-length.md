@@ -13,19 +13,19 @@ let s = "count: " + n
 let t = n + " files"
 let u = "ok: " + true
 let v = "value: " + null
-let bad = n + true
 
-let arr = split "a,b" ","
+let arr = json_parse "[1,2]"
 let len = arr.length
-let obj = json_parse
+let obj = json_parse "{}"
 let obj_len = obj.length
 let str_len = "abc".length
 
 arr into {
     let inner_len = $.length
 }
+```
 
-（`split` 为示例工具，返回 `json_array`；对象长度用任意对象值测试。）
+失败用例单独成脚本，避免在长度断言前中止：`let bad = 3 + true` → 运行期 `type`。
 
 ## 2. 输出
 

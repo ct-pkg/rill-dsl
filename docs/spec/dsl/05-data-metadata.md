@@ -21,7 +21,7 @@ meta    := { truncated: bool, original_size: number }
 ### 1.2 工具边界
 
 - handler 与工具参数只看到 `payload`；任何工具都不可能收到“带 meta 的包装值” [D-008]。
-- 字段访问、索引、相等比较、算术、emit 序列化都只作用于 `payload`。
+- 字段访问、索引、相等比较、算术、emit 序列化都只作用于 `payload`（侧车伪字段 `truncated`/`original_size` 除外，见 §1.3）。
 - `let`、管道、`into`/`$`、`fn` 返回、`|?` 胜出分支都携带完整 `(payload, meta)`。
 
 ### 1.3 读取
@@ -33,7 +33,7 @@ meta    := { truncated: bool, original_size: number }
 | `get "truncated" x` | 读 `payload` 自带的 `truncated` 键（逃逸写法，普通工具调用） |
 | `x.value` | 不特殊处理；按普通字段访问，通常是 `null` |
 
-- 伪字段对六类 payload 都合法，返回 `false` / `0` 而不是 `null`（`meta` 总有值）。
+- 伪字段对六类 payload 都合法：`truncated` 返回 `false`/`true`，`original_size` 返回本值序列化字节数（不是 `0`），都不返回 `null`（`meta` 总有值）。
 - 读取伪字段必须先分组：`(read "big").truncated`；`read "big".truncated` 是 `read("big".truncated)`。
 - 对象 payload 自身含 `truncated` 键时，字段访问返回 `meta` 值；要业务值必须用 `get "truncated" x`。
 - `get` 只做**单键**查找：`get "server.port" x` 查的是名为 `server.port` 的键，不会拆成 `server` → `port`。v0.1 的点分路径语义已废弃（未被 rev.1 沿用）；已知路径用字段访问 `x.server.port`，动态嵌套键串联 `get "port" (get "server" x)`。
@@ -41,7 +41,7 @@ meta    := { truncated: bool, original_size: number }
 ### 1.4 传播与粘性
 
 ```
-result.truncated     = 本次调用被截断 || 任一实参 payload 的 truncated
+result.truncated     = 本次调用被截断 || 任一实参的 meta.truncated
 result.original_size = 本次被截断 ? 切前字节数
                      : 任一实参 truncated ? 该实参 original_size 的最大值
                      : 本值序列化字节数

@@ -17,6 +17,7 @@ struct ToolDef {
     char *description;     // 给 LLM 看
     char *params_schema;   // 固定位置形参个数与类型；可变长为 NULL
     int   accepts_context; // 是否接受隐式 $
+    char *context_param;   // $ 注入的具名形参槽；accepts_context=0 时为 NULL
     int   requires_approval;
     int   requires_complete_input; // 1 = 任一实参 meta.truncated=1 时拒绝执行（limit）
     ParamConstraint *constraints;
@@ -44,6 +45,7 @@ DslResult dsl_exec(const char *source, int len, ToolRegistry *reg,
 - 一次 `dsl_exec` 只产生一个 `DslResult`；脚本不能嵌套调用 `dsl_exec`。
 - `DslResult.value_json` 是**最后一条 `expr_stmt`** 的值；没有 `expr_stmt` 时为 `null`。
 - `requires_complete_input=1` 的工具：任一实参 `meta.truncated=1` 时，运行时在调用 handler 之前失败，`error_kind=limit`（见 §3.2）。这类工具不能用半截输入产出结果。
+- `accepts_context=1` 必须给出 `context_param`（具名形参槽，如 `get` 的 `obj`），且该名必须在 `params_schema` 中；缺失或名字不在 schema → 注册期拒绝。注入 `$` 时该槽没有绑定任何约束 → 运行期 `unconstrained_arg`（[D-014](../../decisions/D-014.md) 第 5 条）。
 - `json_build` 是**可选工具**：内核可以不注册；未注册时脚本对它的调用按普通未注册工具处理，加载期 `unknown_tool`。可选不等于放行，`# allow:` 与参数约束照常适用。
 
 ## 2. ExecLimits

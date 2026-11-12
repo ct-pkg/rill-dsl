@@ -9,7 +9,7 @@
 - `number` 为 IEEE-754 双精度；±2^53 内的整数按整数语义比较、格式化为无小数点形式。
 - 对象与数组是值，不是引用：`let` 绑定、`for` item、`fn` 参数、`fn` 返回值一律值拷贝（深拷贝）。项目已有的“item 值拷贝”硬约束在此沿用。
 - 相等：`null == null` 为 `true`；跨类型 `==` 为 `false`（不隐式转换）；对象/数组按结构化深比较。`<`/`>` 只接受 `number` 或 `string`，其他类型 → 运行时 `E_TYPE`。
-- 算术：`+` 支持 `number + number`（加）、`string + 标量`（拼接，标量按规范文本：`true`/`false`/`null`/数字无多余零）、`json_array + json_array`（连接）；`-` `*` `/` `%` 只接受 `number`；其他组合 → 运行时 `E_TYPE` [D-016]。
+- 算术：`+` 支持 `number + number`（加）、`string` 与任意标量的拼接（**任一侧**为 `string` 即可，另一侧可为 `string`/`number`/`bool`/`null`；`null` 渲染为 `"null"`，数字无多余零）、`json_array + json_array`（连接）；`-` `*` `/` `%` 只接受 `number`；其他组合 → 运行时 `E_TYPE` [D-016]。
 - 真值：条件位置只接受 `bool`；非 `bool` → 运行时 `condition_not_bool`（值是动态的，加载期无法判定类型；示例中一律写显式比较）。
 
 ## 2. 名字解析
@@ -52,7 +52,7 @@ fn name(p1, p2) { ... }
 - 无递归：加载期构建调用图，出现环（含自调用、互调用）→ `E_RECURSION`。
 - 无重载；同一脚本内 `fn` 同名 → `E_DUP_DECL`。`fn` 名不得与工具同名（§2）。
 - 调用实参个数必须等于形参个数 → 加载期 `E_ARITY`；`fn` 与固定 arity 工具同此规则，工具见 §6。
-- 执行到函数体末尾没有 `return` → 返回 `null`；`return` 在 `fn` 外 → 加载期 `E_RETURN_OUTSIDE_FN`。
+- 执行到函数体末尾没有 `return` → 返回 `null`；`return` 在 `fn` 外 → 加载期 `E_RETURN_OUTSIDE_FN`。`return e` 返回 `e` 的完整 `(payload, meta)`，不剥侧车。
 
 ## 6. 调用与隐式参数
 
@@ -74,14 +74,14 @@ fn name(p1, p2) { ... }
 
 ## 7. into 与 `$`
 
-- `expr into { ... }`：求值 `expr`，在块内把 `$` 绑定为该值；块的值是块内最后一条 `expr_stmt` 的值（无则为 `null`）。
+- `expr into { ... }` 是**语句**，不是表达式：块的值被丢弃（即使块内最后一条是 `expr_stmt`），不能写 `let x = e into { ... }`。求值 `expr`，在块内把 `$` 绑定为该值；`$` 携带完整的 `(payload, meta)`。
 - `$` 在块内只读；`$ = ...` → `E_IMMUTABLE_ASSIGN`；块外使用 `$` → 加载期 `E_DOLLAR_OUTSIDE`。
 - `into` 允许嵌套；内层 `$` 覆盖外层，内层块结束后恢复外层 [D-017]。`$` 是环境帧里的词法绑定，不做编译期脱糖；CT 的嵌套禁令来自其脱糖实现，不适用于本解释器。
 - `expr` 为 `null` 时仍可进入块，`$.x` 返回 `null`（不报错）；对 `null` 调用字段访问返回 `null`，便于缺省处理。
 
 ## 8. 字段、索引与内建字段
 
-- `x.k`：`json_object` 取键，缺键返回 `null`；`json_array` 仅支持内建字段 `length`；其他类型 → `null`（不报错）。
+- `x.k`：`json_object` 取键，缺键返回 `null`；`json_array` 支持内建字段 `length` 与侧车伪字段 `truncated`/`original_size`；其他类型 → `null`（不报错）。
 - `x[i]`：`json_array` 取第 `i` 个元素（0 基），越界返回 `null`；`json_object` 用 `x["k"]` 取键；其他类型返回 `null`。
 - `length`：唯一内建字段，只挂在 `json_array` 上，返回元素个数（`number`）。`json_object`、`string`、`null` 及其他值访问 `.length` → `null`；`string` 长度由工具取 [D-016]。
 - 空数组与 `null` 不等价：搜索类工具“无匹配”返回空数组（如 `grep` 返回 `[]`），不是 `null`；因此 `x != null` 对空数组恒真，判断有无结果必须写 `x.length > 0`。
