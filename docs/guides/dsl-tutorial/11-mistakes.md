@@ -43,7 +43,7 @@ write "out.txt" a -1
 write "out.txt" (-1)
 ```
 
-**判据**：`read -1` 加载期报「工具名不能作值」，Hint 提示 `read (-1)`；`write "out.txt" a -1` 会先执行写，再算 `null - 1`，随后报运行时 `type`。
+**判据**：`read -1` 加载期报 `arity`（裸 `read` 零参，0≠1）；`read (-1)` 才会进入运行期并因 `path` 非字符串报 `constraint`。`write "out.txt" a -1` 会先执行写，再算 `null - 1`，随后报运行时 `type`。
 
 ## 3. 语句不换行，写成一串
 
@@ -86,7 +86,7 @@ let b = 2
 write "out.txt" (a + b)
 ```
 
-**判据**：不加括号时解析树是 `(write "out.txt" a) + b`，副作用已发生；`null + 1` → 运行时 `type`（`null + 字符串` 则会拼出 `null...`，同样不是两个实参）。
+**判据**：不加括号时解析树是 `(write "out.txt" a) + b`，副作用已发生；`write` 返回 `null`，`null + 1` → 运行时 `type`。若 `b` 是字符串，则按字符串拼接规则：只要一侧是 `string`，另一侧可为任意标量（含 `null`、`bool`、`number`），`null` 渲染为 `"null"`，得到 `"null..."`，同样不是两个实参。
 
 ## 5. `$` 用在 `into` 外面
 

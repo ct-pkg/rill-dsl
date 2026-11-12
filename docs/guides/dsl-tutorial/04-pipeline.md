@@ -39,8 +39,8 @@ write "todo.json" hits
 
 ```
 a |> f b |? g c     =  a |> (f b |? g c)
-read "p" |? read "f" |> parse
-                    =  (read "p" |? read "f") |> parse
+read "p" |? read "f" |> json_parse
+                    =  (read "p" |? read "f") |> json_parse
 ```
 
 - 左侧必须是**单个可调用节点**（`call`，或零参裸名，可分组）；不是 → 加载期 `fallback_lhs`。
@@ -78,7 +78,7 @@ let cfg = read "primary.json" |? read "fallback.json" |> json_parse
 | 资源上限 | `limit` | 否 |
 | 策略撤销/脚本变更 | `revoked` / `script_changed` | 否 |
 | 内核内部错误 | `internal` | 否 |
-| 加载错误 | `load` | 否（加载阶段根本不执行） |
+| 加载期错误 | 不适用（阶段类别，具体 `kind` 见 07 §3） | 否（加载阶段根本不执行） |
 
 两条容易误判的规则：
 
