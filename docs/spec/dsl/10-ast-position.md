@@ -75,7 +75,7 @@ let x = read "a" |> grep "m"
 
 - 行、列均 1 基；**列按 UTF-8 字节计**（与 [07 §4](07-runtime.md) 的错误列同口径）。Tab 计 1 字节；文件头 BOM 不计入列。
 - span 为 `[start, end)`：`start` 是首 token 首字节，`end` 是末 token 之后一字节。
-- 节点 span 取法：语句从首 token 到末 token（不含行尾 NEWLINE）；`block` 含 `{` 与 `}`；`call` 从 callee 到末实参；`field`/`index` 从对象起点到后缀末；`program` 从首个非空行到末 token；`header` 从首个 header 行行首到末个 header 行末。
+- 节点 span 取法：语句从首 token 到末 token（不含行尾 NEWLINE）；`block` 含 `{` 与 `}`；`call` 从 callee 到末实参；`field`/`index` 从对象起点到后缀末；`program` 从首个非空行到末 token，空脚本或无语句时为 `1:1-1:1`；`header` 从首个 header 行行首到末个 header 行末。
 - 分组被擦除，内层 span 不扩到括号；但未闭合括号的诊断位置用开括号（见 §5）。
 - 可选字段缺省不占位置；`return` 无值时 span 止于 `return`。
 - **`sexpr-loc`**：每个节点名前插入 `@<sl>:<sc>-<el>:<ec>` 加一个空格，例如 `(@1:1-1:20 program …)`。golden 默认比对 `sexpr`；位置用例比对 `sexpr-loc`。
