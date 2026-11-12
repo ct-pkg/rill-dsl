@@ -51,6 +51,12 @@ fallback_expr := or_expr ("|?" or_expr)*        # 左结合，高于 |>
 | 审批 | `approval_required` / `approval_denied` / `approval_stale` / `approval_reused` | **不捕获** |
 | 资源上限，或输入被上游截断 | `limit` | **不捕获** |
 | 策略撤销/脚本变更 | `revoked` / `script_changed` | **不捕获** |
+| 值类型/结构错误 | `type` | 捕获 |
+| 参数协议重复键 | `dup_key` | **不捕获**（程序/协议错误） |
+| 隐式 `$` 的槽没有绑定约束 | `unconstrained_arg` | **不捕获**（程序错误） |
+| emit payload 不符合内核 schema | `emit_schema` | **不捕获**（程序错误） |
+| `for` 迭代值不是数组 | `for_not_array` | 捕获（值层错误） |
+| 条件不是 `bool` | `condition_not_bool` | 捕获（值层错误） |
 | 内核内部错误 | `internal` | **不捕获** |
 | 加载期错误 | 见 [07 §3.1](07-runtime.md)（含 `dollar_outside` 等） | **不捕获**（加载阶段根本不执行） |
 
