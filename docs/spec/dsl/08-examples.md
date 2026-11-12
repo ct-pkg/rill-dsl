@@ -9,12 +9,14 @@
 
 let content = read "src/main.c"
 let matches = content |> grep "malloc"
-if matches != null {
+if matches.length > 0 {
     write "report.txt" matches
 }
 ```
 
 解析要点：`content |> grep "malloc"` → `grep("malloc", content)`（R2 追加末尾）；`write "report.txt" matches` 两个空格实参。
+
+> 判断“有没有匹配”必须用 `matches.length > 0`：`grep` 无匹配返回**空数组**，不是 `null`，所以 `matches != null` 恒真（[03 §8](03-semantics.md)）。示例 1、3、4 同此规则。
 
 ## 2. 示例 2：into + `$`
 
@@ -38,7 +40,7 @@ read "config.json" |> json_parse into {
 fn find_issues(path) {
     let content = read path
     let matches = content |> grep "TODO"
-    if matches != null {
+    if matches.length > 0 {
         return matches
     }
     return null
@@ -55,6 +57,7 @@ write "issues.txt" (a + b)
 | --- | --- |
 | `find_issues("src/a.c")` → `find_issues "src/a.c"` | D-001/D-002：括号只分组；统一空格形态，避免示例教两套写法 |
 | `write "issues.txt" a + b` → `write "issues.txt" (a + b)` | 旧写法在新文法下是 `write("issues.txt", a)` 再 `+ b`，会先调用再相加；加括号才是“把 `a + b` 作为一个实参” [D-002] |
+| `if matches != null` → `if matches.length > 0` | `grep` 无匹配返回空数组，`!= null` 恒真，分支永远进入；`length` 只挂 `json_array` [D-016] |
 
 ## 4. 示例 4：emit 事件
 
@@ -63,7 +66,7 @@ write "issues.txt" (a + b)
 # emit: analysis_done
 
 let matches = read "src/main.c" |> grep "malloc"
-if matches != null {
+if matches.length > 0 {
     emit "analysis_done" { "file": "src/main.c", "count": matches.length }
 }
 ```

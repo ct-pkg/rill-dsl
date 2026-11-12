@@ -81,7 +81,7 @@ plain_atom    := IDENT | STRING | NUMBER | BOOL | NULL | "$" | "(" expr ")"
 
 规则：
 
-1. `|?` **高于** `|>`：`a |> f b |? g c` = `a |> (f b |? g c)`；`read "p" |? read "f" |> parse` = `(read "p" |? read "f") |> parse` [D-007]。
+1. `|?` **高于** `|>`：`a |> f b |? g c` = `a |> (f b |? g c)`；`read "p" |? read "f" |> json_parse` = `(read "p" |? read "f") |> json_parse` [D-007]。
 2. `atom` 中的 `call` 要求至少一个实参；`IDENT` 后能开始一个 `arg` 时按调用解析，否则是标识符引用。判定只需 1 token 前瞻。
 3. 空格应用**不递归**：`f g "x"` = `f(g, "x")`；要传嵌套调用写 `f (g "x")`；要传表达式写 `f (a + b)` [D-002]。
 4. 没有 postfix `()`：`f()` 的 `()` 里缺 `expr` → `E_SYNTAX`；`a.b()` 同理 [D-005]。

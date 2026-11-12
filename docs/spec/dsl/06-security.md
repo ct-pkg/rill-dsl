@@ -82,6 +82,8 @@ PolicySnapshot {
 
 工具声明 `path` 类参数时，必须同时满足：
 
+**基准**：相对路径一律以 **workspace root** 为基准解析为绝对路径，再做第 1–5 步判定。workspace root 由内核配置提供，不在脚本 header 中，脚本不能声明或改写；执行期内不变，变更随策略快照生效（§3）。示例里的 `read "src/main.c"` 即 `<workspace_root>/src/main.c`。绝对路径不做拼接，直接进入第 1 步。
+
 1. 判定对象是解析后的绝对路径（`realpath` 或等价物）。
 2. 界内 = 等于 root，或以 `root + "/"` 为前缀；不得用裸字符串前缀（防止 `/workspace-evil`）。
 3. 写不存在的文件：解析父目录 realpath，校验 basename 不是 symlink。

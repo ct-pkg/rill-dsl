@@ -36,6 +36,7 @@ meta    := { truncated: bool, original_size: number }
 - 伪字段对六类 payload 都合法，返回 `false` / `0` 而不是 `null`（`meta` 总有值）。
 - 读取伪字段必须先分组：`(read "big").truncated`；`read "big".truncated` 是 `read("big".truncated)`。
 - 对象 payload 自身含 `truncated` 键时，字段访问返回 `meta` 值；要业务值必须用 `get "truncated" x`。
+- `get` 只做**单键**查找：`get "server.port" x` 查的是名为 `server.port` 的键，不会拆成 `server` → `port`。v0.1 的点分路径语义已废弃（未被 rev.1 沿用）；已知路径用字段访问 `x.server.port`，动态嵌套键串联 `get "port" (get "server" x)`。
 
 ### 1.4 传播与粘性
 
@@ -48,6 +49,7 @@ result.original_size = 本次被截断 ? 切前字节数
 
 - 粘性理由：`read` 被截断后再 `grep`，若下游丢失标记，agent 会把“没搜到”当成“不存在”，这是可证明的假阴性 [D-008]。
 - `original_size` 单位为 UTF-8 字节，与 `ExecLimits.max_output_bytes` 同口径。
+- **两条分支口径不同，不可互推**：截断分支取工具切之前的**原始内容字节**；未截断分支取该值 **JSON 序列化后**的字节。对 `string` 差异最明显——未截断时含 JSON 引号与转义（`"a\nb"` 计 6 字节），截断时不计引号（原始内容 3 字节）。因此不能用未截断的 `original_size` 反推截断前大小，反之亦然；需要字符串原始长度时由工具返回，DSL 不提供换算。
 - 截断只由工具产生；DSL 没有 `limit N` 语法。
 
 ## 2. emit 事件

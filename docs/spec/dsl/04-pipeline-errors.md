@@ -10,8 +10,10 @@
 ```
 a |> f b        =  f(b, a)
 a |> f b |> g   =  g(f(b, a))          # 左结合
-x |> read "p"   =  read("p", x)        # 参数个数由工具 schema 判定
+x |> grep "pat" =  grep("pat", x)      # grep arity=2；左侧值补到第 2 位
 ```
+
+- 管道只负责追加实参，不改变工具 arity。上例若换成 arity=1 的 `read`，`x |> read "p"` 会得到 2 个实参，运行时按 arity 不符报 `constraint`（工具不适用 `E_ARITY`，见 [03 §5](03-semantics.md)）；写管道时右侧工具的形参个数必须能容纳管道值。
 
 - `|>` 的右操作数必须是**可调用节点**：一个 `call`，或加载期解析为零参工具/零参 `fn` 的裸 `IDENT`；允许分组（如 `a |> (f b)`）。其他形式 → 加载期 `E_PIPE_RHS`，提示“管道右侧必须是调用”。
 - `|>` 右侧是 `fn` 时，管道值按普通追加实参处理，`fn` 的形参个数必须匹配，否则 `E_ARITY`。
@@ -43,7 +45,7 @@ fallback_expr := or_expr ("|?" or_expr)*        # 左结合，高于 |>
 | 结果不存在 | `not_found` | 捕获 |
 | 输入不合法 | `invalid_input` | 捕获 |
 | 瞬时失败（可重试） | `transient` | 捕获 |
-| 策略拒绝 | `denied` | **不捕获** |
+| 策略拒绝或 OS 权限拒绝 | `denied` | **不捕获** |
 | 参数越界 | `constraint` | **不捕获** |
 | 审批 | `approval_required` / `approval_denied` | **不捕获** |
 | 资源上限 | `limit` | **不捕获** |
@@ -52,6 +54,7 @@ fallback_expr := or_expr ("|?" or_expr)*        # 左结合，高于 |>
 | 加载错误 | `load` | **不捕获**（加载阶段根本不执行） |
 
 - `null` 是值，不是失败：缺键、越界返回 `null`，不触发 `|?`。
+- `denied` 同时覆盖**策略拒绝**（调用点授权检查判定不放行）与 **OS 权限拒绝**（如 `EACCES`/`EPERM`）。两者对脚本的可观察后果相同：调用未发生、错误不可恢复、不得被降级改写；拆成两个 kind 只会把宿主文件系统细节泄漏进脚本，且会让“不可捕获”集合随平台变化，因此不新增 kind。
 - 工具用 `error_kind` 表达失败；返回 `null` 不等价于失败。
 - 不可捕获错误即使出现在 `|?` 左侧，也按 §3 中止块；这是安全要求：`denied`/`limit` 不得被静默改写为正常结果。
 
@@ -97,4 +100,4 @@ R4 的完整表述 [D-010]：
 ## 5. 验收锚点
 
 - [S-007](../S-007-fallback-precedence.md)、[S-008](../S-008-capturable-errors.md)、[S-012](../S-012-r4-failure-table.md)。
-- 求值轨迹 golden：`a |> f b |? g c`、`read p |? read f |> parse`、`a |? b |? c`、`f (a |> b) |? c`（应报 `E_FALLBACK_LHS`）。
+- 求值轨迹 golden：`a |> f b |? g c`、`read p |? read f |> json_parse`、`a |? b |? c`、`f (a |> b) |? c`（应报 `E_FALLBACK_LHS`）。

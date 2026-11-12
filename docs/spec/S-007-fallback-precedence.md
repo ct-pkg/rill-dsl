@@ -8,7 +8,7 @@
 ## 1. 输入
 
 ```
-read "primary" |? read "fallback" |> parse
+read "primary" |? read "fallback" |> json_parse
 a |> f b |? g c
 a |? b |? c
 (f a |> g) |? h
@@ -17,7 +17,7 @@ read "a" |? read "b" |> f |> g
 
 ## 2. 输出
 
-- `|?` 高于 `|>`：第 1 行 = `(read "primary" |? read "fallback") |> parse`；primary 成功时 `parse` 仍然执行。
+- `|?` 高于 `|>`：第 1 行 = `(read "primary" |? read "fallback") |> json_parse`；primary 成功时 `json_parse` 仍然执行。
 - 第 2 行 = `a |> (f b |? g c)`；左侧成功时 `g` 不执行。
 - 第 3 行左结合：`(a |? b) |? c`。
 - 第 4 行 → 加载期 `fallback_lhs`（左侧是分组管道，不是单个 call）。
