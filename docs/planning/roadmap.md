@@ -11,7 +11,7 @@
 | PH-2 | M3 | 执行器核心：值模型、绑定/赋值、if/for、ExecLimits、DslResult | PH-1 收口 | 赋值 4 类、循环 2 类、条件 1 类、`limit` 全有负例 | `examples/phase2/` + fake 工具 |
 | PH-3 | M4 | 管道与降级：`\|>`、`\|?`、R4 失败行为表、`degraded` | PH-2 收口 | 求值轨迹 4 例、可捕获/不可捕获各 2 例、`pipe_rhs`/`fallback_lhs` | `examples/phase3/` |
 | PH-4 | M5 | `into` + `$` + `fn`：注入、闭包只读、无环、`arity` | PH-2 收口；PH-3 可并行 | 注入矩阵 3 例、递归/遮蔽工具名负例 | `examples/phase4/` |
-| PH-5 | M6 | 截断 + emit + 事件总线：侧车、粘性、`max_emit_bytes`/`max_payload_depth` | PH-2/P3 收口 | 伪字段/逃逸/粘性/字节口径 6 例、emit 上限与 schema 4 例 | `examples/phase5/` |
+| PH-5 | M6 | 截断 + emit + 事件总线：侧车、粘性、`max_emit_bytes`/`max_payload_depth` | PH-2/P3 收口 | 伪字段/逃逸/粘性/字节口径 6 例；emit 无订阅方/队列满、字节与深度超限各 1 例（schema 由内核配置，不在脚本 golden 内） | `examples/phase5/` |
 
 Phase 1 把 09 的 M1（lexer）与 M2（parser + 静态检查）合并为一个可运行切片；理由是“只有 lexer 无法交付可运行样例”，而 09 §1 原则 3 要求每个里程碑至少一个可运行样例。09 正文不改，映射关系在本表与 PH-1 卡 A-1 中记明。
 
@@ -47,9 +47,9 @@ Phase 1 把 09 的 M1（lexer）与 M2（parser + 静态检查）合并为一个
 
 ### Phase 5：截断 + emit + 事件总线（09 M6）
 
-- **范围**：截断侧车 `(payload, meta)`、伪字段优先、`get` 逃逸、粘性传播、`original_size` 两种字节口径；emit fire-and-forget、事件声明、`max_emit_bytes`/`max_payload_depth`、事件 schema。
+- **范围**：截断侧车 `(payload, meta)`、伪字段优先、`get` 逃逸、粘性传播、`original_size` 两种字节口径；emit fire-and-forget、事件声明、`max_emit_bytes`/`max_payload_depth`；脚本侧不做 schema 校验（schema 由内核配置）。
 - **依赖**：PH-2/P3 收口；PH-1 已解析 emit payload 与 `dup_key`；PH-4 的 `$` 可用于 payload 值。
-- **退出条件**：伪字段/逃逸/粘性/字节口径 6 例；emit 超限与 schema 4 例；`external_egress` 1 例；meta 不泄漏进 `args_json`；超限不得静默丢弃。
+- **退出条件**：伪字段/逃逸/粘性/字节口径 6 例；emit 无订阅方/队列满、字节与深度超限各 1 例；`external_egress` 1 例；meta 不泄漏进 `args_json`；超限不得静默丢弃。
 - **与 09 的关系**：对应 M6；09 §2 的 M6 退出判据全部在本 phase 门禁内。
 
 ## 3. 跨阶段硬约束
@@ -70,7 +70,7 @@ Phase 1 把 09 的 M1（lexer）与 M2（parser + 静态检查）合并为一个
 | Phase 0 | `tools/check.sh`/`tools/check-all.sh` 门禁基线、`docs/session-map.md`、版本落点；构建骨架由 PH-1 建立；g3/g5/g7/g8 由 Phase 1 启用 | 缺任一：PH-1 不开工；由 G0/G1 拦 |
 | CT 工具链 | 编译器版本固定；无网络依赖 | 构建失败即 P0，先修 Phase 0 |
 | registry 元数据 | T-001..T-006 的 arity/`accepts_context`/变长 | 元数据变更 → PH-1 的 arity golden 同步；不得只改实现 |
-| 规范冲突 | `# approval:`（U-1）、`unknown_tool`/`unknown_callee`（U-2） | 已在 PH-1 卡 §10 记为未决；不在实现中擅自定规则 |
+| 规范演进 | AST/位置已由 10 卷/D-020 冻结；`# approval:` 按注释、`unknown_callee` 已合并入 `unknown_tool` | 10 卷变更时 PH-1 golden 同步；不得在卡内另立 AST 形态 |
 | 排期压缩 | Phase 1 合并 M1+M2，工作量大于 09 的单 M | 任务清单已按 12 片切分；任一片超一轮则先拆，不延长 phase 判据 |
 | 真实 LLM 验证 | M10 不在 Phase 1–5 | 不得用“解析 golden 全绿”宣称 LLM 可用性；M10 另立 phase |
 

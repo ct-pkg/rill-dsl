@@ -10,7 +10,7 @@
 | 阶段 | 阶段 0（编码前 / pre-coding） |
 | 实现 | 无 lexer、parser、解释器或任何可执行代码 |
 | 常驻对话 | 未建立：需求池、技术池、评审三类均无登记 |
-| phase 对话 | 未建立：无 `docs/phases/PH-<n>/card.md`，未开 phase |
+| phase 对话 | PH-1：阶段 1（编码前）；卡片 `docs/phases/PH-1/card.md`；状态「编码前」；当前无已派发实现任务；phase 对话未建立 |
 | 对话命名规则 | phase 对话 `[rill-dsl] P<nn> · <目标一句话>`；需求池 `[rill-dsl] 需求池`；技术池 `[rill-dsl] 技术池`；评审 `[rill-dsl] 评审`（`AGENTS.md` §9.3） |
 | G0 基线锚点 | HEAD `34bb690cf959ae013e8f40e71d5e886e40a1fe1b`（G0 基建提交的父提交） |
 | 门禁入口 | `tools/check.sh`（`tools/check-all.sh` 等价 `all`） |
