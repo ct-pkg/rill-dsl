@@ -30,7 +30,7 @@
 | 域 | 内容 | 规范锚点 |
 | --- | --- | --- |
 | 词法 | UTF-8、无 BOM、CRLF 归一、虚拟 EOF NEWLINE；`IDENT`/`STRING`/`NUMBER`/`BOOL`/`NULL`/`KEYWORD`/`PUNCT`/`NEWLINE`/`EOF`；最长匹配；无符号数字；字符串转义与禁止裸换行；注释不吃 LF；N1–N8 抑制 | [01](../../spec/dsl/01-lexical.md) §1–§7 |
-| Header | 只认 `# allow:` / `# deny:` / `# emit:` / `# dsl-version:` 四种前缀，其余 `#` 行按注释（含 `# approval:`）；整行解析；`TERM`；重复键；默认拒绝（无 allow/空列表拒绝）；`*` 与 deny 列表只记录集合，不计算有效集；版本只接受 `1` | [01](../../spec/dsl/01-lexical.md) §6、[02](../../spec/dsl/02-grammar.md) §1、[06](../../spec/dsl/06-security.md) §2、[10](../../spec/dsl/10-ast-position.md) §6、[D-011](../../decisions/D-011.md)、[D-018](../../decisions/D-018.md) |
+| Header | 只认 `# allow:` / `# deny:` / `# emit:` / `# dsl-version:` 四种前缀，其余 `#` 行按注释（含 `# approval:`）；整行解析；`TERM`；重复键；默认拒绝（无 allow/空列表拒绝）；有效集 = allow 列表 ∩ 注册表，未注册名忽略（06 §2），用于加载期 `tool_not_allowed`；`*` 与 deny 只记录集合，审计/快照不在 Phase 1；版本只接受 `1` | [01](../../spec/dsl/01-lexical.md) §6、[02](../../spec/dsl/02-grammar.md) §1、[06](../../spec/dsl/06-security.md) §2、[10](../../spec/dsl/10-ast-position.md) §6、[D-011](../../decisions/D-011.md)、[D-018](../../decisions/D-018.md) |
 | 文法 | 全部语句：`let`/`let mut`/赋值/`if`/`for`/`into`/`fn`/`return`/`emit`/`break`/`continue`/表达式语句；完整表达式优先级；空格实参不递归；无 postfix `()`；字段与索引；`\|>` 与 `\|?`；emit 受限 JSON；`approve` 不是文法语句（写了 → `syntax`） | [02](../../spec/dsl/02-grammar.md) §2–§4、[06](../../spec/dsl/06-security.md) §6、[S-016](../../spec/S-016-approval.md)、[D-001..D-009](../../decisions/README.md) |
 | AST | 节点集合、字段顺序、`sexpr`/`sexpr-loc`、分组/注释/版本头擦除、header 保序与 `*` 表示全部以 10 卷为准；`--dump-ast` 与 `--dump-tokens` 两种 golden | [10](../../spec/dsl/10-ast-position.md) §2–§6、[D-020](../../decisions/D-020.md) |
 | 加载期校验 | `unknown_tool`（名字解析失败统一用此 kind，Hint 同时提示工具名与函数名）、`tool_not_allowed`、`event_not_declared`、`undefined_name`、`bare_fn_ref`、`shadow_tool`、`dup_decl`、`assign_undefined`、`immutable_assign`、`loop_control`、`return_outside_fn`、`recursion`、`arity`（含管道与 `$` 注入）、`not_implemented`、`pipe_rhs`、`fallback_lhs`、`dollar_outside`、`reserved_name`、`dup_header`、`no_allow_header`、`deny_without_allow`、`version`、`dup_key`（加载期，emit 字面量） | [03](../../spec/dsl/03-semantics.md) §2–§7、[04](../../spec/dsl/04-pipeline-errors.md)、[06](../../spec/dsl/06-security.md)、[07](../../spec/dsl/07-runtime.md) §3.1、[T-001..T-006](../../spec/tools/README.md) |
@@ -71,7 +71,7 @@ rill parse --dump-ast [--loc]   [--registry R] FILE
 rill parse --check --json       [--registry R] FILE
 ```
 
-`--dump-ast` 默认输出 10 §3 的 `sexpr`；加 `--loc` 输出 10 §4 的 `sexpr-loc`。退出码：`0` 可加载；`1` 加载错误；`2` 用法/IO/内部错误。`--check --json` 成功输出 `{"ok":1}`；失败输出 `{"ok":0,"error_kind":"…","line":N,"col":M,"message":"…","hint":"…","path":"…"}`。默认 registry 为 `tests/phase1/registry.json`。
+`--dump-ast` 默认输出 10 §3 的 `sexpr`；加 `--loc` 输出 10 §4 的 `sexpr-loc`。解析成功但加载失败时，`--dump-ast` 仍把已建成的 AST 写到 stdout、诊断写 stderr，退出码 `1`（10 §5 允许调试输出）。退出码：`0` 可加载；`1` 加载错误；`2` 用法/IO/内部错误。`--check --json` 成功输出 `{"ok":1}`；失败输出 `{"ok":0,"error_kind":"…","line":N,"col":M,"message":"…","hint":"…","path":"…"}`，不输出 AST。默认 registry 为 `tests/phase1/registry.json`。
 
 ### 2.4 registry fixture
 
@@ -117,7 +117,7 @@ Phase 1 只消费静态元数据：`read` arity=1、`grep` arity=2、`write` ari
 
 ### 5.0 判据执行方式与位置规则
 
-- 每个 case 的输入是 `tests/phase1/cases/<ID>-<n>.rill`；一个 case 可含多个 fixture（表中用“；”分隔的每个片段各是一个 fixture），每个 fixture 配同名 `.tok`/`.sexpr`/`.sexpr-loc`（仅位置用例）/`.err.json`。
+- 每个 case 的输入是 `tests/phase1/cases/<ID>-<n>.rill`；一个 case 可含多个 fixture（表中用“；”分隔的每个片段各是一个 fixture），每个 fixture 配同名 `.tok`/`.sexpr`/`.sexpr-loc`（仅位置用例）/`.err.json`；加载失败但 AST 已建成的负例可同时有 `.sexpr` 与 `.err.json`。
 - 单条命令：`tools/check-phase1.sh --case <ID>`（跑该 case 的全部 fixture）；Phase 1 全量：`tools/check-phase1.sh --all`；仓库全量：`tools/check-all.sh`（g3/g5/g7/g8 在收口时启用）。
 - 负例同时断言：`ok=0`、精确 `error_kind`/`line`/`col`、`message` 包含表中“文案要点”子串、`hint` 非空。
 - 位置与 span 口径完全以 [10 §4/§5](../../spec/dsl/10-ast-position.md) 为准；词法/解析为 `syntax`，加载用 07 §3.1 的 kind；未闭合定界符指向最内层未匹配的开定界符（10 §5）。各负例的精确 `line`/`col` 由 `.err.json` 固定。
@@ -142,13 +142,14 @@ Phase 1 只消费静态元数据：`read` arity=1、`grep` arity=2、`write` ari
 
 | ID | S | 输入 | 期望 | 负例：error_kind@位置 + 文案要点 |
 | --- | --- | --- | --- | --- |
-| HD-01 | S-013/S-015 | `# allow: read, grep, nosuch`、`# deny: write`、`# emit: e`、`# dsl-version: 1` | header `entry*` 保序、不去重；version 擦除不进 AST；allow 中未注册 `nosuch` 不报错（A-3） | — |
-| HD-02 | S-013 | 无 `# allow:`；`# allow:` 空列表；首条语句前有注释/空行 | 拒绝加载；空列表按 06 §2 与无 header 同义，AST 为 `(entry allow)`（10 §6） | `no_allow_header`；`Available:` 与 `Hint:` 必含；位置为第一条语句首 token |
-| HD-03 | S-013 | 只有 `# deny: exec` | 拒绝，不得静默变空集 | `deny_without_allow`@header 行首；文案含“add '# allow:'” |
+| HD-01 | S-013/S-015 | `# allow: read, grep, nosuch`、`# deny: write`、`# emit: e`、`# dsl-version: 1` | header `entry*` 保序、不去重；version 擦除不进 AST；`nosuch` 被忽略，有效集 `{read, grep}`（06 §2） | — |
+| HD-02 | S-013 | `# allow:` 空列表；无 `# allow:` + 注释/空行 + `let a = 1`；空脚本或只有注释 | 三例都拒绝；空列表 AST `(entry allow)`，无 allow 时无 `entry`（10 §6） | `no_allow_header`；位置按 10 §5：空列表→该 header 行行首；无 allow→第一条有效语句行首；空脚本→`1:1`；`Available:`/`Hint:` 必含 |
+| HD-03 | S-013 | 只有 `# deny: exec` | 拒绝，不得静默变空集 | `deny_without_allow`@第一条 `# deny:` 行行首（列 1）；文案含“add '# allow:'” |
 | HD-04 | S-013 | 任意 header 键重复，如两个 `# allow:` | 拒绝 | `dup_header`@第二次键行首；文案含键名 |
 | HD-05 | S-021 | `# dsl-version: 2`、`1.0`、`v1`、重复版本头；`1` 与省略对比 | `1` 与省略 AST 相等（版本头擦除，10 §6） | `version`@数字 token（`2`/`1.0`）；`syntax`@值 token（`v1`）；`dup_header`（重复） |
 | HD-06 | S-014 | `# allow: *` + `# deny: exec` | AST 为 `(entry allow *)` `(entry deny exec)`；审计记录不在 Phase 1 | — |
-| HD-07 | S-013 | `let a = 1` + 换行 + `# allow: read` + 换行 + `read "x"` | header 模式已结束；后置行按注释处理 | `no_allow_header`；位置为 `let` token |
+| HD-07 | S-013 | `let a = 1` + 换行 + `# allow: read` + 换行 + `read "x"` | header 模式已结束；后置行按注释处理 | `no_allow_header`；位置为第一条有效语句行首（`let` 行，列 1） |
+| HD-08 | S-013/S-014 | `# allow: nosuch`（无工具调用）；`# allow: nosuch` + `read "x"` | 第一例加载成功，AST `(entry allow nosuch)`，有效集为空；第二例 header 不拒绝，调用点拒绝 | `tool_not_allowed`@`read`（第二例）；不得报 `no_allow_header` |
 
 ### 5.3 02 文法
 
@@ -271,11 +272,10 @@ Phase 1 只消费静态元数据：`read` arity=1、`grep` arity=2、`write` ari
 
 ## 10. 卡内裁定
 
-AST 形态、擦除、位置、错误阶段、header 保序与 `*` 表示已由 [10 卷](../../spec/dsl/10-ast-position.md) 与 [D-020](../../decisions/D-020.md) 定；本表不再列这些项，也无未决项。旧未决项已由 01 §6、10 §6、07 §3.1 解决。
+AST 形态、擦除、位置、错误阶段、header 保序与 `*` 表示已由 [10 卷](../../spec/dsl/10-ast-position.md) 与 [D-020](../../decisions/D-020.md) 定；header 未注册名与有效集规则已由 [06 §2](../../spec/dsl/06-security.md) 定；本表不再列这些项，也无未决项。
 
 | # | 事项 | 裁定 | 依据 | 影响判据 |
 | --- | --- | --- | --- | --- |
 | A-1 | Phase 1 覆盖 09 的 M1+M2，并提前落地 M5/M7 的静态子集（arity/注入/递归/遮蔽/header 默认拒绝），而不是只做 lexer | 合并交付 | 用户指示“完整文法 + AST + 加载期名字校验”；09 §1 原则 3 要求可运行样例；M2 的加载校验依赖 M1 token；这些静态检查没有运行期依赖 | 无（范围定义） |
 | A-2 | `$` 注入按词法位置静态判定，不按运行时调用点 | 词法 | 03 §6 要求“个数静态可算”；D-017 `$` 是词法绑定 | LD-13 |
-| A-3 | `# allow:` 中的未注册工具不报错 | 允许 | 06 §1 第一层以调用为对象；S-014 C 的 `# deny: exec` 明确允许“即使注册”的未注册名，allow 同理 | HD-01 |
 | A-6 | `read -1` 的 `error_kind` 取 `arity` | 取 arity | 裸 `read` 先解析为零参工具调用（03 §2）；`read` arity=1，0≠1（03 §6、07 §3.1） | GR-06 |
