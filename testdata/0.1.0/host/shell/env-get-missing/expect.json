@@ -1,0 +1,12 @@
+{
+  "capability": "env",
+  "operation": "get",
+  "outcome": "failure",
+  "profile": "min",
+  "expect": {
+    "ok": true,
+    "exit": 0,
+    "value_contains": "E-HOST-ENV-MISSING",
+    "stderr_contains": "RILL_TEST_MISSING"
+  }
+}

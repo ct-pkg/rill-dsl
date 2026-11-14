@@ -1,0 +1,12 @@
+{
+  "capability": "stdio",
+  "operation": "write",
+  "outcome": "success",
+  "profile": "min",
+  "expect": {
+    "ok": true,
+    "exit": 0,
+    "value": "hello",
+    "stderr_contains": "hello"
+  }
+}

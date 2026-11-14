@@ -1,0 +1,9 @@
+{
+  "capability": "fs",
+  "operation": "write",
+  "outcome": "success",
+  "profile": "full",
+  "files": {"in.txt": "copied\n"},
+  "expect": {"ok": true, "exit": 0, "value": "out.txt"},
+  "files_after": {"out.txt": "copied\n"}
+}

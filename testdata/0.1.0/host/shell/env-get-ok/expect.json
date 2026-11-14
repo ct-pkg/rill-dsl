@@ -1,0 +1,8 @@
+{
+  "capability": "env",
+  "operation": "get",
+  "outcome": "success",
+  "profile": "min",
+  "env": {"RILL_TEST_PORT": "8080"},
+  "expect": {"ok": true, "exit": 0, "value": "8080"}
+}

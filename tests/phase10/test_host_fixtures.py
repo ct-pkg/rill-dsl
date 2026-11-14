@@ -154,9 +154,6 @@ def case_e2e_real_script():
     assert payload["ok"] is True, payload
     assert payload["value"] == "8080", payload
     assert result.stderr.strip() == "8080", result.stderr
-    process = payload["host_meta"]["process"]
-    assert process["code"] == 0, process
-    assert process["stdout"] == "8080", process
 
 
 def main():

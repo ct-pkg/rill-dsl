@@ -1,0 +1,15 @@
+{
+  "capability": "fs",
+  "operation": "write",
+  "outcome": "failure",
+  "profile": "min",
+  "files": {"in.txt": "copied\n"},
+  "expect": {
+    "exit": 2,
+    "diagnostic": {
+      "code": "E-HOST-CAPABILITY-DENIED",
+      "message_contains": "fs.write"
+    }
+  },
+  "files_absent": ["out.txt"]
+}

@@ -1,0 +1,12 @@
+{
+  "capability": "fs",
+  "operation": "read",
+  "outcome": "failure",
+  "profile": "min",
+  "expect": {
+    "ok": true,
+    "exit": 0,
+    "value_contains": "E-HOST-FS-READ",
+    "stderr_contains": "E-HOST-FS-READ"
+  }
+}

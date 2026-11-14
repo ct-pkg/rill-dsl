@@ -1,0 +1,2 @@
+<read> testdata/0.1.0/host/shell/e2e/config.json |> <run> "python3 testdata/0.1.0/host/shell/e2e/port_from_config.py" ->$port
+<send> $port [to] user

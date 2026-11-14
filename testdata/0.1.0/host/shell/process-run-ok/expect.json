@@ -1,0 +1,7 @@
+{
+  "capability": "process",
+  "operation": "run",
+  "outcome": "success",
+  "profile": "full",
+  "expect": {"ok": true, "exit": 0, "value": "hi\n", "process_code": 0}
+}

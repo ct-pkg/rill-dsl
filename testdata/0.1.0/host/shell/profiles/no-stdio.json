@@ -1,0 +1,12 @@
+{
+  "schema": "rill.shell-profile/0",
+  "name": "shell-no-stdio",
+  "description": "除 stdio.write 外与 full 相同，用于观察输出能力的拒绝。",
+  "allow": {
+    "process": ["run"],
+    "fs": ["read", "write"],
+    "env": ["get"],
+    "stdio": []
+  },
+  "exit_codes": {"ok": 0, "unhandled": 1}
+}

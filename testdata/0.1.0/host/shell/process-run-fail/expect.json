@@ -1,0 +1,12 @@
+{
+  "capability": "process",
+  "operation": "run",
+  "outcome": "failure",
+  "profile": "full",
+  "expect": {
+    "ok": true,
+    "exit": 0,
+    "value_contains": "E-HOST-PROCESS-EXIT",
+    "stderr_contains": "进程退出码 3"
+  }
+}

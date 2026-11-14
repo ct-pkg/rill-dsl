@@ -1,0 +1,13 @@
+{
+  "capability": "stdio",
+  "operation": "write",
+  "outcome": "failure",
+  "profile": "no-stdio",
+  "expect": {
+    "exit": 2,
+    "diagnostic": {
+      "code": "E-HOST-CAPABILITY-DENIED",
+      "message_contains": "stdio.write"
+    }
+  }
+}

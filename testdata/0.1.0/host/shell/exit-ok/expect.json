@@ -1,0 +1,8 @@
+{
+  "capability": "exit",
+  "operation": "map",
+  "outcome": "success",
+  "profile": "min",
+  "files": {"config.txt": "ok\n"},
+  "expect": {"ok": true, "exit": 0, "value": "ok\n"}
+}

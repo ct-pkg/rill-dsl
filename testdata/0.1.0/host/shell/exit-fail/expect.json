@@ -1,0 +1,12 @@
+{
+  "capability": "exit",
+  "operation": "map",
+  "outcome": "failure",
+  "profile": "full",
+  "expect": {
+    "ok": false,
+    "exit": 1,
+    "error_contains": "RILL DSL ERROR",
+    "process_code": 5
+  }
+}

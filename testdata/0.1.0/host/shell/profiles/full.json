@@ -1,0 +1,12 @@
+{
+  "schema": "rill.shell-profile/0",
+  "name": "shell-full",
+  "description": "完整：在读能力之上声明 write 与进程 spawn，供端到端真脚本使用。",
+  "allow": {
+    "process": ["run"],
+    "fs": ["read", "write"],
+    "env": ["get"],
+    "stdio": ["write"]
+  },
+  "exit_codes": {"ok": 0, "unhandled": 1}
+}

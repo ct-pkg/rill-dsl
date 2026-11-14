@@ -81,6 +81,7 @@ class Interpreter(object):
         if variables:
             scope.vars.update(variables)
         last = input_value
+        meta = None
         try:
             for statement in program["body"]:
                 outcome = self.eval_statement_in_domain(statement, scope, input_value)
@@ -88,11 +89,12 @@ class Interpreter(object):
                 if not outcome.ok:
                     return outcome
                 last = outcome.value
+                meta = outcome.host_meta
         except BreakSignal as signal:
             if signal.target:
                 scope.set(signal.target, signal.value)
             return result.ExecOutcome.success(signal.value)
-        return result.ExecOutcome.success(last)
+        return result.ExecOutcome.success(last, host_meta=meta)
 
     def eval_statement(self, statement, scope, dollar):
         kind = statement["kind"]
@@ -214,7 +216,8 @@ class Interpreter(object):
                 self.trace.append(
                     {"event": "error", "triggered": False, "value": None}
                 )
-            return result.ExecOutcome.success(cur)
+            # PH-10：段尾只改写 value/ok，不清空宿主元数据（如进程 code/stderr）。
+            return result.ExecOutcome.success(cur, host_meta=outcome.host_meta)
 
         if ok_block is not None:
             self.trace.append({"event": "ok", "triggered": False, "value": None})
@@ -232,7 +235,9 @@ class Interpreter(object):
             )
             if not block_outcome.ok:
                 return self._unhandled(block_outcome)
-            return result.ExecOutcome.success(block_dollar)
+            return result.ExecOutcome.success(
+                block_dollar, host_meta=block_outcome.host_meta or failure.host_meta
+            )
         return self._unhandled(failure)
 
     def _finish(self, statement, scope, outcome):
@@ -294,8 +299,13 @@ class Interpreter(object):
         return result.ExecOutcome.success(dollar), dollar
 
     def _unhandled(self, outcome):
-        """§4.10：未写 ``[error]`` 时失败默认 break 规范串。"""
-        return result.ExecOutcome.failure(DEFAULT_ERROR)
+        """§4.10：未写 ``[error]`` 时失败默认 break 规范串。
+
+        ``host_meta`` 继续透传，让进程 code/stderr 在顶层仍可观察；``$`` 不受影响。
+        """
+        return result.ExecOutcome.failure(
+            DEFAULT_ERROR, host_meta=getattr(outcome, "host_meta", None)
+        )
 
     # ---- 调用 ----------------------------------------------------------
 

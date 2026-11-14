@@ -1,0 +1,8 @@
+{
+  "capability": "fs",
+  "operation": "read",
+  "outcome": "success",
+  "profile": "min",
+  "files": {"config.txt": "port: 8080\n"},
+  "expect": {"ok": true, "exit": 0, "value": "port: 8080\n"}
+}
