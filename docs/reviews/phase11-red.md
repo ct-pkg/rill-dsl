@@ -126,3 +126,61 @@ exit=1
 - 绿提交：`docs(host): PH-11-T5 能力矩阵`
 - 绿命令与输出：`python3 tests/phase11/test_matrix_doc.py` →
   `PASS phase11 matrix: 五类能力 Shell/Agent 两列 + 文字差异`（exit 0）
+
+## PH-11-T6 工具真实传输（复核补记）
+
+- 红提交：`test(host): PH-11-T6 红`（baseline `a5deb4e`）
+- 红命令：`python3 tests/phase11/test_tool_transport.py`
+- 红输出：
+
+```text
+Traceback (most recent call last):
+  ...
+TypeError: __init__() got an unexpected keyword argument 'cwd'
+exit=1
+```
+
+- 绿提交：`feat(host): PH-11-T6 工具真实传输`
+- 绿命令与输出：`python3 tests/phase11/test_tool_transport.py` →
+  `PASS phase11 transport: command 工具走真实子进程、pid/日志可观察`（exit 0）
+- 覆盖：`command` 工具由宿主 spawn；请求/响应走 JSON stdin/stdout；
+  `host_meta.transport.pid` 与工具侧 `RILL_TOOL_LOG` 的 pid 相等且不等于
+  CLI 进程；canonical `profiles/tools.json` 的 `read` 读到真实 `config.txt`。
+
+## PH-11-T7 宿主契约收口（复核补记）
+
+- 红提交：`test(host): PH-11-T7 红`（baseline `a5506df`）
+- 红命令：`python3 tests/phase11/test_host_contract.py`
+- 红输出：
+
+```text
+AssertionError: (0, '{"ok": false, "value": null, "error": "RILL DSL ERROR", "host_meta": {}}\n', '')
+exit=1
+```
+
+- 绿提交：`feat(host): PH-11-T7 宿主契约收口`
+- 绿命令与输出：`python3 tests/phase11/test_host_contract.py` →
+  `PASS phase11 contract: fakes 退出码、错误码退役、host 身份、共享核心`（exit 0）
+- 覆盖：`--fakes` 未处理失败退出 1；harness 接受“退出 1 + `{"ok": false}`”；
+  `src/` 不再出现 `E-RUN-HOST-UNAVAILABLE`；`payload.host.profile/principal`
+  可观察；parser/lexer/loader 不 import 宿主；CLI 只有一处 `Interpreter(`；
+  独立 `[ok]` / `[error]` 的报错提示改用尾随块。
+
+## PH-11-T8 能力矩阵与陈账（复核补记）
+
+- 红提交：`test(host): PH-11-T8 红`（baseline `f2876d4`）
+- 红命令：`python3 tests/phase11/test_matrix_doc.py`
+- 红输出：
+
+```text
+AssertionError: 矩阵缺少真实传输说明 'command 工具'
+exit=1
+```
+
+- 绿提交：`docs(host): PH-11-T8 能力矩阵与陈账`
+- 绿命令与输出：`python3 tests/phase11/test_matrix_doc.py` →
+  `PASS phase11 matrix: 五类能力 Shell/Agent 两列 + 文字差异 + 传输/陈账`（exit 0）
+- 附带修正：`phase12-red.md` 在 PH-12 收口时增至 433 行，文档门禁基线从
+  20 变为 21；`test_known_limits_doc.py` 与 known-limits 同步为 21，
+  不删除证据。
+
