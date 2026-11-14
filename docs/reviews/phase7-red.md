@@ -81,5 +81,31 @@ AssertionError: testdata/0.1.0/positive/run/into/failure-error: exit 3，stderr=
 
 原因：CLI 的 `run` / `fmt` 仍走 `_not_implemented`，退出码 3。
 
+## T5 独立 `[into]` 与 `->$x` 顺序
+
+- 命令：`python3 tests/phase7/test_forms.py`
+- 退出码：`1`
+- 原始输出：
+
+```text
+Traceback (most recent call last):
+  File "/Users/samxx/trae-ws/rill-dsl/tests/phase7/test_forms.py", line 103, in <module>
+    main()
+  File "/Users/samxx/trae-ws/rill-dsl/tests/phase7/test_forms.py", line 93, in main
+    case_independent_into_variable()
+  File "/Users/samxx/trae-ws/rill-dsl/tests/phase7/test_forms.py", line 22, in run(
+    interp, out = run(
+  File "/Users/samxx/trae-ws/rill-dsl/tests/phase7/test_forms.py", line 18, in run
+    return interp, interp.eval_program(parse_source(source), variables=variables)
+  File "/Users/samxx/trae-ws/rill-dsl/src/rill/eval_simple.py", line 85, in eval_program
+    outcome = self.eval_statement(statement, scope, input_value)
+  File "/Users/samxx/trae-ws/rill-dsl/src/rill/eval_simple.py", line 102, in eval_statement
+    raise EvalError(
+rill.eval_simple.EvalError: PrepBlockStmt 不在 PH-7 的执行范围（PH-8/PH-9）
+```
+
+原因：`PrepBlockStmt` 与 `Assign` 仍是显式未实现分支。
+
+
 
 
