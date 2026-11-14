@@ -104,3 +104,9 @@ exit=1
 ```
 
 - 绿提交：`feat(host): PH-12-T4 双 profile 对照`
+- 绿命令与输出：`python3 tests/phase12/test_host_matrix.py` →
+  `PASS phase12 matrix: 五类能力 + PH-12 验收 + host 桶绿`（exit 0）
+- 补充证据：`bash tools/check-0.1.0.sh --bucket host` →
+  `PASS host/shared/read-send ...`（1 passed, 0 failed）；
+  `python3 tests/phase11/test_agent_fixtures.py` →
+  `PASS phase11 fixtures: agent 五类能力 + role/limits/type + AST 一致`

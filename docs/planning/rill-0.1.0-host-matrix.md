@@ -123,3 +123,44 @@ Agent 的“失败”是可观察的 `{ok: false}`，不是进程退出状态；
 - 动态主语（`$var` 角色）按默认角色处理；类型表只有 `path` / `text` 两种约束。
 - PH-10 的 `docs/planning/rill-0.1.0-shell-profile.md` §4 里“Agent 预留”的表述
   以本文件为准；PH-10 卡 §8 #2 的 agent 动词集裁定由 PH-11 卡 §7 #6 取代。
+
+## 9. PH-12 双 profile 验收
+
+本节只记录 PH-12 的验收结果，不重复 §1–§6 的能力形态；缺口裁定见
+`docs/phases/PH-12/card.md` §7。
+
+| 判据 | 命令 | 原始结果 |
+| --- | --- | --- |
+| 同源 AST | `bash tools/check-0.1.0.sh --bucket host` | `PASS host/shared/read-send`；1 passed, 0 failed |
+| Agent 五类能力 | `python3 tests/phase11/test_agent_fixtures.py` | `PASS phase11 fixtures: ... AST 一致`（exit 0） |
+| round-trip | `bash tools/check-fmt.sh --roundtrip` | `PASS ... 71 个 fixture`（exit 0） |
+| 全样例 | `bash tools/check-0.1.0.sh --all` | 85 fixtures；83 compliance + 2 smoke passed；pending 0 |
+| 文档一致性 | `python3 tests/phase12/test_host_matrix.py` | `PASS phase12 matrix`（exit 0） |
+
+### 9.1 run 能否真实跑脚本
+
+| 问题 | Shell | Agent |
+| --- | --- | --- |
+| 能跑 RILL 脚本吗 | 能 | 能 |
+| 能否读真实文件 | 能 | 不能，只调 `read` / `write` 工具 |
+| 能否起真实进程 | 能 | 不能，只调 `run` / `exec` 工具 |
+| 能否读真实环境变量 | 能 | 不能，只读 manifest `context` |
+| 未处理失败是否有 OS 退出码 | 有，数字由能力清单给出 | 没有，固定 0，payload 仍 `ok=false` |
+| 同源 AST | 相等 | 相等 |
+
+“能跑脚本”只说明脚本被解析并执行；Shell 的副作用是真实的，Agent 的副作用
+只发生在工具注册表里。两者能力不等价，不得用一方的结果推断另一方。
+
+### 9.2 host-specific 差异清单
+
+| # | 差异点 | Shell 实际 | Agent 实际 | 是否影响语法/AST |
+| --- | --- | --- | --- | --- |
+| 1 | `run` / `exec` 落点 | 真实进程 | 工具调用 | 不影响语法/AST |
+| 2 | `read` / `write` 落点 | OS 文件 | `read` / `write` 工具 | 不影响语法/AST |
+| 3 | `env` 来源 | 当前进程 `os.environ` | manifest `context` | 不影响语法/AST |
+| 4 | `send` 通道 | stderr | `send` / `emit` 工具 | 不影响语法/AST |
+| 5 | 未处理失败退出码 | 非 0（能力清单） | 0（payload `ok=false`） | 不影响语法/AST |
+| 6 | 角色、类型与 limits | 无 role；只有进程 timeout | `roles` / `types` / `limits` | 不影响语法/AST |
+
+结论：六项差异全部落在能力层，parser 与 AST 不感知宿主；同一 fixture 的
+AST 在 shell / agent 下逐节点相等。差异没有一条被写进语法或 AST。
