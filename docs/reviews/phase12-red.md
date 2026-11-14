@@ -58,3 +58,23 @@ exit=1
   （exit 0）。
 - 说明：`retired=4` 是 `pending/` 下 4 个 `retired: true` 的转正痕迹目录，
   harness 不发现、不执行；E-2 以 `pending: 0 not run` 为准（卡 §7 #6）。
+
+## PH-12-T3 round-trip 门禁
+
+- 红提交：`test(fmt): PH-12-T3 红`（baseline `6b3f26b`）
+- 红命令：`python3 tests/phase12/test_roundtrip.py`
+- 红输出：
+
+```text
+Traceback (most recent call last):
+  File ".../tests/phase12/test_roundtrip.py", line 88, in <module>
+    main()
+  File ".../tests/phase12/test_roundtrip.py", line 72, in main
+    case_gate_script_exists()
+  File ".../tests/phase12/test_roundtrip.py", line 39, in case_gate_script_exists
+    assert os.path.isfile(GATE), "缺少 round-trip 门禁：%s" % GATE
+AssertionError: 缺少 round-trip 门禁：.../tools/check-fmt.sh
+exit=1
+```
+
+- 绿提交：`feat(fmt): PH-12-T3 round-trip 门禁`
