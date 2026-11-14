@@ -49,6 +49,8 @@ DEFAULT_VERBS = (
 TOOL_UNREGISTERED = "E-HOST-TOOL-UNREGISTERED"
 TOOL_ARGS = "E-HOST-TOOL-ARGS"
 ENV_MISSING = "E-HOST-ENV-MISSING"
+FS_OUTSIDE = "E-HOST-FS-OUTSIDE"
+FS_TYPE = "E-HOST-FS-TYPE"
 
 
 class AgentHostError(Exception):
@@ -338,6 +340,108 @@ class AgentStdioCapability(object):
         )
 
 
+class AgentFsCapability(object):
+    """文件能力：只把路径交给工具；workspace root 与类型约束在宿主侧校验。"""
+
+    def __init__(self, host):
+        self.host = host
+
+    def _split_type(self, raw, operation):
+        if not isinstance(raw, str) or raw == "":
+            raise ToolFailure(TOOL_ARGS, "%s 需要一个非空路径字符串" % operation)
+        type_name = None
+        value = raw
+        if ":" in raw:
+            prefix, rest = raw.split(":", 1)
+            if prefix in self.host.policy.types:
+                type_name = prefix
+                if self.host.policy.types[prefix] != "path":
+                    raise ToolFailure(
+                        FS_TYPE,
+                        "%s 只接受 path 类型，%r 是 %s"
+                        % (operation, prefix, self.host.policy.types[prefix]),
+                        {"fs": {"code": FS_TYPE, "path": raw}},
+                    )
+                value = rest
+        if value == "":
+            raise ToolFailure(TOOL_ARGS, "%s 的路径为空" % operation)
+        return value, type_name
+
+    def _resolve(self, raw, operation):
+        value, type_name = self._split_type(raw, operation)
+        root = os.path.normpath(self.host.policy.workspace)
+        target = os.path.normpath(
+            value if os.path.isabs(value) else os.path.join(root, value)
+        )
+        if target != root and not target.startswith(root + os.sep):
+            raise ToolFailure(
+                FS_OUTSIDE,
+                "%s 的路径 %r 越出 workspace %r" % (operation, raw, root),
+                {"fs": {"code": FS_OUTSIDE, "path": raw, "root": root}},
+            )
+        relative = os.path.relpath(target, root).replace(os.sep, "/")
+        return relative, type_name, root
+
+    def read(self, raw):
+        path, type_name, root = self._resolve(raw, "read")
+        args = {"path": path}
+        outcome = self.host.tools.call("read", args)
+        return _attach(
+            outcome,
+            {
+                "fs": {
+                    "tool": "read",
+                    "path": path,
+                    "root": root,
+                    "type": type_name,
+                },
+                "tool": {"name": "read", "args": args},
+            },
+        )
+
+    def write(self, raw, content):
+        path, type_name, root = self._resolve(raw, "write")
+        if not isinstance(content, (str, Bytes)):
+            raise ToolFailure(TOOL_ARGS, "write 的内容只接受文本或 Bytes")
+        args = {"path": path, "content": content}
+        outcome = self.host.tools.call("write", args)
+        if outcome.ok and outcome.value is None:
+            outcome = result.ExecOutcome.success(path, host_meta=outcome.host_meta)
+        return _attach(
+            outcome,
+            {
+                "fs": {
+                    "tool": "write",
+                    "path": path,
+                    "root": root,
+                    "type": type_name,
+                },
+                "tool": {"name": "write", "args": args},
+            },
+        )
+
+
+class AgentEnvCapability(object):
+    """环境变量能力：只读 manifest 的 kernel context，不读 OS env。"""
+
+    def __init__(self, host):
+        self.host = host
+
+    def get(self, name):
+        if not isinstance(name, str) or name == "":
+            raise ToolFailure(TOOL_ARGS, "env 需要一个非空变量名")
+        if name not in self.host.policy.context:
+            raise ToolFailure(
+                ENV_MISSING,
+                "环境变量 %r 未在 agent context 中注入" % name,
+                {"env": {"code": ENV_MISSING, "name": name, "source": "context"}},
+            )
+        return result.ExecOutcome.success(
+            self.host.policy.context[name],
+            host_meta={"env": {"name": name, "source": "context"}},
+        )
+
+
 class AgentHost(object):
     """一次 ``rill run`` 的 agent 宿主句柄。"""
 
@@ -348,6 +452,8 @@ class AgentHost(object):
         self.tools = tools if tools is not None else policy.tools
         self.process = AgentProcessCapability(self)
         self.stdio = AgentStdioCapability(self)
+        self.fs = AgentFsCapability(self)
+        self.env = AgentEnvCapability(self)
 
     def validate_program(self, program):
         """PH-11-T3 接入角色表；T1 只保留钩子。"""
@@ -392,38 +498,18 @@ class AgentVerbRegistry(object):
 
     def _dispatch(self, name, entry):
         if name == "read":
-            path = _require_text(entry["object"], "read 需要一个文件路径")
-            args = {"path": path}
-            outcome = self.host.tools.call("read", args)
-            return _attach(
-                outcome,
-                {"fs": {"tool": "read", "path": path}, "tool": {"name": "read", "args": args}},
-            )
+            return self.host.fs.read(entry["object"])
 
         if name == "write":
-            path = _require_text(entry["object"], "write 需要一个文件路径")
             content = entry["subject"] if entry["subject"] is not None else entry["input"]
-            outcome = self.host.tools.call("write", {"path": path, "content": content})
-            if outcome.ok and outcome.value is None:
-                outcome = result.ExecOutcome.success(path, host_meta=outcome.host_meta)
-            return _attach(outcome, {"fs": {"tool": "write", "path": path}})
+            return self.host.fs.write(entry["object"], content)
 
         if name == "run":
             command = _require_text(entry["object"], "run 需要一个命令字符串")
             return self.host.process.run(command, stdin=entry["input"])
 
         if name == "env":
-            key = _require_text(entry["object"], "env 需要一个变量名")
-            if key not in self.host.policy.context:
-                raise ToolFailure(
-                    ENV_MISSING,
-                    "环境变量 %r 未在 agent context 中注入" % key,
-                    {"tool": {"name": "env", "args": {"name": key}}},
-                )
-            return result.ExecOutcome.success(
-                self.host.policy.context[key],
-                host_meta={"env": {"name": key, "source": "context"}},
-            )
+            return self.host.env.get(entry["object"])
 
         if name == "send":
             text = entry["subject"]

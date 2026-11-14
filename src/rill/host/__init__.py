@@ -1,6 +1,8 @@
 """宿主能力层：Shell（PH-10）与 Agent（PH-11）。"""
 
 from .agent import (  # noqa: F401
+    AgentEnvCapability,
+    AgentFsCapability,
     AgentHost,
     AgentHostError,
     AgentPolicy,

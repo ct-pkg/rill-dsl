@@ -58,3 +58,7 @@ Traceback (most recent call last):
 ImportError: cannot import name 'AgentEnvCapability' from 'rill.host.agent'
 exit=1
 ```
+
+- 绿提交：`feat(host): PH-11-T2 工具文件与环境`
+- 绿命令与输出：`python3 tests/phase11/test_fs_env.py` →
+  `PASS phase11 fs/env: workspace 约束、类型表、context-only env`（exit 0）
