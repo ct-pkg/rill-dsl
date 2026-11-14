@@ -60,13 +60,6 @@ fixture 不叫 `source.rill` / `case.json`，避免被 harness 当成 `--fakes` 
 | PH-11-T3 | `src/rill/host/agent.py`（role/limits） | `feat(host): PH-11-T3 角色与 limits` | `git revert <sha>` | `python3 tests/phase11/test_role_limits.py` | M | E-3 |
 | PH-11-T4 | `testdata/0.1.0/host/agent/` | `feat(host): PH-11-T4 Agent fixture` | `git revert <sha>` | `python3 tests/phase11/test_agent_fixtures.py` | S | E-1 |
 | PH-11-T5 | `docs/planning/rill-0.1.0-host-matrix.md` | `docs(host): PH-11-T5 能力矩阵` | `git revert <sha>` | `python3 tests/phase11/test_matrix_doc.py` | S | E-2,E-4,E-5 |
-| PH-11-T6 | `src/rill/host/agent.py`（`command` 工具）+ `testdata/0.1.0/host/agent/tools/tool_server.py` + canonical `profiles/tools.json` | `feat(host): PH-11-T6 工具真实传输` | `git revert <sha>` | `python3 tests/phase11/test_tool_transport.py` | M | E-1,E-8 |
-| PH-11-T7 | `src/rill/cli.py`（fakes 失败退出码、`E-RUN-HOST-UNAVAILABLE` 退役、`payload.host`）+ `tools/rill_harness/sut.py` | `feat(host): PH-11-T7 宿主契约收口` | `git revert <sha>` | `python3 tests/phase11/test_host_contract.py` | M | E-9,E-10 |
-| PH-11-T8 | `docs/planning/rill-0.1.0-host-matrix.md`（真实传输与 principal 结论）+ `docs/planning/rill-0.1.0-known-limits.md` | `docs(host): PH-11-T8 能力矩阵与陈账` | `git revert <sha>` | `python3 tests/phase11/test_matrix_doc.py` | S | E-2,E-8,E-9 |
-
-> 复核补记（用户 PH-11 收口要求）：T1–T5 只证明了映射层，工具仍是队列桩；
-> T6 补真实子进程传输，T7 收口退出码与已退役错误码，T8 把结论写进矩阵。
-> 三张任务卡同样先红后绿，红证追加到 `docs/reviews/phase11-red.md`。
 
 依赖顺序：T1 → T2 → T3 → T4 → T5。T1 同时接 CLI 与 agent 动词集，
 否则 T4 的 fixture 没有可执行的宿主。verify 一律是可失败的单测；
@@ -84,9 +77,6 @@ fixture 不叫 `source.rill` / `case.json`，避免被 harness 当成 `--fakes` 
 | E-3 | `[error]` 仍只拿字符串；结构化错误走 `host_meta`/工具值 | `$` 类型断言 |
 | E-4 | 没有 parser/lexer 改动 | `git diff --quiet HEAD -- src/rill/lexer.py src/rill/parser.py` 退出 0 |
 | E-5 | 任务清单每项可独立验收（T-6） | 收口对照表逐项贴 `verify` 原始输出 |
-| E-8 | canonical Agent 宿主的工具调用真的走出进程：子进程 pid、工具侧日志、真实文件内容三者可观察 | `tests/phase11/test_tool_transport.py` + 收口报告贴 `rill run` 原始输出/退出码 |
-| E-9 | `--fakes` 未处理失败退出码与真实宿主一致（1）；正常路径不再出现 `E-RUN-HOST-UNAVAILABLE` | 单测断言退出码 + `src/` 全文检索无该错误码 |
-| E-10 | 两个宿主共用 parser/lexer/Interpreter；调用方能从 `payload.host.profile` 判断自己在哪套能力体系 | AST 逐节点相等 + 单测断言 `host.profile` / `host.principal` |
 
 ## 5. 依赖与风险
 
@@ -125,3 +115,23 @@ fixture 不叫 `source.rill` / `case.json`，避免被 harness 当成 `--fakes` 
 | 14 | PH-10 卡 §8 #11 | `E-RUN-HOST-UNAVAILABLE` 是占位错误 | **裁定：退役**。Agent profile 永远有宿主（manifest 或 builtin），CLI 不再产生该错误码；缺失/坏 manifest 报 `E-RUN-HOST-PROFILE`（退出 2）。`src/rill/` 不再出现 `E-RUN-HOST-UNAVAILABLE` |
 | 15 | §五.1 / §五.2 | 能力清单与 principal 是不是同一套 `HostCapabilities` | **裁定：槽位接口是同一套，授权维度不同**。process/fs/env/stdio/exit 五槽两宿主同签名；ShellPolicy 是“能做什么”（operation grant，principal 为 OS 用户，不建模）；AgentPolicy 是“谁 + 能做什么”（role 是动词级 principal，types/context/limits/tools 是五槽的实现参数）。调用方用 `--profile` 选择，并从 `payload.host.profile` / `payload.host.principal` 读取身份；不需要第二套执行路径 |
 | 16 | §4.16 / canonical manifest | 工具注册表 schema 名 `rill-fakes-tools/0` 是否继续用于真实工具 | **裁定：保留 schema 名，只扩展工具描述**。同一份注册表可混用 `queue/default`（确定性桩）与 `command`（真实子进程）；canonical manifest 一律 `command`，并在矩阵文档里标明哪些 fixture 仍用桩 |
+
+## 8. 复核补记：真实工具传输与陈账收口
+
+> T1–T5 只证明了映射层，工具仍是队列桩；用户 PH-11 收口要求补真实传输、
+> 退出码与陈账结论。本节不改 §3/§4（首个实现提交后冻结），补记任务同样
+> 先红后绿，红证追加到 `docs/reviews/phase11-red.md`。
+
+| ID | 交付物 | 提交 | 回滚 | verify | effort | 覆盖 |
+| --- | --- | --- | --- | --- | --- | --- |
+| PH-11-T6 | `src/rill/host/agent.py`（`command` 工具）+ `testdata/0.1.0/host/agent/tools/tool_server.py` + canonical `profiles/tools.json` | `feat(host): PH-11-T6 工具真实传输` | `git revert <sha>` | `python3 tests/phase11/test_tool_transport.py` | M | E-8 |
+| PH-11-T7 | `src/rill/cli.py`（fakes 失败退出码、`E-RUN-HOST-UNAVAILABLE` 退役、`payload.host`）+ `tools/rill_harness/sut.py` | `feat(host): PH-11-T7 宿主契约收口` | `git revert <sha>` | `python3 tests/phase11/test_host_contract.py` | M | E-9,E-10 |
+| PH-11-T8 | `docs/planning/rill-0.1.0-host-matrix.md`（真实传输与 principal 结论）+ `docs/planning/rill-0.1.0-known-limits.md` | `docs(host): PH-11-T8 能力矩阵与陈账` | `git revert <sha>` | `python3 tests/phase11/test_matrix_doc.py` | S | E-2,E-8,E-9 |
+
+补记退出判据：
+
+| ID | 条件 | 判定 |
+| --- | --- | --- |
+| E-8 | canonical Agent 宿主的工具调用真的走出进程：子进程 pid、工具侧日志、真实文件内容三者可观察 | `tests/phase11/test_tool_transport.py` + 收口报告贴 `rill run` 原始输出/退出码 |
+| E-9 | `--fakes` 未处理失败退出码与真实宿主一致（1）；正常路径不再出现 `E-RUN-HOST-UNAVAILABLE` | 单测断言退出码 + `src/` 全文检索无该错误码 |
+| E-10 | 两个宿主共用 parser/lexer/Interpreter；调用方能从 `payload.host.profile` 判断自己在哪套能力体系 | AST 逐节点相等 + 单测断言 `host.profile` / `host.principal` |
