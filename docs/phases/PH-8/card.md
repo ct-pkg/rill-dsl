@@ -33,20 +33,21 @@
 
 | 路径 | 用途 |
 | --- | --- |
-| `src/rill/eval_control.py` | 管道、if、each、break |
-| `testdata/0.1.0/positive/run/` | 管道/if/each/break 轨迹用例 |
-| `testdata/0.1.0/expected/run/` | 轨迹 golden |
-| `testdata/0.1.0/negative/run/` | 场域与 truthy 负例 |
+| `src/rill/eval_control.py` | `if` / `each` / `break` 场域与 expr 求值（统一回落到 `eval_simple`） |
+| `src/rill/eval_simple.py` | 抽取 `_apply_tail` 供 each 复用；补管道场域；`E-RUN-UNSUPPORTED` 清单收缩 |
+| `tests/phase8/` | `support.py`、`test_if.py`、`test_each.py`、`test_break.py`、`test_cases.py` |
+| `testdata/0.1.0/positive/run/control/` | 管道/if/each/break 运行用例（`ok=false` 的脚本也放这里） |
+| `testdata/0.1.0/expected/run/` | 轨迹 golden（由 `tests/phase8/test_cases.py` 读取） |
+| `docs/reviews/phase8-red.md` | 各任务红证与转绿记录 |
 
 ## 3. 任务清单
 
 | ID | 交付物 | 提交 | 回滚 | verify | effort | 覆盖 |
 | --- | --- | --- | --- | --- | --- | --- |
-| PH-8-T1 | `src/rill/eval_control.py`（管道） | `feat(runtime): PH-8-T1 管道分段` | `git revert <sha>` | `bash tools/check-0.1.0.sh --show positive/pipe/multi-line` | M | E-1 |
-| PH-8-T2 | `src/rill/eval_control.py`（if/else） | `feat(runtime): PH-8-T2 if 控制流` | `git revert <sha>` | `bash tools/check-0.1.0.sh --show positive/if/else-if` | S | E-2 |
-| PH-8-T3 | `src/rill/eval_control.py`（each） | `feat(runtime): PH-8-T3 each 遍历` | `git revert <sha>` | `bash tools/check-0.1.0.sh --show positive/each/bareword-value` | M | E-3,E-4 |
-| PH-8-T4 | `src/rill/eval_control.py`（break） | `feat(runtime): PH-8-T4 break 场域` | `git revert <sha>` | `bash tools/check-0.1.0.sh --show positive/break/capture` | M | E-5 |
-| PH-8-T5 | `testdata/0.1.0/expected/run/` 轨迹 golden | `feat(runtime): PH-8-T5 轨迹 golden` | `git revert <sha>` | `bash tools/check-0.1.0.sh --kind run` | S | E-6 |
+| PH-8-T1 | `src/rill/eval_control.py`（`if`：条件四形态、truthy） | `feat(runtime): PH-8-T1 if 条件求值` | `git revert <sha>` | `python3 tests/phase8/test_if.py` | M | E-2 |
+| PH-8-T2 | `src/rill/eval_control.py`（`each`）+ `eval_simple._apply_tail` 抽取 | `feat(runtime): PH-8-T2 each 遍历与每轮成败` | `git revert <sha>` | `python3 tests/phase8/test_each.py` | M | E-3,E-4 |
+| PH-8-T3 | `src/rill/eval_control.py`（`break` 场域）+ `eval_simple` 管道场域 | `feat(runtime): PH-8-T3 break 场域` | `git revert <sha>` | `python3 tests/phase8/test_break.py` | M | E-5 |
+| PH-8-T4 | `tests/phase8/test_cases.py` + `testdata/0.1.0/positive/run/control/` + `expected/run/control-*.json` | `test(runtime): PH-8-T4 轨迹 golden 与 run 用例` | `git revert <sha>` | `python3 tests/phase8/test_cases.py` | S | E-1,E-6 |
 
 ## 4. 退出判据（exit-criteria）
 
@@ -54,23 +55,43 @@
 
 | ID | 条件 | 判定 |
 | --- | --- | --- |
-| E-1 | 管道 3 段以上，每段 `[error]` 只覆盖本段 | 轨迹 golden：段边界与错误归属 |
-| E-2 | `if` 的 truthy/falsy 与 `[ok]` 的 `ok` 分离 | 空串成功仍走 `[ok]`，`if` 走 falsy |
-| E-3 | each 空数组 0 次、null 0 次、非数组 1 次 | 三个计数断言 |
-| E-4 | 某轮失败后循环继续，结果数组对应位为 null | 数组逐位比对 |
-| E-5 | `break` 只中断当前场域；带值 break 可被外部变量捕捉 | 场域轨迹 + 捕捉断言 |
-| E-6 | 任务清单每项可独立验收（T-6） | 收口对照表逐项贴 `verify` 原始输出 |
+| E-1 | 管道 3 段以上，每段 `[error]` 只覆盖本段 | 轨迹 golden 的段边界与错误归属；`control/pipe-three` |
+| E-2 | `if` 的 truthy/falsy 与 `[ok]` 的 `ok` 分离；条件四形态（裸值 / 动词调用 / 带主语 / 管道）运行期可归约 | `test_if.py`：空串成功仍走 `[ok]`、`if` 走 falsy；带主语条件断言 `subject` 已求值 |
+| E-3 | each null 走 error 且 0 轮、空数组 0 轮、非数组 1 轮 | `test_each.py` 三个轮数断言 |
+| E-4 | 某轮失败后循环继续，结果数组对应位为 null；each 级 `[ok]/[error]` 的触发与 `$` | `test_each.py` 逐位比对 + 触发断言 |
+| E-5 | `break` 三场域；each 内 break、失败轮后 break、裸词 break 三组合 | `test_break.py` 场域轨迹 + 捕捉断言 |
+| E-6 | 任务清单每项可独立验收（T-6） | 收口对照表逐项贴 `verify` 原始输出；`bash tools/check-0.1.0.sh --kind run --bucket positive` |
 
 ## 5. 依赖与风险
 
 | 类型 | 内容 |
 | --- | --- |
-| 依赖 | PH-7 的段输出与 `[into]` 顺序；PH-6 的 truthy 与 `$`；`W-01` 只在 `check` 触发，不影响 run。 |
+| 依赖 | PH-7 的段输出、`[into]` 顺序与 `_finish`（管道本体已在 PH-7 落地，PH-8 不重写）；PH-6 的 truthy 与 `$`；PH-3 的 AST。 |
+| 显式顺序 | 管道无独立任务：PH-8 只补「expr 位的管道」（`if` 条件、`each` 源）与「管道场域（break 止于管道）」。这两项都压在本卡 T1–T3 上，不能先做。 |
 | 风险 1 | each 每轮作用域未固定：会留下“每轮共享 `$`”的二义。触发信号：两轮之间变量可见。 |
 | 风险 2 | `$` 被 `[in]` 宾语覆盖：each 体内 `$` 必须是当前项。触发信号：体内 `$` 等于整个数组。 |
 | 风险 3 | `break` 跨场域：块内 break 中断整个 program。触发信号：E-5 轨迹越界。 |
+| 风险 4 | 管道另立求值路径：expr 位与语句位各写一套。触发信号：`if` 条件里的管道与语句级管道对同一脚本给出不同段边界。 |
 
 ## 6. 收口与 tag
 
 - 收口时产品版本 `0.8.0`；annotated tag `v0.8.0`，message 含 `PH-8` 与收口提交 sha 前 7 位。
 - 只推 tag，不推分支、不对外发布。收口对照表：`docs/reviews/closeout-8.md`（收口时新建）。
+
+## 8. 规范缺口与实现裁定（不改变规范正文）
+
+下列各条在规范里没有唯一表述。**先实测、再裁定**：裁定只写进本表，不写进
+`docs/RILL-0.1.0.md`；后续 CR 需要逐条收口。
+
+| # | 位置 | 缺口 | 本 phase 的实测与裁定 |
+| --- | --- | --- | --- |
+| 1 | §4.13 + §4.15 | `each` 体内 `break`（非 `[error]` 块）是结束本轮还是结束整个 each | 待 T3 实测后补 |
+| 2 | §4.13 | 「某轮失败后 `[error]` 内 `break`」之后：该轮元素算 `null` 还是省略，each 级 `[error]` 是否触发 | 待 T3 实测后补 |
+| 3 | §4.13/§4.15 | `break` 的值作为 each 错误串时，裸词按 `STRING` 进入哪一层（each 级 `$` 还是捕捉变量） | 待 T3 实测后补 |
+| 4 | §4.12 | `if` 的段输出是什么（无动作的纯判断） | 待 T1 实测后补 |
+| 5 | §4.12/§4.10 | `if` 条件求值为失败（动词 `ok=false`、条件管道中断）时的语义 | 待 T1 实测后补 |
+| 6 | §4.12 | `if` 体内 `$` 指代什么、体内 `break` 是否只中断 `if` | 待 T1/T3 实测后补 |
+| 7 | §4.13 | `each` 源为 `null` 时的错误串；源为失败动词/中断管道时的语义 | 待 T2 实测后补 |
+| 8 | §4.13 | each 每轮作用域：`$变量` 与外层同名变量的读写关系 | 待 T2 实测后补 |
+| 9 | §4.13 | each 级 `[into]` 是否存在、收到什么值 | 待 T2 实测后补 |
+| 10 | §4.6/§4.15 | 管道段内 `break` 之后，管道场域的段输出与 program 的 `ok` | 待 T3 实测后补 |
