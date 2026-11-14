@@ -104,6 +104,6 @@ fixture 不叫 `source.rill` / `case.json`，避免被 harness 当成 `--fakes` 
 | 8 | §五.8 | 有真实映射的动词之外怎么处理 | **实测：`search` / `parse` / `replace` / `contains` / `review` 无真实映射**，调用即 `E-RUN-VERB-UNREGISTERED`（stage=run），不静默成功 |
 | 9 | §4.16 | `Bytes` / `Opaque` 能否出现在最终 `run` 输出 | **实测：`Bytes` 序列化为 `{"$bytes": "<base64>"}`，`Opaque` 为 `{"$opaque": tag}`**；二进制不经过 `$` 字符串 |
 | 10 | §4.16 | stdin 初始值 | **实测：`run` 的 stdin = 管道/`$` 输入的字符串（`Bytes` 直接写字节）**；没有输入时 stdin 为空 |
-| 11 | §五 | agent profile 没有真实宿主 | **实测：不带 `--fakes` 时返回 `E-RUN-HOST-UNAVAILABLE`（退出 2）**；PH-11 接真实 Agent 能力 |
-| 12 | §4.10 | `--fakes` 与真实宿主的退出码不一致 | **实测：`--fakes` 保持 harness 协议退出 0/2/3；只有真实宿主按 `exit_codes` 返回 1**。同一脚本失败时两种模式退出码不同，登记缺口 |
+| 11 | §五 | agent profile 没有真实宿主 | **实测：不带 `--fakes` 时返回 `E-RUN-HOST-UNAVAILABLE`（退出 2）**；PH-11 接真实 Agent 能力。PH-11-T7 已让该错误码退役，见 PH-11 卡 §7 #14 |
+| 12 | §4.10 | `--fakes` 与真实宿主的退出码不一致 | **实测：`--fakes` 保持 harness 协议退出 0/2/3；只有真实宿主按 `exit_codes` 返回 1**。同一脚本失败时两种模式退出码不同，登记缺口。**PH-11-T7 已收口：`--fakes` 未处理失败退出 1，harness SUT 接受“退出 1 + `{"ok": false}`”，见 PH-11 卡 §7 #12** |
 | 13 | §4.5 | 进程 timeout / env 覆盖 / `stat`/`list` | **实测：进程默认 10s timeout，可 `timed_out` 观察；环境变量只继承不覆盖；`stat`/`list` 不映射**，后续 CR |

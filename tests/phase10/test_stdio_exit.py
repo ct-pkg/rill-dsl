@@ -3,7 +3,7 @@
 用法：python3 tests/phase10/test_stdio_exit.py（退出 0 = 通过）。
 覆盖 E-2/E-3：send 写 stderr 且值可观察、stdio 未声明时拒绝、
 真实宿主未处理失败按能力清单退出、[error] 处理后退出 0、
---fakes 保持 harness 协议（失败仍退出 0）、Bytes 输出不崩。
+--fakes 与真实宿主同一失败退出码（PH-11-T7 收口）、Bytes 输出不崩。
 """
 
 import base64
@@ -154,13 +154,9 @@ def case_cli_exit_codes_come_from_profile():
         assert result.returncode == 7, (result.returncode, result.stdout, result.stderr)
 
 
-def case_fakes_keep_harness_exit_code():
+def case_fakes_match_real_exit_codes():
+    """PH-11-T7：fakes 未处理失败退出 1，与真实 Shell 宿主一致。"""
     with tempfile.TemporaryDirectory() as tmp:
-        write_script(
-            tmp,
-            "script.rill",
-            "<read> missing.txt [error] { <send> $ [to] user }\n",
-        )
         fakes = os.path.join(tmp, "fakes.json")
         with open(fakes, "w", encoding="utf-8") as handle:
             json.dump(
@@ -179,8 +175,21 @@ def case_fakes_keep_harness_exit_code():
                 },
                 handle,
             )
+        write_script(tmp, "fail.rill", "<read> missing.txt\n")
         result = run_cli(
-            ["run", "script.rill", "--profile", "shell", "--fakes", fakes], cwd=tmp
+            ["run", "fail.rill", "--profile", "shell", "--fakes", fakes], cwd=tmp
+        )
+        assert result.returncode == 1, (result.returncode, result.stdout, result.stderr)
+        payload = payload_of(result)
+        assert payload["ok"] is False and payload["error"] == "RILL DSL ERROR", payload
+
+        write_script(
+            tmp,
+            "handled.rill",
+            "<read> missing.txt [error] { <send> $ [to] user }\n",
+        )
+        result = run_cli(
+            ["run", "handled.rill", "--profile", "shell", "--fakes", fakes], cwd=tmp
         )
         assert result.returncode == 0, (result.returncode, result.stdout, result.stderr)
         payload = payload_of(result)
@@ -210,7 +219,7 @@ def main():
     case_cli_denial_is_diagnostic()
     case_cli_handled_failure_exits_zero()
     case_cli_exit_codes_come_from_profile()
-    case_fakes_keep_harness_exit_code()
+    case_fakes_match_real_exit_codes()
     case_bytes_survive_json_output()
     print("PASS phase10 stdio/exit: send→stderr、退出码表、fakes 协议、Bytes 输出")
 

@@ -2,6 +2,7 @@
 
 这一层只认“命令 + 退出码 + stdout JSON”，不认任何具体实现语言或产品 CLI 细节：
   0  成功，stdout 是 JSON
+  1  运行结果失败（{"ok": false}），仍按“运行结果”比对，不当内部错误
   2  诊断，stdout 是 {"error": {stage, code, line, col, message}}
   3  未实现（Phase 0 的占位实现走这条），stdout/stderr 只作说明
 其他  视为内部错误
@@ -15,6 +16,7 @@ import shlex
 import subprocess
 
 EXIT_OK = 0
+EXIT_UNHANDLED = 1
 EXIT_DIAGNOSTIC = 2
 EXIT_NOT_IMPLEMENTED = 3
 
@@ -82,7 +84,7 @@ class Sut(object):
 
         if proc.returncode == EXIT_NOT_IMPLEMENTED:
             status = "not_implemented"
-        elif proc.returncode in (EXIT_OK, EXIT_DIAGNOSTIC):
+        elif proc.returncode in (EXIT_OK, EXIT_UNHANDLED, EXIT_DIAGNOSTIC):
             try:
                 payload = json.loads(stdout) if stdout.strip() else {}
             except ValueError as exc:
@@ -100,6 +102,10 @@ class Sut(object):
                 )
             if proc.returncode == EXIT_OK:
                 status = "ok"
+            elif proc.returncode == EXIT_UNHANDLED:
+                status = "ok" if isinstance(payload.get("ok"), bool) else "internal"
+                if status == "internal":
+                    stderr = "退出码 1 但 stdout 缺少布尔 ok"
             else:
                 status = "diagnostic" if isinstance(payload.get("error"), dict) else "internal"
                 if status == "internal":

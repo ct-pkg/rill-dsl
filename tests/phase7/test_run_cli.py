@@ -24,11 +24,11 @@ def cases():
     return sorted(found)
 
 
-def run_cli(relative_case, fakes):
+def run_cli(relative_case, fakes, expected_exit):
     env = dict(os.environ)
     env["PYTHONPATH"] = os.path.join(ROOT, "src")
     source = os.path.join(relative_case, "source.rill")
-    return subprocess.run(
+    result = subprocess.run(
         [
             sys.executable,
             "-m",
@@ -45,6 +45,13 @@ def run_cli(relative_case, fakes):
         capture_output=True,
         text=True,
     )
+    assert result.returncode == expected_exit, "%s: exit %d（期望 %d），stderr=%r" % (
+        relative_case,
+        result.returncode,
+        expected_exit,
+        result.stderr.strip(),
+    )
+    return result
 
 
 def main():
@@ -55,17 +62,13 @@ def main():
             spec = json.load(handle)
         relative = os.path.relpath(case_dir, ROOT)
         fakes = os.path.join(FAKES_ROOT, spec.get("fakes", "fakes/tools.json"))
-        result = run_cli(relative, fakes)
-        assert result.returncode == 0, "%s: exit %d，stderr=%r" % (
-            relative,
-            result.returncode,
-            result.stderr.strip(),
-        )
+        expected = spec["expect"]
+        expected_exit = 0 if expected.get("ok", True) else 1
+        result = run_cli(relative, fakes, expected_exit)
         try:
             payload = json.loads(result.stdout)
         except ValueError:
             raise AssertionError("%s: stdout 不是 JSON：%r" % (relative, result.stdout))
-        expected = spec["expect"]
         assert payload.get("ok") == expected["ok"], "%s: ok 不符 %r" % (
             relative,
             payload,

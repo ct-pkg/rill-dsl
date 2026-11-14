@@ -29,6 +29,7 @@ from .parser import parse, parse_with_warnings
 from .verbs import FakeVerbRegistry
 
 EXIT_OK = 0
+EXIT_UNHANDLED = 1
 EXIT_DIAGNOSTIC = 2
 EXIT_NOT_IMPLEMENTED = 3
 
@@ -201,6 +202,21 @@ def _run_verbs(profile, fakes_path, host_profile_path):
     return ShellVerbRegistry(ShellHost(policy, cwd=os.getcwd())), policy
 
 
+def _host_identity(profile, policy, fakes_path):
+    """调用方据 ``payload.host`` 判断自己在哪套能力体系（PH-11 卡 §7 #15）。"""
+    if fakes_path:
+        return {
+            "profile": "fakes",
+            "principal": {"kind": "test-transport", "name": "--fakes"},
+        }
+    if profile == "agent":
+        return {"profile": "agent", "principal": {"kind": "role", "name": policy.role}}
+    return {
+        "profile": "shell",
+        "principal": {"kind": "os-user", "name": os.environ.get("USER", "")},
+    }
+
+
 def cmd_run(args):
     profile = "shell"
     fakes_path = ""
@@ -252,8 +268,6 @@ def cmd_run(args):
         return _diagnostic("E-RUN-FAKES", "fakes 无法加载：%s" % exc)
     if isinstance(policy, tuple):
         return _diagnostic(policy[1], policy[2])
-    if verbs is None:
-        return _diagnostic("E-RUN-HOST-UNAVAILABLE", policy)
 
     try:
         tree = parse(tokenize(source))
@@ -279,12 +293,16 @@ def cmd_run(args):
     code = EXIT_OK
     if policy is not None:
         code = policy.exit_code(outcome.ok)
+    elif fakes_path:
+        # 测试传输与真实 Shell 宿主的默认约定一致；agent 真实宿主仍固定 0。
+        code = EXIT_OK if outcome.ok else EXIT_UNHANDLED
     return _emit(
         {
             "ok": outcome.ok,
             "value": jsonable(outcome.value),
             "error": outcome.error,
             "host_meta": jsonable(outcome.host_meta or {}),
+            "host": _host_identity(profile, policy, fakes_path),
         },
         code,
     )

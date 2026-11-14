@@ -63,9 +63,11 @@ def run_cli(name, spec):
         capture_output=True,
         text=True,
     )
-    assert result.returncode == 0, "%s: exit %d，stderr=%r" % (
+    expected_exit = 0 if spec["expect"].get("ok", True) else 1
+    assert result.returncode == expected_exit, "%s: exit %d（期望 %d），stderr=%r" % (
         name,
         result.returncode,
+        expected_exit,
         result.stderr.strip(),
     )
     return json.loads(result.stdout)

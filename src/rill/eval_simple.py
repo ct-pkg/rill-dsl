@@ -253,7 +253,8 @@ class Interpreter(object):
         if prep != "into":
             raise EvalError(
                 "E-RUN-UNSUPPORTED",
-                "独立 [%s] 没有前置 {value, ok}，语义未定义（PH-7 卡 §8 #5）" % prep,
+                "独立 [%s] 没有前置 {value, ok}，语义未定义（PH-7 卡 §8 #5）；"
+                "请改用挂在产生 $ 的语句后的尾随块" % prep,
                 span["line"],
                 span["col"],
             )
