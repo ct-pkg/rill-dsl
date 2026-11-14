@@ -55,3 +55,23 @@ rill.eval_simple.EvalError: EachStmt 不在 PH-8 的执行范围（each 见 T2�
 
 原因：`EachStmt` 仍在统一未实现分支；三种输入、每轮作用域与 each 级
 `[ok]/[error]` 都没有执行路径。
+
+## T3 `break` 三场域
+
+- 命令：`python3 tests/phase8/test_break.py`
+- 退出码：`1`
+- 原始输出：
+
+```text
+Traceback (most recent call last):
+  File "/Users/samxx/trae-ws/rill-dsl/tests/phase8/test_break.py", line 161, in <module>
+    main()
+  File "/Users/samxx/trae-ws/rill-dsl/tests/phase8/test_break.py", line 150, in main
+    case_pipe_break_stops_pipe_only()
+  File "/Users/samxx/trae-ws/rill-dsl/tests/phase8/test_break.py", line 50, in case_pipe_break_stops_pipe_only
+    assert called(interp) == ["read", "write", "send"], "break 不应中断 program"
+AssertionError: break 不应中断 program
+```
+
+原因：块内 `break` 一路穿到 `eval_program` 的总捕获，管道没有自己的场域；
+`break` 之后的下一条语句不会执行，each 也不会在循环层截住 break。
