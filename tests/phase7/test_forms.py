@@ -24,7 +24,7 @@ def case_independent_into_variable():
         {"send": {"queue": [], "default": success(None)}},
         variables={"cfg": {"a": 1}},
     )
-    assert out.ok is True and out.value == {"a": 1}
+    assert out.ok is True and out.value is None, "program 值是最后一条语句的段输出"
     assert interp.log[0]["object"] == {"a": 1}, "独立 into 的 $ 是 $cfg 的值"
     assert interp.log[1]["object"] == {"a": 1}, "$cfg 在块外仍可见"
 

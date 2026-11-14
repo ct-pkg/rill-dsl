@@ -97,6 +97,8 @@ class Interpreter(object):
         kind = statement["kind"]
         if kind == "SimpleStmt":
             return self.eval_simple(statement, scope, dollar)
+        if kind == "PrepBlockStmt":
+            return self.eval_prep_block(statement, scope, dollar)
         if kind == "BreakStmt":
             raise BreakSignal(self._break_value(statement["value"], scope, dollar), statement["target"])
         raise EvalError(
@@ -117,6 +119,14 @@ class Interpreter(object):
 
         for item in statement["tail"]:
             kind = item["kind"]
+            if kind == "Assign":
+                if failure is not None:
+                    continue
+                scope.set(item["target"], cur)
+                self.trace.append(
+                    {"event": "assign", "target": item["target"], "value": cur}
+                )
+                continue
             if kind == "IntoBlock":
                 if failure is not None:
                     continue
@@ -196,6 +206,45 @@ class Interpreter(object):
         if statement["pipe"] is None or not outcome.ok:
             return outcome
         return self.eval_simple(statement["pipe"], scope, outcome.value)
+
+    def eval_prep_block(self, statement, scope, dollar):
+        """独立形式 ``[into] $cfg { ... }`` / ``[into] <call> { ... }``。"""
+        prep = statement["prep"]
+        span = statement["span"]
+        if prep != "into":
+            raise EvalError(
+                "E-RUN-UNSUPPORTED",
+                "独立 [%s] 没有前置 {value, ok}，语义未定义（PH-7 卡 §8 #5）" % prep,
+                span["line"],
+                span["col"],
+            )
+        subject = statement["subject"]
+        if subject["kind"] == "Variable":
+            cur = scope.get(subject["name"])
+        elif subject["kind"] == "VerbCall":
+            outcome = self._call(subject, scope, dollar)
+            if not outcome.ok:
+                return self._unhandled(outcome)
+            cur = outcome.value
+        else:
+            cur = self.eval_value(subject, scope, dollar)
+
+        block_outcome, block_dollar = self._run_block(
+            statement["block"], scope, cur
+        )
+        self.trace.append(
+            {
+                "event": "into",
+                "ok": block_outcome.ok,
+                "value": block_dollar if block_outcome.ok else None,
+                "error": block_outcome.error,
+            }
+        )
+        if not block_outcome.ok:
+            return self._unhandled(block_outcome)
+        if subject["kind"] == "Variable":
+            scope.set(subject["name"], block_dollar)
+        return result.ExecOutcome.success(block_dollar)
 
     def _run_block(self, block, scope, dollar):
         block_scope = Scope(scope)
