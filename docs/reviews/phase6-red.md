@@ -35,3 +35,6 @@ Traceback (most recent call last):
 ImportError: cannot import name 'result' from 'rill' (/Users/samxx/trae-ws/rill-dsl/tests/phase6/../../src/rill/__init__.py)
 ```
 
+- green: `python3 tests/phase6/test_result.py` → `rc=0`，
+  `PASS result: ok 只看 ok、默认错误、$ 投影、exit_code 钩子、顶层中断`。
+
