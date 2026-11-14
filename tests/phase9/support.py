@@ -11,6 +11,7 @@ ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 sys.path.insert(0, os.path.join(ROOT, "src"))
 
 from rill import lexer, loader, parser, result
+from rill.errors import LexError, LoadError, ParseError
 from rill.eval_simple import EvalError, Interpreter
 from rill.verbs import FakeVerbRegistry
 
