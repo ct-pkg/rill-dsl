@@ -99,4 +99,29 @@ VERDICT: FAIL (exit 1)
   --case positive/check/host-profiles` → `rc=0`，
   `PASS load E-LOAD-VERB-UNKNOWN@1:1`、`PASS check 通过（shell / agent）`。
 
+## PH-4-T4
+
+- baseline: `19d5cc7`
+- 命令: `bash tools/check-0.1.0.sh --case positive/check/each-bareword-w01`
+- 退出码: `1`
+- 原始输出:
+
+```text
+RILL 0.1.0 harness
+root     : testdata/0.1.0
+sut      : python3 -m rill
+profiles : agent, shell
+fixtures : 1 (positive 1)
+filters  : case=positive/check/each-bareword-w01
+
+FAIL    positive/check/each-bareword-w01 (warning)  未产生 W-01；实际警告：无
+
+summary
+  compliance: 0 passed, 1 failed, 0 blocked, 0 draft
+  smoke:     0 passed, 0 failed, 0 blocked, 0 draft
+  pending:   0 not run (A 0, B 0)
+VERDICT: FAIL (exit 1)
+```
+
+
 
