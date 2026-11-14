@@ -28,3 +28,25 @@ exit=1
   `PASS phase12 cli: 四子命令/退出码分层/fmt 回读`（exit 0）
 - 实现说明：`fmt` 依赖 PH-5 未交付的最小 `src/rill/formatter.py`（卡 §7 #1）；
   `--compress` / `--display` 的 AST 等价由 T3 的 round-trip 门禁扩大覆盖。
+
+## PH-12-T2 全样例门禁
+
+- 红提交：`test(cli): PH-12-T2 红`（baseline `b54e50d`）
+- 红命令：`python3 tests/phase12/test_all_gate.py`
+- 红输出：
+
+```text
+Traceback (most recent call last):
+  File ".../tests/phase12/test_all_gate.py", line 70, in <module>
+    main()
+  File ".../tests/phase12/test_all_gate.py", line 63, in main
+    case_all_is_green()
+  File ".../tests/phase12/test_all_gate.py", line 28, in case_all_is_green
+    assert result.returncode == 0, (
+AssertionError: ('check-0.1.0.sh --all 退出 2', '', 'usage: check-0.1.0.sh ... error: unrecognized arguments: --all\n')
+exit=1
+```
+
+- 直接复现：`bash tools/check-0.1.0.sh --all` →
+  `check-0.1.0.sh: error: unrecognized arguments: --all`（exit 2）
+- 绿提交：`feat(cli): PH-12-T2 全样例门禁`
