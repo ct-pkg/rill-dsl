@@ -21,7 +21,7 @@ def run(source, script, variables=None):
 def case_ok_block_sees_value():
     interp, out = run(
         "<read> a.yml [ok] { <send> $ [to] user }\n",
-        {"read": [success("V")], "send": [success(None)]},
+        {"read": [success("V")], "send": {"queue": [success(None)], "default": success(None)}},
     )
     assert out.ok is True and out.value == "V"
     assert interp.log[1]["object"] == "V", "[ok] 块内 $ 是段成功结果"
@@ -71,7 +71,7 @@ def case_ok_does_not_fire_on_failure_and_error_not_on_success():
 
     interp, out = run(
         "<read> a.yml [error] { <send> \"err\" [to] user }\n",
-        {"read": [success("V")], "send": [success(None)]},
+        {"read": [success("V")], "send": {"queue": [success(None)], "default": success(None)}},
     )
     assert out.ok is True and out.value == "V"
     assert events(interp, "error") == [
@@ -84,7 +84,7 @@ def case_into_runs_before_ok():
     interp, out = run(
         "<read> a.yml [into] { <send> \"into\" [to] user }"
         " [ok] { <send> $ [to] user }\n",
-        {"read": [success("V")], "send": [success(None)]},
+        {"read": [success("V")], "send": {"queue": [success(None)], "default": success(None)}},
     )
     assert out.ok is True and out.value == "V"
     assert called(interp) == ["read", "send", "send"], "[into] 必须先于 [ok]"
@@ -101,9 +101,9 @@ def case_into_failure_goes_to_user_error():
         },
     )
     assert out.ok is True, "[into] 失败后用户 [error] 处理，段算 handled"
-    assert out.value == "E_INTO"
+    assert out.value == "RILL DSL ERROR", "块内未处理失败按 §4.10 默认 break 规范串"
     assert called(interp) == ["read", "read", "send"], "失败 into 后不得继续后续块"
-    assert interp.log[2]["object"] == "E_INTO"
+    assert interp.log[2]["object"] == "RILL DSL ERROR"
 
 
 def main():

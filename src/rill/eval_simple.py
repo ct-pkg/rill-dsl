@@ -111,13 +111,18 @@ class Interpreter(object):
     def eval_simple(self, statement, scope, dollar):
         outcome = self._call(statement["call"], scope, dollar)
         cur = result.dollar(outcome)
-        if not outcome.ok:
-            return self._unhandled(outcome)
+        failure = None if outcome.ok else outcome
+        ok_block = None
+        error_block = None
 
         for item in statement["tail"]:
             kind = item["kind"]
             if kind == "IntoBlock":
-                block_outcome, block_dollar = self._run_block(item["body"], scope, cur)
+                if failure is not None:
+                    continue
+                block_outcome, block_dollar = self._run_block(
+                    item["body"], scope, cur
+                )
                 self.trace.append(
                     {
                         "event": "into",
@@ -127,23 +132,62 @@ class Interpreter(object):
                     }
                 )
                 if not block_outcome.ok:
-                    return self._unhandled(block_outcome)
+                    failure = block_outcome
+                    continue
                 cur = block_dollar
                 continue
-            if kind in ("OkBlock", "ErrorBlock"):
-                raise EvalError(
-                    "E-RUN-UNSUPPORTED",
-                    "[%s] 在 PH-7-T2 实现" % ("ok" if kind == "OkBlock" else "error"),
-                    item["span"]["line"],
-                    item["span"]["col"],
-                )
+            if kind == "OkBlock":
+                ok_block = item
+                continue
+            if kind == "ErrorBlock":
+                error_block = item
+                continue
             raise EvalError(
                 "E-RUN-UNSUPPORTED",
                 "%s 在 PH-7-T5 实现" % kind,
                 item["span"]["line"],
                 item["span"]["col"],
             )
-        return result.ExecOutcome.success(cur)
+
+        if failure is None:
+            if ok_block is not None:
+                block_outcome, block_dollar = self._run_block(
+                    ok_block["body"], scope, outcome.value
+                )
+                self.trace.append(
+                    {
+                        "event": "ok",
+                        "triggered": True,
+                        "value": block_dollar if block_outcome.ok else None,
+                    }
+                )
+                if not block_outcome.ok:
+                    return self._unhandled(block_outcome)
+                cur = block_dollar
+            if error_block is not None:
+                self.trace.append(
+                    {"event": "error", "triggered": False, "value": None}
+                )
+            return result.ExecOutcome.success(cur)
+
+        if ok_block is not None:
+            self.trace.append({"event": "ok", "triggered": False, "value": None})
+        error_string = failure.error or DEFAULT_ERROR
+        if error_block is not None:
+            block_outcome, block_dollar = self._run_block(
+                error_block["body"], scope, error_string
+            )
+            self.trace.append(
+                {
+                    "event": "error",
+                    "triggered": True,
+                    "value": block_dollar if block_outcome.ok else None,
+                }
+            )
+            if not block_outcome.ok:
+                return self._unhandled(block_outcome)
+            return result.ExecOutcome.success(block_dollar)
+        return self._unhandled(failure)
 
     def _run_block(self, block, scope, dollar):
         block_scope = Scope(scope)
