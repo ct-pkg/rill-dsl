@@ -12,7 +12,7 @@ import sys
 from . import loader
 from .errors import LexError, LoadError, ParseError
 from .lexer import tokenize
-from .parser import parse
+from .parser import parse, parse_with_warnings
 
 EXIT_OK = 0
 EXIT_DIAGNOSTIC = 2
@@ -137,7 +137,7 @@ def cmd_check(args):
     except OSError as exc:
         return _usage("无法读取 %s：%s" % (path, exc))
     try:
-        tree = parse(tokenize(source))
+        tree, warnings = parse_with_warnings(tokenize(source))
         loader.check_program(tree, profile)
     except LexError as exc:
         return _emit({"error": exc.as_dict()}, EXIT_DIAGNOSTIC)
@@ -145,7 +145,7 @@ def cmd_check(args):
         return _emit({"error": exc.as_dict()}, EXIT_DIAGNOSTIC)
     except LoadError as exc:
         return _emit({"error": exc.as_dict()}, EXIT_DIAGNOSTIC)
-    return _emit({"warnings": []}, EXIT_OK)
+    return _emit({"warnings": warnings}, EXIT_OK)
 
 
 def main(argv=None):

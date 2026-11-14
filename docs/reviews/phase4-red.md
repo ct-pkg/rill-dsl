@@ -123,5 +123,9 @@ summary
 VERDICT: FAIL (exit 1)
 ```
 
+- green: `bash tools/check-0.1.0.sh --case positive/check/each-bareword-w01`
+  → `rc=0`，`PASS W-01 已提示，check 退出 0`；`--phase p4` → `5 passed`，
+  全量 `58 passed / 0 failed / 0 blocked / 0 draft`。
+
 
 

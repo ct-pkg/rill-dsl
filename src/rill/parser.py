@@ -56,6 +56,7 @@ class Parser(object):
         self.tokens = tokens
         self.i = 0
         self.maps = {}
+        self.warnings = []
 
     # ---- token 游标 ----------------------------------------------------
 
@@ -301,11 +302,36 @@ class Parser(object):
         if prep.text != "in":
             self._error("E-PARSE-UNKNOWN-PREP", "each 头只接受 [in]，实际 [%s]" % prep.text, prep)
         self._expect("RBRACKET", "[in] 的 ]")
+        source_start = self.i
         source = self._parse_expr()
+        self._warn_bareword_source(source_start)
         body = self._parse_block("each 体")
         tail = self._parse_statement_tail(allow_assign=False)
         return ast.make(
             "EachStmt", span=span, var=var.text, source=source, body=body, tail=tail
+        )
+
+    def _warn_bareword_source(self, index):
+        """§4.20 W-01：``each`` 的 ``[in]`` 右值以单个裸词开头时提示。
+
+        PH-4 采用裁定 (a)：在归约成 ``STRING`` 之前记录来源；``parse`` 的信封
+        不变，只有 ``check`` 消费。多段裸词（如 ``xs.yml``）不提示，因为提示
+        文案要求“若意图是变量请写 ``$xs``”，对拼接串没有意义。
+        """
+        token = self.tokens[index]
+        if token.kind != "BARE":
+            return
+        nxt = self.tokens[index + 1] if index + 1 < len(self.tokens) else self.tokens[-1]
+        if nxt.kind == "VERB" or _adjacent(token, nxt):
+            return
+        self.warnings.append(
+            {
+                "code": "W-01",
+                "line": token.line,
+                "col": token.col,
+                "message": "裸词 `%s` 按字符串处理，若意图是变量请写 `$%s`"
+                % (token.text, token.text),
+            }
         )
 
     def _parse_parallel(self):
@@ -559,5 +585,12 @@ class Parser(object):
         self._error("E-PARSE-UNEXPECTED", "这里不能出现 %r" % token.text, token)
 
 
+def parse_with_warnings(tokens):
+    """返回 ``(AST, warnings)``；警告来自解析期，不改 AST。"""
+    parser = Parser(tokens)
+    tree = parser.parse_program()
+    return tree, parser.warnings
+
+
 def parse(tokens):
-    return Parser(tokens).parse_program()
+    return parse_with_warnings(tokens)[0]
