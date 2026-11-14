@@ -22,7 +22,7 @@ from ..value import Bytes
 
 DENIED_CODE = "E-HOST-CAPABILITY-DENIED"
 PROFILE_SCHEMA = "rill.shell-profile/0"
-PROFILE_KEYS = ("schema", "name", "allow", "exit_codes")
+PROFILE_KEYS = ("schema", "name", "description", "allow", "exit_codes")
 ALLOW_SLOTS = ("process", "fs", "env", "stdio")
 DEFAULT_ALLOW = {
     "process": (),
