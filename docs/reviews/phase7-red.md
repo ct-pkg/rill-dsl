@@ -106,6 +106,29 @@ rill.eval_simple.EvalError: PrepBlockStmt 不在 PH-7 的执行范围（PH-8/PH-
 
 原因：`PrepBlockStmt` 与 `Assign` 仍是显式未实现分支。
 
+## 转绿记录
+
+| 任务 | 命令 | 结果 |
+| --- | --- | --- |
+| T1 | `python3 tests/phase7/test_into.py` | `PASS phase7 into: 顺序、块内 $、失败短路`，exit 0 |
+| T2 | `python3 tests/phase7/test_ok_error.py` | `PASS phase7 ok/error: 触发条件、$ 取值、into 失败转用户 error`，exit 0 |
+| T3 | `python3 tests/phase7/test_segment.py` | `PASS phase7 segment: 4 种段输出、into 轨迹、管道只传 value`，exit 0 |
+| T4 | `python3 tests/phase7/test_run_cli.py` | `PASS phase7 run cli: 8 个 run 用例结构一致`，exit 0 |
+| T5 | `python3 tests/phase7/test_forms.py` | `PASS phase7 forms: 独立 into、assign 顺序、独立 ok/error 显式拒绝`，exit 0 |
+
+整桶与整仓：
+
+```text
+bash tools/check-0.1.0.sh --kind run --bucket positive
+→ 8 passed, 0 failed, 0 blocked, VERDICT: PASS (exit 0)
+
+bash tools/check-0.1.0.sh
+→ compliance: 66 passed, 0 failed, 0 blocked, 0 draft
+→ smoke: 2 passed, 0 failed
+→ VERDICT: PASS (exit 0)
+```
+
+
 
 
 

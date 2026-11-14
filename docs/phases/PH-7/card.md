@@ -99,3 +99,4 @@
 | 7 | §六 示例 1 | `.database [into] { ... }` 用 `.字段` 直接作语句头，不在 §三 `statement` 产生式内 | 登记，不实现；parser 目前也不接受该形态 |
 | 8 | §4.15 `break` | `break` 穿出顶层后 `run` 的返回形状（ok / value / `->$x`）未定义 | 顶层捕获 break：`ok=true`，`value` 为 break 值，有 `->$x` 时写入变量 |
 | 9 | §4.10 默认隐式 `[error]` | 块内未处理失败转默认 break 时，break 的 value 是否保留宿主错误串未写死 | 取规范字面 `RILL DSL ERROR`；只有同一段直接失败交给用户 `[error]` 时才用宿主错误串 |
+| 10 | §4.11 / `run` 输出 | program 的最终 `value` 没有定义：最后一条语句段输出、整段 `$`、还是 null | 取最后一条语句的段输出；空 program 为 null |
