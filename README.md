@@ -71,7 +71,7 @@ profiles/agent.json` 写的是 `examples/quickstart`，所以请从仓库根目�
 ```console
 $ PYTHONPATH=src python3 -m rill parse --dump-ast examples/quickstart/agent.rill
 $ PYTHONPATH=src python3 -m rill check examples/quickstart/agent.rill --profile agent
-$ PYTHONPATH=src python3 -m rill fmt examples/quickstart/agent.rill
+$ PYTHONPATH=src python3 -m rill fmt examples/quickstart/agent.rill --display
 ```
 
 `parse` / `check` / `run` 成功退出 0；诊断退出 2（stdout 是
