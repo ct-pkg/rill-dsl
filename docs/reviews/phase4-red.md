@@ -42,3 +42,28 @@ ImportError: cannot import name 'loader' from 'rill' (/Users/samxx/trae-ws/rill-
 
 - green: `bash tools/check-0.1.0.sh --case negative/load/map-duplicate-short` → `rc=0`，
   `PASS load E-LOAD-MAP-DUP-SHORT@3:1`；`python3 tests/phase4/test_no_exec.py` → `rc=0`。
+
+## PH-4-T2
+
+- baseline: `19d5cc7`
+- 命令: `bash tools/check-0.1.0.sh --case negative/load/unknown-function`
+- 退出码: `1`
+- 原始输出:
+
+```text
+RILL 0.1.0 harness
+root     : testdata/0.1.0
+sut      : python3 -m rill
+profiles : agent, shell
+fixtures : 1 (negative 1)
+filters  : case=negative/load/unknown-function
+
+FAIL    negative/load/unknown-function (error)  期望诊断，实际成功（退出码 0）
+
+summary
+  compliance: 0 passed, 1 failed, 0 blocked, 0 draft
+  smoke:     0 passed, 0 failed, 0 blocked, 0 draft
+  pending:   0 not run (A 0, B 0)
+VERDICT: FAIL (exit 1)
+```
+

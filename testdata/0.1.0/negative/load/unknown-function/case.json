@@ -1,6 +1,13 @@
 {
   "kind": "error",
-  "phase": "p3",
+  "phase": "p4",
   "note": "未声明函数在加载期报错，错误串含函数名（§4.18）",
-  "expect": {"stage": "load", "command": "check", "message_contains": "nope"}
+  "expect": {
+    "stage": "load",
+    "command": "check",
+    "code": "E-LOAD-FN-UNDECLARED",
+    "line": 1,
+    "col": 1,
+    "message_contains": "nope"
+  }
 }
