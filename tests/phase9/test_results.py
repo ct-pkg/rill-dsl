@@ -46,7 +46,7 @@ def case_results_only_in_parallel_tail():
         (
             'parallel {\n    <read> a.yml [results] { <send> "x" [to] user }\n}\n',
             2,
-            17,
+            18,
         ),
     )
     for source, line, col in cases:

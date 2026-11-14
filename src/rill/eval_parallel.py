@@ -11,20 +11,11 @@
 """
 
 from . import result
-from .eval_simple import BreakSignal, EvalError, Scope
+from .eval_simple import BreakSignal, Scope
 
 
 def eval_parallel(interp, statement, scope, dollar):
-    """执行全部分支，返回 ``{value: 结果数组, ok}`；``[results]`` 在 T2 落地。"""
-    if statement["results"] is not None:
-        span = statement["results"]["span"]
-        raise EvalError(
-            "E-RUN-UNSUPPORTED",
-            "parallel [results] 不在 PH-9-T1 的执行范围（T2）",
-            span["line"],
-            span["col"],
-        )
-
+    """执行全部分支；``[results]`` 永远触发，且只改变值不携带状态字段。"""
     values = []
     first_error = None
     for index, branch in enumerate(statement["branches"]):
@@ -46,6 +37,25 @@ def eval_parallel(interp, statement, scope, dollar):
         base = result.ExecOutcome.success(values)
     else:
         base = result.ExecOutcome(value=values, ok=False, error=first_error)
+
+    if statement["results"] is not None:
+        block_outcome, block_dollar = _run_results(
+            interp, statement["results"], scope, values
+        )
+        interp.trace.append(
+            {
+                "event": "results",
+                "ok": block_outcome.ok,
+                "value": block_dollar if block_outcome.ok else None,
+                "error": block_outcome.error,
+            }
+        )
+        if not block_outcome.ok:
+            return block_outcome
+        base = result.ExecOutcome(
+            value=block_dollar, ok=base.ok, error=base.error
+        )
+
     return interp._finish(statement, scope, base)
 
 
@@ -58,3 +68,13 @@ def _run_branch(interp, branch, scope, dollar):
         if signal.target:
             scope.set(signal.target, signal.value)
         return result.ExecOutcome.failure(signal.value)
+
+
+def _run_results(interp, block, scope, values):
+    """``[results]`` 块：``$`` = 结果数组；块内 break 收口为块失败。"""
+    try:
+        return interp._run_block(block, scope, values)
+    except BreakSignal as signal:
+        if signal.target:
+            scope.set(signal.target, signal.value)
+        return result.ExecOutcome.failure(signal.value), values

@@ -179,6 +179,7 @@ class Parser(object):
                 continue
             break
         if self._at("LBRACKET"):
+            self._reject_results()
             self._error(
                 "E-PARSE-UNEXPECTED", "方括号后必须跟块或介宾宾语：%r" % self._peek().text
             )
@@ -189,15 +190,23 @@ class Parser(object):
                 )
         return tail
 
-    def _parse_trailing_block(self, counts):
-        bracket = self._take()
-        prep = self._take()
-        if prep.text == "results":
+    def _reject_results(self):
+        """§4.5/§4.14：``[results]`` 只有 parallel 尾随块一个合法位置。
+
+        所有方括号入口共用这一条判据；出现在其他位置一律报错，不落进
+        通用介词表被静默吃掉。
+        """
+        if self._at("LBRACKET") and self._peek(1).text == "results":
             self._error(
                 "E-PARSE-RESULTS-CONTEXT",
                 "[results] 只允许出现在 parallel 块级",
-                bracket,
+                self._peek(),
             )
+
+    def _parse_trailing_block(self, counts):
+        self._reject_results()
+        bracket = self._take()
+        prep = self._take()
         if prep.text not in ("ok", "error", "into"):
             self._error(
                 "E-PARSE-UNKNOWN-PREP",
@@ -236,6 +245,7 @@ class Parser(object):
         return parse_next()
 
     def _parse_prep_block_stmt(self):
+        self._reject_results()
         bracket = self._take()
         prep = self._take()
         if not self._at("RBRACKET"):
@@ -522,6 +532,7 @@ class Parser(object):
         )
 
     def _parse_prep_phrase(self):
+        self._reject_results()
         bracket = self._take()
         prep = self._take()
         if prep.text not in _PREPS:
