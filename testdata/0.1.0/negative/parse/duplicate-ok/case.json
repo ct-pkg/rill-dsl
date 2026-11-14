@@ -2,5 +2,11 @@
   "kind": "error",
   "phase": "p2",
   "note": "[ok] 上限为 1（§4.10 / 评审 I-29）",
-  "expect": {"stage": "parse", "command": "parse"}
+  "expect": {
+    "stage": "parse",
+    "command": "parse",
+    "code": "E-PARSE-DUP-OK",
+    "line": 1,
+    "col": 44
+  }
 }

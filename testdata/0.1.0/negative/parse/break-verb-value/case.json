@@ -2,5 +2,11 @@
   "kind": "error",
   "phase": "p2",
   "note": "break 的值只能是字面量/变量/字段，不含动词调用（§4.15）",
-  "expect": {"stage": "any", "command": "parse"}
+  "expect": {
+    "stage": "parse",
+    "command": "parse",
+    "code": "E-PARSE-BREAK-VALUE",
+    "line": 1,
+    "col": 7
+  }
 }

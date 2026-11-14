@@ -1,0 +1,12 @@
+{
+  "kind": "error",
+  "phase": "p2",
+  "note": "方括号里不是介词表成员：解析期报错（§4.5 / §七）",
+  "expect": {
+    "stage": "parse",
+    "command": "parse",
+    "code": "E-PARSE-UNKNOWN-PREP",
+    "line": 1,
+    "col": 15
+  }
+}

@@ -82,3 +82,26 @@ VERDICT: FAIL (exit 1)
 ```
 
 - green: 待实现
+
+## PH-3-T5
+
+- baseline: `ff534e1`
+- 命令: `bash tools/check-0.1.0.sh --phase p2 --bucket negative --kind error`
+- 退出码: `1`
+- 原始输出：
+
+```text
+PASS    negative/parse/break-verb-value (error)  parse E-PARSE-BREAK-VALUE@1:7
+PASS    negative/parse/duplicate-error (error)  parse E-PARSE-DUP-ERROR@1:47
+PASS    negative/parse/duplicate-ok (error)  parse E-PARSE-DUP-OK@1:44
+PASS    negative/parse/fn-def-in-body (error)  parse E-PARSE-FN-DEF-BODY@1:1
+PASS    negative/parse/missing-block (error)  parse E-PARSE-MISSING-BLOCK@1:30
+PASS    negative/parse/results-in-branch (error)  parse E-PARSE-RESULTS-CONTEXT@2:18
+PASS    negative/parse/results-outside-parallel (error)  parse E-PARSE-RESULTS-CONTEXT@1:14
+FAIL    negative/parse/unknown-prep (error)  期望诊断，实际成功（退出码 0）
+summary
+  compliance: 7 passed, 1 failed, 0 blocked, 0 draft
+VERDICT: FAIL (exit 1)
+```
+
+- green: 待实现
