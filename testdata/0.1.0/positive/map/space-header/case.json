@@ -3,31 +3,8 @@
   "phase": "p2",
   "note": "// 与 map、map 与 { 之间允许空格（§3.1）；映射值展开为 STRING，相邻后缀折叠（§4.17）",
   "expect": {
-    "profiles": ["shell"],
-    "ast": {
-      "kind": "Program",
-      "headers": [
-        {
-          "kind": "MapBlock",
-          "entries": [
-            {"kind": "MapEntry", "short": "cfg", "marker": "`", "long": "configuration"}
-          ]
-        }
-      ],
-      "body": [
-        {
-          "kind": "SimpleStmt",
-          "call": {
-            "kind": "VerbCall",
-            "subject": null,
-            "verb": "read",
-            "object": {"kind": "String", "value": "configuration.yml"},
-            "post": []
-          },
-          "tail": [],
-          "pipe": null
-        }
-      ]
-    }
+    "profiles": [
+      "shell"
+    ]
   }
 }

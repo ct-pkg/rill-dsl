@@ -1,0 +1,47 @@
+{
+  "schema": "rill-ast-golden/0",
+  "case": "positive/block/into-independent",
+  "ast": {
+    "kind": "Program",
+    "headers": [],
+    "body": [
+      {
+        "kind": "PrepBlockStmt",
+        "prep": "into",
+        "subject": {
+          "kind": "Variable",
+          "name": "cfg"
+        },
+        "block": {
+          "kind": "Block",
+          "body": [
+            {
+              "kind": "SimpleStmt",
+              "call": {
+                "kind": "VerbCall",
+                "subject": null,
+                "verb": "send",
+                "object": {
+                  "kind": "String",
+                  "value": "x"
+                },
+                "post": [
+                  {
+                    "kind": "PrepPhrase",
+                    "prep": "to",
+                    "object": {
+                      "kind": "Bare",
+                      "text": "user"
+                    }
+                  }
+                ]
+              },
+              "tail": [],
+              "pipe": null
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

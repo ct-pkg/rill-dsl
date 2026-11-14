@@ -3,26 +3,8 @@
   "phase": "p2",
   "note": "同一行 [ok] user 是普通介词短语，不是块头（§4.5 三分表）",
   "expect": {
-    "profiles": ["shell"],
-    "ast": {
-      "kind": "Program",
-      "headers": [],
-      "body": [
-        {
-          "kind": "SimpleStmt",
-          "call": {
-            "kind": "VerbCall",
-            "subject": null,
-            "verb": "send",
-            "object": {"kind": "String", "value": "x"},
-            "post": [
-              {"kind": "PrepPhrase", "prep": "ok", "object": {"kind": "Bare", "text": "user"}}
-            ]
-          },
-          "tail": [],
-          "pipe": null
-        }
-      ]
-    }
+    "profiles": [
+      "shell"
+    ]
   }
 }

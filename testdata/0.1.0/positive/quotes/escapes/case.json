@@ -3,54 +3,8 @@
   "phase": "p2",
   "note": "单引号纯字面、双引号 \\\" \\\\ 转义、裸词反斜杠转义（§4.16）",
   "expect": {
-    "profiles": ["shell"],
-    "ast": {
-      "kind": "Program",
-      "headers": [],
-      "body": [
-        {
-          "kind": "SimpleStmt",
-          "call": {
-            "kind": "VerbCall",
-            "subject": null,
-            "verb": "send",
-            "object": {"kind": "String", "value": "a [b] <c>"},
-            "post": [
-              {"kind": "PrepPhrase", "prep": "to", "object": {"kind": "Bare", "text": "user"}}
-            ]
-          },
-          "tail": [],
-          "pipe": null
-        },
-        {
-          "kind": "SimpleStmt",
-          "call": {
-            "kind": "VerbCall",
-            "subject": null,
-            "verb": "send",
-            "object": {"kind": "String", "value": "say \"hi\" and \\ done"},
-            "post": [
-              {"kind": "PrepPhrase", "prep": "to", "object": {"kind": "Bare", "text": "user"}}
-            ]
-          },
-          "tail": [],
-          "pipe": null
-        },
-        {
-          "kind": "SimpleStmt",
-          "call": {
-            "kind": "VerbCall",
-            "subject": null,
-            "verb": "send",
-            "object": {"kind": "Bare", "text": "plain\\[word\\]"},
-            "post": [
-              {"kind": "PrepPhrase", "prep": "to", "object": {"kind": "Bare", "text": "user"}}
-            ]
-          },
-          "tail": [],
-          "pipe": null
-        }
-      ]
-    }
+    "profiles": [
+      "shell"
+    ]
   }
 }

@@ -1,0 +1,18 @@
+{
+  "schema": "rill-ast-golden/0",
+  "case": "positive/break/bareword-value",
+  "ast": {
+    "kind": "Program",
+    "headers": [],
+    "body": [
+      {
+        "kind": "BreakStmt",
+        "value": {
+          "kind": "String",
+          "value": "done"
+        },
+        "target": null
+      }
+    ]
+  }
+}

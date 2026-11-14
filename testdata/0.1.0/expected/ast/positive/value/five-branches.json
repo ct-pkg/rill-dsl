@@ -1,0 +1,50 @@
+{
+  "schema": "rill-ast-golden/0",
+  "case": "positive/value/five-branches",
+  "ast": {
+    "kind": "Program",
+    "headers": [],
+    "body": [
+      {
+        "kind": "BreakStmt",
+        "value": {
+          "kind": "String",
+          "value": "s"
+        },
+        "target": "a"
+      },
+      {
+        "kind": "BreakStmt",
+        "value": {
+          "kind": "Number",
+          "value": 42
+        },
+        "target": "b"
+      },
+      {
+        "kind": "BreakStmt",
+        "value": {
+          "kind": "String",
+          "value": "bare"
+        },
+        "target": "c"
+      },
+      {
+        "kind": "BreakStmt",
+        "value": {
+          "kind": "Variable",
+          "name": "v"
+        },
+        "target": "d"
+      },
+      {
+        "kind": "BreakStmt",
+        "value": {
+          "kind": "Field",
+          "name": "field"
+        },
+        "target": "e"
+      }
+    ]
+  }
+}

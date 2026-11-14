@@ -3,24 +3,8 @@
   "phase": "p2",
   "note": "-> $x 赋值；规范 §三 未给该产生式，按 §4.7 落为 tail 中的 Assign（见卡片 §8 缺口 1）",
   "expect": {
-    "profiles": ["shell"],
-    "ast": {
-      "kind": "Program",
-      "headers": [],
-      "body": [
-        {
-          "kind": "SimpleStmt",
-          "call": {
-            "kind": "VerbCall",
-            "subject": null,
-            "verb": "read",
-            "object": {"kind": "Bare", "text": "a.yml"},
-            "post": []
-          },
-          "tail": [{"kind": "Assign", "target": "cfg"}],
-          "pipe": null
-        }
-      ]
-    }
+    "profiles": [
+      "shell"
+    ]
   }
 }

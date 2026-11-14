@@ -1,0 +1,48 @@
+{
+  "schema": "rill-ast-golden/0",
+  "case": "positive/each/bareword-value",
+  "ast": {
+    "kind": "Program",
+    "headers": [],
+    "body": [
+      {
+        "kind": "EachStmt",
+        "var": "f",
+        "source": {
+          "kind": "String",
+          "value": "xs"
+        },
+        "body": {
+          "kind": "Block",
+          "body": [
+            {
+              "kind": "SimpleStmt",
+              "call": {
+                "kind": "VerbCall",
+                "subject": null,
+                "verb": "send",
+                "object": {
+                  "kind": "Variable",
+                  "name": "f"
+                },
+                "post": [
+                  {
+                    "kind": "PrepPhrase",
+                    "prep": "to",
+                    "object": {
+                      "kind": "Bare",
+                      "text": "user"
+                    }
+                  }
+                ]
+              },
+              "tail": [],
+              "pipe": null
+            }
+          ]
+        },
+        "tail": []
+      }
+    ]
+  }
+}

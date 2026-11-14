@@ -1,0 +1,51 @@
+{
+  "schema": "rill-ast-golden/0",
+  "case": "positive/map/header",
+  "ast": {
+    "kind": "Program",
+    "headers": [
+      {
+        "kind": "MapBlock",
+        "entries": [
+          {
+            "kind": "MapEntry",
+            "short": "cfg",
+            "marker": "`",
+            "long": "configuration"
+          }
+        ]
+      }
+    ],
+    "body": [
+      {
+        "kind": "SimpleStmt",
+        "call": {
+          "kind": "VerbCall",
+          "subject": null,
+          "verb": "read",
+          "object": {
+            "kind": "String",
+            "value": "configuration.yml"
+          },
+          "post": []
+        },
+        "tail": [],
+        "pipe": {
+          "kind": "SimpleStmt",
+          "call": {
+            "kind": "VerbCall",
+            "subject": null,
+            "verb": "write",
+            "object": {
+              "kind": "String",
+              "value": "configuration.yml"
+            },
+            "post": []
+          },
+          "tail": [],
+          "pipe": null
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,134 @@
+{
+  "schema": "rill-ast-golden/0",
+  "case": "positive/if/else-if",
+  "ast": {
+    "kind": "Program",
+    "headers": [],
+    "body": [
+      {
+        "kind": "IfStmt",
+        "branches": [
+          {
+            "kind": "IfBranch",
+            "condition": {
+              "kind": "VerbCall",
+              "subject": {
+                "kind": "Variable",
+                "name": "cfg"
+              },
+              "verb": "contains",
+              "object": {
+                "kind": "Bare",
+                "text": "debug=true"
+              },
+              "post": []
+            },
+            "body": {
+              "kind": "Block",
+              "body": [
+                {
+                  "kind": "SimpleStmt",
+                  "call": {
+                    "kind": "VerbCall",
+                    "subject": null,
+                    "verb": "send",
+                    "object": {
+                      "kind": "String",
+                      "value": "on"
+                    },
+                    "post": [
+                      {
+                        "kind": "PrepPhrase",
+                        "prep": "to",
+                        "object": {
+                          "kind": "Bare",
+                          "text": "user"
+                        }
+                      }
+                    ]
+                  },
+                  "tail": [],
+                  "pipe": null
+                }
+              ]
+            }
+          },
+          {
+            "kind": "IfBranch",
+            "condition": {
+              "kind": "VerbCall",
+              "subject": {
+                "kind": "Variable",
+                "name": "cfg"
+              },
+              "verb": "contains",
+              "object": {
+                "kind": "Bare",
+                "text": "release=true"
+              },
+              "post": []
+            },
+            "body": {
+              "kind": "Block",
+              "body": [
+                {
+                  "kind": "SimpleStmt",
+                  "call": {
+                    "kind": "VerbCall",
+                    "subject": null,
+                    "verb": "send",
+                    "object": {
+                      "kind": "String",
+                      "value": "release"
+                    },
+                    "post": [
+                      {
+                        "kind": "PrepPhrase",
+                        "prep": "to",
+                        "object": {
+                          "kind": "Bare",
+                          "text": "user"
+                        }
+                      }
+                    ]
+                  },
+                  "tail": [],
+                  "pipe": null
+                }
+              ]
+            }
+          }
+        ],
+        "else_body": {
+          "kind": "Block",
+          "body": [
+            {
+              "kind": "SimpleStmt",
+              "call": {
+                "kind": "VerbCall",
+                "subject": null,
+                "verb": "send",
+                "object": {
+                  "kind": "String",
+                  "value": "off"
+                },
+                "post": [
+                  {
+                    "kind": "PrepPhrase",
+                    "prep": "to",
+                    "object": {
+                      "kind": "Bare",
+                      "text": "user"
+                    }
+                  }
+                ]
+              },
+              "tail": [],
+              "pipe": null
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

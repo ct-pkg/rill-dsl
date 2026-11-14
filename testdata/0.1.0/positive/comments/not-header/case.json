@@ -3,24 +3,8 @@
   "phase": "p2",
   "note": "//map 后无 { 时按行注释处理（§3.1），注释不进 AST",
   "expect": {
-    "profiles": ["shell"],
-    "ast": {
-      "kind": "Program",
-      "headers": [],
-      "body": [
-        {
-          "kind": "SimpleStmt",
-          "call": {
-            "kind": "VerbCall",
-            "subject": null,
-            "verb": "read",
-            "object": {"kind": "Bare", "text": "a.yml"},
-            "post": []
-          },
-          "tail": [],
-          "pipe": null
-        }
-      ]
-    }
+    "profiles": [
+      "shell"
+    ]
   }
 }

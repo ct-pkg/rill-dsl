@@ -18,7 +18,7 @@ Traceback (most recent call last):
 ImportError: cannot import name 'ast' from 'rill' (/Users/samxx/trae-ws/rill-dsl/tests/phase3/../../src/rill/__init__.py)
 ```
 
-- green: 待实现
+- green: `rc=0`，`PASS ast-json: 29 个节点，字段顺序与 span 归一化符合预期`
 
 ## PH-3-T2
 
@@ -36,7 +36,7 @@ summary
 VERDICT: NOT IMPLEMENTED (exit 3)
 ```
 
-- green: 待实现
+- green: `rc=0`，`3 passed`（comments/not-header、map/space-header、simple/read-write）
 
 ## PH-3-T3
 
@@ -58,7 +58,7 @@ summary
 VERDICT: FAIL (exit 1)
 ```
 
-- green: 待实现
+- green: `rc=0`，`12 passed / 10 draft`
 
 ## PH-3-T4
 
@@ -81,7 +81,7 @@ summary
 VERDICT: FAIL (exit 1)
 ```
 
-- green: 待实现
+- green: `rc=0`，`20 passed / 3 draft`（golden 补齐后 23/23）
 
 ## PH-3-T5
 
@@ -104,4 +104,4 @@ summary
 VERDICT: FAIL (exit 1)
 ```
 
-- green: 待实现
+- green: `rc=0`，`8 passed`（含 unknown-prep）

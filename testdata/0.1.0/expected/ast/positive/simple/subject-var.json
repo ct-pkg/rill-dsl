@@ -1,0 +1,28 @@
+{
+  "schema": "rill-ast-golden/0",
+  "case": "positive/simple/subject-var",
+  "ast": {
+    "kind": "Program",
+    "headers": [],
+    "body": [
+      {
+        "kind": "SimpleStmt",
+        "call": {
+          "kind": "VerbCall",
+          "subject": {
+            "kind": "Variable",
+            "name": "cfg"
+          },
+          "verb": "contains",
+          "object": {
+            "kind": "Bare",
+            "text": "debug"
+          },
+          "post": []
+        },
+        "tail": [],
+        "pipe": null
+      }
+    ]
+  }
+}

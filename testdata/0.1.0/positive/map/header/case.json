@@ -3,42 +3,8 @@
   "phase": "p2",
   "note": "//map{} 头 + 值类标记 ` 展开为 STRING（§3.2 / §4.17），两条语句共享同一条管道形态",
   "expect": {
-    "profiles": ["shell"],
-    "ast": {
-      "kind": "Program",
-      "headers": [
-        {
-          "kind": "MapBlock",
-          "entries": [
-            {"kind": "MapEntry", "short": "cfg", "marker": "`", "long": "configuration"}
-          ]
-        }
-      ],
-      "body": [
-        {
-          "kind": "SimpleStmt",
-          "call": {
-            "kind": "VerbCall",
-            "subject": null,
-            "verb": "read",
-            "object": {"kind": "String", "value": "configuration.yml"},
-            "post": []
-          },
-          "tail": [],
-          "pipe": {
-            "kind": "SimpleStmt",
-            "call": {
-              "kind": "VerbCall",
-              "subject": null,
-              "verb": "write",
-              "object": {"kind": "String", "value": "configuration.yml"},
-              "post": []
-            },
-            "tail": [],
-            "pipe": null
-          }
-        }
-      ]
-    }
+    "profiles": [
+      "shell"
+    ]
   }
 }

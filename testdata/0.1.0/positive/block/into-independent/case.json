@@ -3,36 +3,8 @@
   "phase": "p2",
   "note": "独立形式 prep_block_stmt：[into] $cfg { ... }（§4.9 / 评审 R-03）",
   "expect": {
-    "profiles": ["shell"],
-    "ast": {
-      "kind": "Program",
-      "headers": [],
-      "body": [
-        {
-          "kind": "PrepBlockStmt",
-          "prep": "into",
-          "subject": {"kind": "Variable", "name": "cfg"},
-          "block": {
-            "kind": "Block",
-            "body": [
-              {
-                "kind": "SimpleStmt",
-                "call": {
-                  "kind": "VerbCall",
-                  "subject": null,
-                  "verb": "send",
-                  "object": {"kind": "String", "value": "x"},
-                  "post": [
-                    {"kind": "PrepPhrase", "prep": "to", "object": {"kind": "Bare", "text": "user"}}
-                  ]
-                },
-                "tail": [],
-                "pipe": null
-              }
-            ]
-          }
-        }
-      ]
-    }
+    "profiles": [
+      "shell"
+    ]
   }
 }

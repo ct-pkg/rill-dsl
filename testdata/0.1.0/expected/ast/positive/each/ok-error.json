@@ -1,0 +1,137 @@
+{
+  "schema": "rill-ast-golden/0",
+  "case": "positive/each/ok-error",
+  "ast": {
+    "kind": "Program",
+    "headers": [],
+    "body": [
+      {
+        "kind": "EachStmt",
+        "var": "file",
+        "source": {
+          "kind": "VerbCall",
+          "subject": null,
+          "verb": "search",
+          "object": {
+            "kind": "Bare",
+            "text": "*.yml"
+          },
+          "post": [
+            {
+              "kind": "Adverb",
+              "items": [
+                {
+                  "kind": "Bare",
+                  "text": "recursive"
+                }
+              ]
+            }
+          ]
+        },
+        "body": {
+          "kind": "Block",
+          "body": [
+            {
+              "kind": "SimpleStmt",
+              "call": {
+                "kind": "VerbCall",
+                "subject": null,
+                "verb": "replace",
+                "object": {
+                  "kind": "Bare",
+                  "text": "localhost"
+                },
+                "post": [
+                  {
+                    "kind": "PrepPhrase",
+                    "prep": "with",
+                    "object": {
+                      "kind": "Bare",
+                      "text": "prod"
+                    }
+                  },
+                  {
+                    "kind": "PrepPhrase",
+                    "prep": "in",
+                    "object": {
+                      "kind": "Variable",
+                      "name": "file"
+                    }
+                  }
+                ]
+              },
+              "tail": [],
+              "pipe": null
+            }
+          ]
+        },
+        "tail": [
+          {
+            "kind": "OkBlock",
+            "body": {
+              "kind": "Block",
+              "body": [
+                {
+                  "kind": "SimpleStmt",
+                  "call": {
+                    "kind": "VerbCall",
+                    "subject": null,
+                    "verb": "send",
+                    "object": {
+                      "kind": "String",
+                      "value": "全部完成"
+                    },
+                    "post": [
+                      {
+                        "kind": "PrepPhrase",
+                        "prep": "to",
+                        "object": {
+                          "kind": "Bare",
+                          "text": "user"
+                        }
+                      }
+                    ]
+                  },
+                  "tail": [],
+                  "pipe": null
+                }
+              ]
+            }
+          },
+          {
+            "kind": "ErrorBlock",
+            "body": {
+              "kind": "Block",
+              "body": [
+                {
+                  "kind": "SimpleStmt",
+                  "call": {
+                    "kind": "VerbCall",
+                    "subject": null,
+                    "verb": "send",
+                    "object": {
+                      "kind": "String",
+                      "value": "过程中出错"
+                    },
+                    "post": [
+                      {
+                        "kind": "PrepPhrase",
+                        "prep": "to",
+                        "object": {
+                          "kind": "Bare",
+                          "text": "user"
+                        }
+                      }
+                    ]
+                  },
+                  "tail": [],
+                  "pipe": null
+                }
+              ]
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "schema": "rill-ast-golden/0",
+  "case": "positive/comments/not-header",
+  "ast": {
+    "kind": "Program",
+    "headers": [],
+    "body": [
+      {
+        "kind": "SimpleStmt",
+        "call": {
+          "kind": "VerbCall",
+          "subject": null,
+          "verb": "read",
+          "object": {
+            "kind": "Bare",
+            "text": "a.yml"
+          },
+          "post": []
+        },
+        "tail": [],
+        "pipe": null
+      }
+    ]
+  }
+}

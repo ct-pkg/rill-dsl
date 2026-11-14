@@ -1,0 +1,28 @@
+{
+  "schema": "rill-ast-golden/0",
+  "case": "positive/simple/read-write",
+  "ast": {
+    "kind": "Program",
+    "headers": [],
+    "body": [
+      {
+        "kind": "SimpleStmt",
+        "call": {
+          "kind": "VerbCall",
+          "subject": {
+            "kind": "Bare",
+            "text": "engineer"
+          },
+          "verb": "read",
+          "object": {
+            "kind": "Bare",
+            "text": "config.yml"
+          },
+          "post": []
+        },
+        "tail": [],
+        "pipe": null
+      }
+    ]
+  }
+}

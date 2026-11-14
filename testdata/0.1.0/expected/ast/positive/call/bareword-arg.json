@@ -1,0 +1,85 @@
+{
+  "schema": "rill-ast-golden/0",
+  "case": "positive/call/bareword-arg",
+  "ast": {
+    "kind": "Program",
+    "headers": [
+      {
+        "kind": "FnBlock",
+        "defs": [
+          {
+            "kind": "FnDef",
+            "name": "notify",
+            "template": [
+              {
+                "kind": "VerbCall",
+                "subject": {
+                  "kind": "Variable",
+                  "name": "msg"
+                },
+                "verb": "send",
+                "object": {
+                  "kind": "Variable",
+                  "name": "msg"
+                },
+                "post": [
+                  {
+                    "kind": "PrepPhrase",
+                    "prep": "to",
+                    "object": {
+                      "kind": "Bare",
+                      "text": "user"
+                    }
+                  }
+                ]
+              }
+            ],
+            "body": {
+              "kind": "Block",
+              "body": [
+                {
+                  "kind": "SimpleStmt",
+                  "call": {
+                    "kind": "VerbCall",
+                    "subject": null,
+                    "verb": "send",
+                    "object": {
+                      "kind": "Variable",
+                      "name": "msg"
+                    },
+                    "post": [
+                      {
+                        "kind": "PrepPhrase",
+                        "prep": "to",
+                        "object": {
+                          "kind": "Bare",
+                          "text": "user"
+                        }
+                      }
+                    ]
+                  },
+                  "tail": [],
+                  "pipe": null
+                }
+              ]
+            }
+          }
+        ]
+      }
+    ],
+    "body": [
+      {
+        "kind": "CallStmt",
+        "name": "notify",
+        "args": [
+          {
+            "kind": "String",
+            "value": "foo"
+          }
+        ],
+        "tail": [],
+        "pipe": null
+      }
+    ]
+  }
+}

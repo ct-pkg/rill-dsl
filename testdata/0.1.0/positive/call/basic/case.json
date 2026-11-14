@@ -3,86 +3,8 @@
   "phase": "p2",
   "note": "//fn{} 定义 + 模板管道 + 正文 @ 调用 + 调用上的管道（§4.18）",
   "expect": {
-    "profiles": ["shell"],
-    "ast": {
-      "kind": "Program",
-      "headers": [
-        {
-          "kind": "FnBlock",
-          "defs": [
-            {
-              "kind": "FnDef",
-              "name": "check-config",
-              "template": [
-                {
-                  "kind": "VerbCall",
-                  "subject": {"kind": "Variable", "name": "path"},
-                  "verb": "read",
-                  "object": {"kind": "Variable", "name": "path"},
-                  "post": []
-                },
-                {
-                  "kind": "VerbCall",
-                  "subject": null,
-                  "verb": "parse",
-                  "object": {"kind": "Bare", "text": "yaml"},
-                  "post": []
-                }
-              ],
-              "body": {
-                "kind": "Block",
-                "body": [
-                  {
-                    "kind": "SimpleStmt",
-                    "call": {
-                      "kind": "VerbCall",
-                      "subject": null,
-                      "verb": "read",
-                      "object": {"kind": "Variable", "name": "path"},
-                      "post": []
-                    },
-                    "tail": [],
-                    "pipe": {
-                      "kind": "SimpleStmt",
-                      "call": {
-                        "kind": "VerbCall",
-                        "subject": null,
-                        "verb": "parse",
-                        "object": {"kind": "Bare", "text": "yaml"},
-                        "post": []
-                      },
-                      "tail": [],
-                      "pipe": null
-                    }
-                  }
-                ]
-              }
-            }
-          ]
-        }
-      ],
-      "body": [
-        {
-          "kind": "CallStmt",
-          "name": "check-config",
-          "args": [{"kind": "String", "value": "config.yml"}],
-          "tail": [],
-          "pipe": {
-            "kind": "SimpleStmt",
-            "call": {
-              "kind": "VerbCall",
-              "subject": null,
-              "verb": "send",
-              "object": {"kind": "String", "value": "完成"},
-              "post": [
-                {"kind": "PrepPhrase", "prep": "to", "object": {"kind": "Bare", "text": "user"}}
-              ]
-            },
-            "tail": [],
-            "pipe": null
-          }
-        }
-      ]
-    }
+    "profiles": [
+      "shell"
+    ]
   }
 }

@@ -3,37 +3,8 @@
   "phase": "p2",
   "note": "value 五分支在 value 位全部可归约：STRING / NUMBER / 裸词→STRING / $变量 / .字段（§三 value / §4.15）",
   "expect": {
-    "profiles": ["shell"],
-    "ast": {
-      "kind": "Program",
-      "headers": [],
-      "body": [
-        {
-          "kind": "BreakStmt",
-          "value": {"kind": "String", "value": "s"},
-          "target": "a"
-        },
-        {
-          "kind": "BreakStmt",
-          "value": {"kind": "Number", "value": 42},
-          "target": "b"
-        },
-        {
-          "kind": "BreakStmt",
-          "value": {"kind": "String", "value": "bare"},
-          "target": "c"
-        },
-        {
-          "kind": "BreakStmt",
-          "value": {"kind": "Variable", "name": "v"},
-          "target": "d"
-        },
-        {
-          "kind": "BreakStmt",
-          "value": {"kind": "Field", "name": "field"},
-          "target": "e"
-        }
-      ]
-    }
+    "profiles": [
+      "shell"
+    ]
   }
 }

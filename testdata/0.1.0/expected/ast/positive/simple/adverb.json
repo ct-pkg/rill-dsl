@@ -1,0 +1,43 @@
+{
+  "schema": "rill-ast-golden/0",
+  "case": "positive/simple/adverb",
+  "ast": {
+    "kind": "Program",
+    "headers": [],
+    "body": [
+      {
+        "kind": "SimpleStmt",
+        "call": {
+          "kind": "VerbCall",
+          "subject": null,
+          "verb": "read",
+          "object": {
+            "kind": "Bare",
+            "text": "config.yml"
+          },
+          "post": [
+            {
+              "kind": "Adverb",
+              "items": [
+                {
+                  "kind": "Bare",
+                  "text": "utf-8"
+                },
+                {
+                  "kind": "Bare",
+                  "text": "backup:daily"
+                },
+                {
+                  "kind": "Bare",
+                  "text": "timeout:30"
+                }
+              ]
+            }
+          ]
+        },
+        "tail": [],
+        "pipe": null
+      }
+    ]
+  }
+}

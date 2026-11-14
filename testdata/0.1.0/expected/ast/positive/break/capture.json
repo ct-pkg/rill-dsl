@@ -1,0 +1,56 @@
+{
+  "schema": "rill-ast-golden/0",
+  "case": "positive/break/capture",
+  "ast": {
+    "kind": "Program",
+    "headers": [],
+    "body": [
+      {
+        "kind": "SimpleStmt",
+        "call": {
+          "kind": "VerbCall",
+          "subject": null,
+          "verb": "read",
+          "object": {
+            "kind": "Bare",
+            "text": "a.yml"
+          },
+          "post": []
+        },
+        "tail": [],
+        "pipe": {
+          "kind": "SimpleStmt",
+          "call": {
+            "kind": "VerbCall",
+            "subject": null,
+            "verb": "write",
+            "object": {
+              "kind": "Bare",
+              "text": "b.yml"
+            },
+            "post": []
+          },
+          "tail": [
+            {
+              "kind": "OkBlock",
+              "body": {
+                "kind": "Block",
+                "body": [
+                  {
+                    "kind": "BreakStmt",
+                    "value": {
+                      "kind": "String",
+                      "value": "done"
+                    },
+                    "target": "result"
+                  }
+                ]
+              }
+            }
+          ],
+          "pipe": null
+        }
+      }
+    ]
+  }
+}

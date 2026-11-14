@@ -2,5 +2,9 @@
   "kind": "ast",
   "phase": "p2",
   "note": "状语并列项与 名称:值 形态（§4.4）",
-  "expect": {"profiles": ["shell"]}
+  "expect": {
+    "profiles": [
+      "shell"
+    ]
+  }
 }

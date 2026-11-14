@@ -1,0 +1,43 @@
+{
+  "schema": "rill-ast-golden/0",
+  "case": "positive/map/verb-marker",
+  "ast": {
+    "kind": "Program",
+    "headers": [
+      {
+        "kind": "MapBlock",
+        "entries": [
+          {
+            "kind": "MapEntry",
+            "short": "r",
+            "marker": "<",
+            "long": "read"
+          },
+          {
+            "kind": "MapEntry",
+            "short": "s",
+            "marker": "'",
+            "long": "my application"
+          }
+        ]
+      }
+    ],
+    "body": [
+      {
+        "kind": "SimpleStmt",
+        "call": {
+          "kind": "VerbCall",
+          "subject": null,
+          "verb": "read",
+          "object": {
+            "kind": "String",
+            "value": "my application"
+          },
+          "post": []
+        },
+        "tail": [],
+        "pipe": null
+      }
+    ]
+  }
+}

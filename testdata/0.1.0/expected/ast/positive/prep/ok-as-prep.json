@@ -1,0 +1,34 @@
+{
+  "schema": "rill-ast-golden/0",
+  "case": "positive/prep/ok-as-prep",
+  "ast": {
+    "kind": "Program",
+    "headers": [],
+    "body": [
+      {
+        "kind": "SimpleStmt",
+        "call": {
+          "kind": "VerbCall",
+          "subject": null,
+          "verb": "send",
+          "object": {
+            "kind": "String",
+            "value": "x"
+          },
+          "post": [
+            {
+              "kind": "PrepPhrase",
+              "prep": "ok",
+              "object": {
+                "kind": "Bare",
+                "text": "user"
+              }
+            }
+          ]
+        },
+        "tail": [],
+        "pipe": null
+      }
+    ]
+  }
+}
