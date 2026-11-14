@@ -62,3 +62,17 @@ exit=1
 - 绿提交：`feat(host): PH-11-T2 工具文件与环境`
 - 绿命令与输出：`python3 tests/phase11/test_fs_env.py` →
   `PASS phase11 fs/env: workspace 约束、类型表、context-only env`（exit 0）
+
+## PH-11-T3 角色与 limits
+
+- 红提交：`test(host): PH-11-T3 红`（baseline `47d6f3f`）
+- 红命令：`python3 tests/phase11/test_role_limits.py`
+- 红输出：
+
+```text
+Traceback (most recent call last):
+  File ".../tests/phase11/test_role_limits.py", line 23, in <module>
+    from rill.host.agent import (
+ImportError: cannot import name 'AgentRoleError' from 'rill.host.agent'
+exit=1
+```
