@@ -78,3 +78,9 @@ exit=1
 ```
 
 - 绿提交：`feat(fmt): PH-12-T3 round-trip 门禁`
+- 绿命令与输出：`bash tools/check-fmt.sh --roundtrip` →
+  `PASS phase12 roundtrip: compress→display→compress AST 等价（71 个 fixture）`
+  （exit 0）；同一入口的失败用例由 `assert not failures` 覆盖，
+  任一阶段的 AST 不等都会列出前 5 个 `(path, stage)`。
+- 说明：71 = 可解析正例（去掉 tokens-only 用例）+ host 脚本；tokens-only
+  用例不是合法 program，不纳入 round-trip（卡 §7 #1）。
