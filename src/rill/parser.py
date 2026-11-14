@@ -27,6 +27,9 @@ _STOP_KINDS = (
     "EOF",
 )
 
+# §4.5 的介词表；方括号里出现表外名称按 §七 在解析期拒绝。
+_PREPS = ("to", "with", "from", "in", "on", "into", "ok", "error")
+
 
 def _raw_len(token):
     """token 在源码里的原始宽度；用于判断两个单词是否相邻（无空格）。"""
@@ -495,6 +498,12 @@ class Parser(object):
     def _parse_prep_phrase(self):
         bracket = self._take()
         prep = self._take()
+        if prep.text not in _PREPS:
+            self._error(
+                "E-PARSE-UNKNOWN-PREP",
+                "未知介词 [%s]；§4.5 只接受 %s" % (prep.text, "/".join(_PREPS)),
+                prep,
+            )
         if not self._at("RBRACKET"):
             self._error("E-PARSE-UNKNOWN-PREP", "介宾标记必须是 [名称]", bracket)
         self._take()
