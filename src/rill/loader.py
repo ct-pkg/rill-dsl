@@ -48,7 +48,11 @@ def check_program(program, profile="shell"):
     """对已解析的 AST 做加载期校验；返回只读表，不执行工具。"""
     host = load_profile(profile)
     maps = _collect_maps(program)
-    return LoadTables(maps=maps, functions={}, verbs=set(DEFAULT_VERBS), profile=host)
+    functions = _collect_functions(program)
+    _check_calls(program, functions)
+    return LoadTables(
+        maps=maps, functions=functions, verbs=set(DEFAULT_VERBS), profile=host
+    )
 
 
 def _collect_maps(program):
@@ -71,3 +75,36 @@ def _collect_maps(program):
             table[short] = (entry["marker"], entry["long"])
         tables.append(table)
     return tables
+
+
+def _collect_functions(program):
+    """``FnDef.name`` 精确匹配；同块重名不报错，登记为缺口（PH-4 卡 §8 #5）。"""
+    functions = {}
+    for header in program.get("headers", []):
+        if header["kind"] != "FnBlock":
+            continue
+        for definition in header["defs"]:
+            functions.setdefault(definition["name"], definition)
+    return functions
+
+
+def _check_calls(node, functions):
+    """只查 ``@ STRING`` 的名字；模板与实参绑定留给 PH-9。"""
+    if isinstance(node, list):
+        for item in node:
+            _check_calls(item, functions)
+        return
+    if not isinstance(node, dict) or "kind" not in node:
+        return
+    if node["kind"] == "CallStmt" and node["name"] not in functions:
+        span = node["span"]
+        raise LoadError(
+            "E-LOAD-FN-UNDECLARED",
+            "未声明的函数 %r；只能调用 //fn{} 内定义的名字" % node["name"],
+            span["line"],
+            span["col"],
+        )
+    for key, value in node.items():
+        if key in ("kind", "span"):
+            continue
+        _check_calls(value, functions)
