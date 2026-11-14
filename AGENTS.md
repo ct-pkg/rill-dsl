@@ -260,12 +260,12 @@ AI_ENGINEERING_SPEC=<主规范路径> ...          # 覆盖默认主规范位置
 | 项 | 值 |
 | --- | --- |
 | 对话清单 | 未建（需求池、技术池、评审三类常驻对话均无登记；phase 对话按 9.3 命名：`[rill-dsl] P<nn> · <目标一句话>`） |
-| 任务-对话映射 | 未建（`docs/session-map.md` 缺失） |
-| 门禁入口 | 未建（`tools/check.sh` 缺失） |
+| 任务-对话映射 | 已建（`docs/session-map.md`，按 phase 登记） |
+| 门禁入口 | 已建（`tools/check.sh`；g0/g1/g4/g6/g8/g9 启用，g2/g3/g5/g7 按未实现 DISABLED） |
 | 文档 snippet | 未建（`docs/snippets/` 缺失；`tools/check-docs.sh` 缺失） |
-| Issue 台账 | 未建（`issues/<id>.md` 缺失，id 前缀未定） |
-| 决策记录 | 未建（`docs/decisions/D-<n>.md` 缺失） |
-| 版本落点 | 缺失（仓库无构建、无版本声明、无 tag；`docs/design/dsl-spec-v0.1.md` 文件名里的 `v0.1` 是规范草案版本，不构成产品版本落点） |
+| Issue 台账 | 已建（`issues/README.md`；当前 0 条） |
+| 决策记录 | 已建（`docs/decisions/D-001.md`…`D-020.md`） |
+| 版本落点 | `src/rill/__init__.py#__version__`（产品版本；语言规范版本另见 docs/RILL-0.1.0.md，不参与产品版本核对） |
 | 偏离项 | 无（见 0.3） |
 
 ### 0.2 话术路由

@@ -1,3 +1,3 @@
-"""RILL 0.1.x reference implementation (lexer track)."""
+"""RILL 0.1.x reference implementation."""
 
-__version__ = "0.1.1"
+__version__ = "0.12.0"
