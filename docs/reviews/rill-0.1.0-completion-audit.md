@@ -44,8 +44,8 @@
 | --- | --- | --- | --- |
 | E-1 AST 词汇/字段/span 可断言 | `test_ast_json.py` | T | PASS |
 | E-2 map 头与映射展开 | `positive/map/*` AST 断言 | H | PASS |
-| E-3 调用/介宾/`//fn` 模板 | `test_ast_json.py` + positive AST | T、H | PASS |
-| E-4 控制流与尾随块 | `if`/`each`/`break`/`[into]`/`parallel` AST | T、H | PASS |
+| E-3 调用/介宾/`@`/`//fn` 模板 | `prep-phrases`、`call/basic`、`assign` 三条 AST 断言 | T、H | PASS |
+| E-4 控制流与尾随块 | `if` 带主语、each、break 五分支、`[into]`、parallel results 六条 AST 断言 | T、H | PASS |
 | E-5 非法位置稳定解析错误 | negative 桶逐条断言 code/line/col | H | PASS |
 | E-6/E-7 正例 golden / 每形态 1 golden | positive ast 桶全部有 golden | H | PASS |
 | E-8 T-6 | 本表 | 本文件 | PASS |
@@ -78,8 +78,11 @@
 | --- | --- | --- | --- |
 | E-1..E-5 falsy/`ok`/错误串/`$`/Bytes | `test_truthy`、`test_result`、`test_value` | T | PASS |
 | E-6 `exit_code` 钩子 | `test_result` 接口断言 | T | PASS |
-| E-7..E-11 管道/each/`\|>`/fake 队列 | `test_pipe`、`test_verbs` | T | PASS |
-| E-12 T-6（卡内 E-7） | 本表 | 本文件 | PASS |
+| E-7 T-6 | 本表 | 本文件 | PASS |
+| E-8 `expr`/`simple_stmt` 两条管道 | `test_pipe.py` 两组独立用例 | T | PASS |
+| E-9 each 失败记 null 并继续 | `test_pipe.py` 轮结果数组 | T | PASS |
+| E-10 `\|>` 只传 value/短路 | `test_pipe.py` 下游计数 | T | PASS |
+| E-11 fake 队列耗尽取 default | `test_verbs.py` | T | PASS |
 
 ### PH-7 简单语句与尾随块
 
@@ -109,7 +112,8 @@
 | --- | --- | --- | --- |
 | E-1 分支三态数组 | `test_parallel.py` | T | PASS |
 | E-2 `[results]` 四位置报错 | `test_results.py` | T | PASS |
-| E-3/E-4 模板参数与默认值 | `test_fn.py` | T | PASS |
+| E-3 模板 3 处 `$path` 只收 1 个实参 | `test_fn.py` 参数计数与同名绑定 | T | PASS |
+| E-4 默认值只允许尾部 | `test_fn.py` 两负一正 | T | PASS |
 | E-5 未声明/参数个数错误 | `test_errors.py` | T | PASS |
 | E-6 函数返回最后段 | `test_fn.py` | T | PASS |
 | E-7 T-6 | 本表 | 本文件 | PASS |
@@ -196,4 +200,4 @@
 - 产品版本：`0.12.0`，落点 `src/rill/__init__.py#__version__`；语言规范版本
   0.1.1 不参与产品版本核对。
 - 本地提交，不打 tag、不 push（按用户指令）；tag 需另行授权。
-- 第一次运行证据见 [closeout-12.md](closeout-12.md) §4 与 README §2/§3。
+- 第一次运行证据见 [closeout-12.md](closeout-12.md) §6 与 README §2/§3。
