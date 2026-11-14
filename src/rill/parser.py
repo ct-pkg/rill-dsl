@@ -6,7 +6,8 @@
 
 PH-3-T2 范围：``program``、``header``（``//map``）、``block``、
 ``simple_stmt`` 的 ``verb_call`` 核心（可选主语、动词、宾语）与映射展开。
-状语、介宾、赋值、管道、``@`` 调用、控制流与尾随块在 T3/T4 加入。
+PH-3-T3 加入状语、介宾、``->`` 赋值、管道、``@`` 调用与 ``//fn`` 模板；
+控制流与尾随块在 T4。
 """
 
 from . import ast
@@ -91,11 +92,12 @@ class Parser(object):
         span = {"line": first.line, "col": first.col}
         headers = []
         body = []
-        while self._at("MAP_HEADER"):
-            headers.append(self._parse_map_block())
+        while self._at("MAP_HEADER", "FN_HEADER"):
+            if self._at("MAP_HEADER"):
+                headers.append(self._parse_map_block())
+            else:
+                headers.append(self._parse_fn_block())
             self._skip_newlines()
-        if self._at("FN_HEADER"):
-            self._error("E-PARSE-UNEXPECTED", "//fn{} 区块在 PH-3-T3 加入")
         while not self._at("EOF"):
             if self._at("NEWLINE"):
                 self.i += 1
@@ -142,7 +144,7 @@ class Parser(object):
                 "关键字 %r 的语句在 PH-3-T4 加入" % token.text,
             )
         if token.kind == "AT":
-            self._error("E-PARSE-UNEXPECTED", "@ 语句在 PH-3-T3 加入")
+            return self._parse_call_stmt()
         if token.kind == "LBRACKET":
             self._error("E-PARSE-UNEXPECTED", "独立介宾块在 PH-3-T4 加入")
         return self._parse_simple_stmt()
@@ -152,14 +154,106 @@ class Parser(object):
         call = self._parse_verb_call()
         tail = []
         if self._at("ARROW"):
-            self._error("E-PARSE-UNEXPECTED", "-> 赋值在 PH-3-T3 加入")
+            tail.append(self._parse_assign())
         if self._at("LBRACKET"):
             self._error("E-PARSE-UNEXPECTED", "尾随块在 PH-3-T4 加入")
-        if self._at("PIPE"):
-            self._error("E-PARSE-UNEXPECTED", "管道在 PH-3-T3 加入")
         if not (self._at("NEWLINE") or self._at("EOF") or self._at("RBRACE")):
-            self._error("E-PARSE-UNEXPECTED", "语句后出现意外 token %r" % self._peek().text)
-        return ast.make("SimpleStmt", span=span, call=call, tail=tail, pipe=None)
+            if not self._at("PIPE"):
+                self._error(
+                    "E-PARSE-UNEXPECTED", "语句后出现意外 token %r" % self._peek().text
+                )
+        pipe = self._parse_pipe(lambda: self._parse_simple_stmt())
+        return ast.make("SimpleStmt", span=span, call=call, tail=tail, pipe=pipe)
+
+    def _parse_assign(self):
+        arrow = self._take()
+        target = self._expect("VARIABLE", "-> 后的 $变量")
+        return ast.make(
+            "Assign",
+            span={"line": arrow.line, "col": arrow.col},
+            target=target.text,
+        )
+
+    def _parse_pipe(self, parse_next):
+        if not self._at("PIPE"):
+            return None
+        self._take()
+        self._skip_newlines()
+        return parse_next()
+
+    def _parse_call_stmt(self):
+        at = self._take()
+        span = {"line": at.line, "col": at.col}
+        name = self._expect("STRING", "函数名（@ 后必须是字符串）")
+        if self._at("VERB") or (
+            self._peek().kind in _WORD_KINDS and self._peek(1).kind == "VERB"
+        ):
+            self._error(
+                "E-PARSE-FN-DEF-BODY",
+                "函数定义只能在 //fn{} 区块内",
+                at,
+            )
+        args = []
+        while self._peek().kind in _WORD_KINDS:
+            args.append(self._parse_word(bare_as_string=True))
+        tail = []
+        if self._at("ARROW"):
+            tail.append(self._parse_assign())
+        if self._at("LBRACKET"):
+            self._error("E-PARSE-UNEXPECTED", "尾随块在 PH-3-T4 加入")
+        pipe = self._parse_pipe(lambda: self._parse_simple_stmt())
+        return ast.make("CallStmt", span=span, name=name.text, args=args, tail=tail, pipe=pipe)
+
+    def _parse_fn_block(self):
+        head = self._take()
+        span = {"line": head.line, "col": head.col}
+        defs = []
+        while True:
+            self._skip_newlines()
+            if self._at("RBRACE"):
+                self._take()
+                return ast.make("FnBlock", span=span, defs=defs)
+            if self._at("EOF"):
+                self._error("E-PARSE-MISSING-BLOCK", "//fn{} 缺 }", head)
+            defs.append(self._parse_fn_def())
+
+    def _parse_fn_def(self):
+        at = self._take()
+        span = {"line": at.line, "col": at.col}
+        name = self._expect("STRING", "函数名（@ 后必须是字符串）")
+        if not (self._at("VERB") or self._peek(1).kind == "VERB"):
+            self._error("E-PARSE-UNEXPECTED", "函数定义缺模板")
+        template = [self._parse_verb_call()]
+        while self._at("PIPE"):
+            self._take()
+            self._skip_newlines()
+            template.append(self._parse_verb_call())
+        body = self._parse_block("函数体")
+        return ast.make("FnDef", span=span, name=name.text, template=template, body=body)
+
+    def _parse_block(self, what):
+        if not self._at("LBRACE"):
+            self._error("E-PARSE-MISSING-BLOCK", "%s 缺 { 块" % what)
+        brace = self._take()
+        body = []
+        while True:
+            self._skip_newlines()
+            if self._at("RBRACE"):
+                self._take()
+                return ast.make(
+                    "Block", span={"line": brace.line, "col": brace.col}, body=body
+                )
+            if self._at("EOF"):
+                self._error("E-PARSE-MISSING-BLOCK", "%s 缺 }" % what, brace)
+            body.append(self._parse_statement())
+
+    def _is_trailing_block(self):
+        return (
+            self._at("LBRACKET")
+            and self._peek(1).kind in ("BARE", "KEYWORD")
+            and self._peek(2).kind == "RBRACKET"
+            and self._peek(3).kind == "LBRACE"
+        )
 
     def _parse_verb_call(self):
         span = {"line": self._peek().line, "col": self._peek().col}
@@ -171,16 +265,56 @@ class Parser(object):
         mapped = self.maps.get(verb_name)
         if mapped and mapped[0] == "<":
             verb_name = mapped[1]
-        if self._at(*_STOP_KINDS):
+        if self._at(*_STOP_KINDS) or self._at("LPAREN", "LBRACKET"):
             self._error("E-PARSE-UNEXPECTED", "动词 %r 缺宾语" % verb_name)
         obj = self._parse_word(bare_as_string=False)
+        post = []
+        while True:
+            if self._at("LPAREN"):
+                post.append(self._parse_adverb())
+                continue
+            if self._at("LBRACKET") and not self._is_trailing_block():
+                post.append(self._parse_prep_phrase())
+                continue
+            break
         return ast.make(
             "VerbCall",
             span=span,
             subject=subject,
             verb=verb_name,
             object=obj,
-            post=[],
+            post=post,
+        )
+
+    def _parse_adverb(self):
+        paren = self._take()
+        items = []
+        while not self._at("RPAREN"):
+            if self._at("EOF", "NEWLINE"):
+                self._error("E-PARSE-UNEXPECTED", "状语缺 )", paren)
+            items.append(self._parse_word(bare_as_string=False))
+            if self._at("COMMA"):
+                self._take()
+                continue
+            if not self._at("RPAREN"):
+                self._error("E-PARSE-UNEXPECTED", "状语项之间必须是逗号")
+        self._take()
+        return ast.make(
+            "Adverb", span={"line": paren.line, "col": paren.col}, items=items
+        )
+
+    def _parse_prep_phrase(self):
+        bracket = self._take()
+        prep = self._take()
+        if not self._at("RBRACKET"):
+            self._error("E-PARSE-UNKNOWN-PREP", "介宾标记必须是 [名称]", bracket)
+        self._take()
+        obj = self._parse_word(bare_as_string=False)
+        return ast.make(
+            "PrepPhrase",
+            span={"line": bracket.line, "col": bracket.col},
+            prep=prep.text,
+            object=obj,
         )
 
     # ---- 单词与值 ------------------------------------------------------
