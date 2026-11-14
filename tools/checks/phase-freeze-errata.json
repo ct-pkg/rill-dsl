@@ -1,0 +1,22 @@
+{
+  "schema": "phase-freeze-errata/1",
+  "updated": "2026-11-15",
+  "entries": [
+    {
+      "id": "PH-13-T5-verify-case-filter",
+      "phase": "PH-13",
+      "file": "docs/phases/PH-13/card.md",
+      "section": "任务清单",
+      "line": 52,
+      "old_sha256": "36f64f87042bf3b11d33fe0e9dc7fb189568d81a4f376451f76ffbaf0d5ea1fd",
+      "new_sha256": "d86043344ff3f8d008d10df80670f72f6f69b5ee94decac01164e6712c07b345",
+      "closeout": {
+        "file": "docs/reviews/closeout-13.md",
+        "section": "2. 退出判据",
+        "must_contain": "T5 的 verify 已按用户裁定改为 9 个"
+      },
+      "date": "2026-11-15",
+      "reason": "T5 verify 原用 --bucket negative --kind error，会连带选中 negative/load/** 7 条（PH-15）导致整体退出 1；改为 9 个 --case 精确过滤，判据 E-3 实质不变。"
+    }
+  ]
+}
