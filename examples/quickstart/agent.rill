@@ -1,0 +1,1 @@
+engineer <read> file:config.txt |> <send> $ [to] user

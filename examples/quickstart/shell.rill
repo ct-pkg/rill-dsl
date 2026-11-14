@@ -1,0 +1,1 @@
+<read> examples/quickstart/config.txt |> <send> $ [to] user

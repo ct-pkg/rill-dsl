@@ -1,0 +1,12 @@
+{
+  "schema": "rill.shell-profile/0",
+  "name": "quickstart-shell",
+  "description": "第一次运行：读文件、写 stdio；不写文件、不起进程。",
+  "allow": {
+    "process": [],
+    "fs": ["read"],
+    "env": ["get"],
+    "stdio": ["write"]
+  },
+  "exit_codes": {"ok": 0, "unhandled": 1}
+}

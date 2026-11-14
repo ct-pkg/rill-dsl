@@ -1,0 +1,9 @@
+{
+  "schema": "rill-fakes-tools/0",
+  "description": "quickstart 的 canonical 工具：真实子进程，JSON stdin/stdout。",
+  "tools": {
+    "read": {"command": ["python3", "../../testdata/0.1.0/host/agent/tools/tool_server.py"]},
+    "send": {"command": ["python3", "../../testdata/0.1.0/host/agent/tools/tool_server.py"]},
+    "run": {"command": ["python3", "../../testdata/0.1.0/host/agent/tools/tool_server.py"]}
+  }
+}

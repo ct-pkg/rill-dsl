@@ -1,0 +1,14 @@
+{
+  "schema": "rill.agent-profile/0",
+  "name": "quickstart-agent",
+  "description": "第一次运行：工程师角色，workspace 为 examples/quickstart，工具走真实子进程。",
+  "role": "engineer",
+  "roles": {
+    "engineer": {"verbs": ["read", "send", "run"]}
+  },
+  "types": {"file": "path", "net": "text"},
+  "workspace": "examples/quickstart",
+  "tools": "tools.json",
+  "context": {},
+  "limits": {"steps": 8, "time_ms": 5000, "bytes": 65536}
+}
