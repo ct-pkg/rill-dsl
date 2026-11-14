@@ -157,3 +157,7 @@ exit=1
 ```
 
 - 绿提交：`docs(acceptance): PH-12-T6 已知限制`
+- 绿命令与输出：`python3 tests/phase12/test_known_limits_doc.py` →
+  `PASS phase12 limits: 生产/并发/pending/formatter/基线 20 FAIL`（exit 0）
+- 说明：基线 FAIL 数由测试现场复跑 `tools/check.sh all` 并计数，
+  与文档中的 20 对齐；分类见 `rill-0.1.0-known-limits.md` §5。
