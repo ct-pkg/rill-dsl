@@ -6,7 +6,7 @@
 ```
 ct/
 ├── rill_ct.ct     单文件 CT 实现（词法 + 语法 + CLI + JSON 写出）
-├── build.sh       从零构建出 ct/bin/rill-ct
+├── build.sh       从零构建出 ct/bin/rill_ct
 ├── test.sh        跑本层覆盖的门禁用例
 └── README.md      本文件（构建、规则映射、CT 限制、验证记录）
 ```
@@ -28,14 +28,18 @@ CTC=/path/to/ctc ./ct/build.sh
 
 ```bash
 ctc ct/rill_ct.ct -o /tmp/rill_ct.c
-cc -std=c99 -Wall -Wextra -O2 /tmp/rill_ct.c -o ct/bin/rill-ct
+cc -std=c99 -Wall -Wextra -O2 /tmp/rill_ct.c -o ct/bin/rill_ct
 ```
+
+`ctc` 有两种来源：仓库根 `../ct-lang/ctc` 是 L0 种子，只做单文件，`build` 会显式拒绝；
+`~/.local/bin/ct` 是 ct-ast 主线（`ctc -> ct` 兼容别名），提供 `ct build` 多单元入口。
+本层是单文件，用前者即可；多单元复核见“撞到的 CT 限制”第 2 条。
 
 CLI 形状与 Python 版对齐：
 
 ```bash
-ct/bin/rill-ct tokenize testdata/0.1.0/positive/tokens/compact/source.rill
-ct/bin/rill-ct parse --dump-ast testdata/0.1.0/positive/simple/read-write/source.rill --profile shell
+ct/bin/rill_ct tokenize testdata/0.1.0/positive/tokens/compact/source.rill
+ct/bin/rill_ct parse --dump-ast testdata/0.1.0/positive/simple/read-write/source.rill --profile shell
 ```
 
 退出码：`0` 成功（stdout 为 `{"tokens":[...]}` 或 `{"ast":...}`）；`2` 诊断（stdout 为
@@ -45,6 +49,13 @@ CLI 用法错误取 `cli` / `E_USAGE`，与 Python 版一致。`--profile` 接�
 
 `tokenize` 输出覆盖 `positive/**` 与 `negative/tokenize/**`；`parse` 输出覆盖
 `positive/**` 与 `negative/parse/**`。
+
+对拍入口（PH-13 起的回归门禁）：
+
+```bash
+python3 tools/diff/diff.py --layer token    # PH-13：82 源，0 差异
+python3 tools/diff/diff.py --layer ast      # PH-14 预演（忽略 span）
+```
 
 ## 规则到 CT 写法的映射
 
@@ -72,9 +83,9 @@ AST 字段顺序按 Python 的 `FIELDS` 表；JSON 里键顺序不影响 harness
 - `positive/tokens`：12/12 PASS。
 - `positive/ast`：23/23 PASS（harness 按 §4.17 忽略 span）。
 - `negative/tokenize` + `negative/parse`：19/19 PASS，断言到 `stage/code/line/col`。
-- 全量差分（另跑，脚本在 `/tmp`，未入库）：`positive` + `negative` 共 82 个
-  `source.rill`，`tokenize` 与 `parse` 两路对比 Python 版，**0 差异**；错误用例的
-  `stage/code/line/col` 也逐项相等。
+- 全量差分（仓库资产）：`python3 tools/diff/diff.py --layer token` 对比 Python 版，
+  `positive` + `negative` 共 82 个 `source.rill`：73 个成功 token 序列 + 9 个词法诊断，
+  **0 差异**；`--layer ast` 亦为 0 差异（不计入 PH-13 判据）。
 - 边界：空文件、CRLF、无行尾换行三种输入的 token 序列与 Python 版相同。
 
 复跑：
@@ -118,9 +129,22 @@ cc -std=c99 /tmp/ctprobe/mapstruct.c -o /tmp/ctprobe/mapstruct   # rc=1
 ```
 
 生成的 C 原样留下 `Map<...>`：容器层是 `ct build` 多单元时预解析的，`ctc` 单文件不注入。
-本机没有安装 `ct`（只有 `ctc`），因此没有验证用户提到的「`Map<K, 用户 struct>` 放进导出
-结构生成不完整类型」在 `ct build` 下的具体表现。
+
+多单元入口已复核：`~/.local/bin/ct`（`ct v0.44.1`，ct-ast 主线）可用，只是不在 PATH；
+`ctc -> ct` 是兼容别名，`ct build` 与 `ct-ast build` 同源。仓库根 `../ct-lang/ctc` 是
+L0 种子，`build` 会报 `ctc: 'build' (multi-file) is not supported by this compiler`（rc=1）。
+用 `ct build` 复跑同一探针：
+
+- 非导出结构（`struct Holder { Map<char *, struct Item> items; };`）：rc=0，生成完整的
+  `struct Map_char_p_Item`，无 incomplete type。
+- 导出结构（`.h.ct` 里 `pub struct Holder { pub Map<char *, Item> items; }`）：rc=1。
+  `types.h` 把字段发射成 `pub struct Map_char_p_Item items;`（多出字面 `pub`，且
+  `Map_char_p_Item` 只有前置声明），`cc` 报 `unknown type name 'pub'` 与
+  `field has incomplete type 'struct Item'`。这就是「`Map<K, 用户 struct>` 放进导出结构
+  生成不完整类型」的复现；根因在导出头，不在入口。
+
 绕法：Token 数组、map 短词表都用自建 `malloc/realloc` 数组，插入序靠追加、查重靠线性扫描。
+后续若拆多单元，不要往 `pub struct` 里放 `Map` 字段（见 `docs/reviews/closeout-13.md` §6）。
 代价：手写内存增长与释放（本实现是一次性 CLI，未回收），没有 `Map` 的插入序与引用计数语义。
 
 ### 3. 指针变量上的 `.` 方法调用（绕开）
@@ -138,10 +162,16 @@ cc -std=c99 /tmp/ctprobe/ptrrecv2.c -o /tmp/ctprobe/ptrrecv2   # rc=1
 # error: no member named 'set' in 'struct S'
 ```
 
-生成的 C 原样保留 `p.set(7)`，没有展开成 `S_Setter_set(...)`。这与已知的
-「发 `S_f(&p)`（传 `S**`）」不是同一形态，可能是 `ctc` 与 `ct-ast`/`ct build` 的差异；
-本机没有 `ct`，无法进一步确认。绕法：本实现不定义方法，全部用自由函数与显式 `self`
-参数，因此没有触发该路径。代价：没有 vtable/接口派发，第一层也不需要。
+生成的 C 原样保留 `p.set(7)`，没有展开成 `S_Setter_set(...)`。用 `ct build` 复核：
+
+```c
+p.__setter_vptr->set(&p, 7);
+```
+
+clang 直接报 `error: member reference type 'struct S *' is a pointer`，`ct build` rc=1；
+即使编译器只告警，`&p` 传给 `void *self` 的是 `S**`，非空时结果已错。绕法：本实现不定义
+方法，全部用自由函数与显式 `self` 参数，因此没有触发该路径。代价：没有 vtable/接口派发，
+第一层也不需要。
 
 ## 明确没做
 
@@ -161,4 +191,5 @@ cc -std=c99 /tmp/ctprobe/ptrrecv2.c -o /tmp/ctprobe/ptrrecv2   # rc=1
    （`negative/load/**`）。
 4. 求值器与宿主动词注册表：沿用本层的 `stage/code/line/col` 诊断信封；`check` 的
    `W-01` 需要把 `each [in]` 右值的来源信息从解析期带出来。
-5. 把 `/tmp` 的全量差分脚本提升为仓库内测试资产，作为 Python 对照实现的回归门禁。
+5. 对拍入口已入库：`python3 tools/diff/diff.py --layer token`（PH-13 起作为回归门禁；
+   PH-14 用 `--layer ast` 扩到 AST 层）。
