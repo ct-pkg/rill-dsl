@@ -19,3 +19,21 @@ ImportError: cannot import name 'ast' from 'rill' (/Users/samxx/trae-ws/rill-dsl
 ```
 
 - green: 待实现
+
+## PH-3-T2
+
+- baseline: `ff534e1`
+- 命令: `bash tools/check-0.1.0.sh --kind ast --bucket positive`
+- 退出码: `3`
+- 原始输出（节选，完整 22 条中 19 条 DRAFT）：
+
+```text
+BLOCK   positive/comments/not-header (ast)  not implemented: parse (P1 only implements tokenize)
+BLOCK   positive/map/space-header (ast)  not implemented: parse (P1 only implements tokenize)
+BLOCK   positive/simple/read-write (ast)  not implemented: parse (P1 only implements tokenize)
+summary
+  compliance: 0 passed, 0 failed, 3 blocked, 19 draft
+VERDICT: NOT IMPLEMENTED (exit 3)
+```
+
+- green: 待实现

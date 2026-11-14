@@ -1,6 +1,26 @@
 {
   "kind": "ast",
   "phase": "p2",
-  "note": "主语 + 动词 + 宾语（§4.1–§4.3）",
-  "expect": {"profiles": ["shell"]}
+  "note": "主语 + 动词 + 宾语（§4.1–§4.3）；主语槽只保留语法形态，不判定角色",
+  "expect": {
+    "profiles": ["shell"],
+    "ast": {
+      "kind": "Program",
+      "headers": [],
+      "body": [
+        {
+          "kind": "SimpleStmt",
+          "call": {
+            "kind": "VerbCall",
+            "subject": {"kind": "Bare", "text": "engineer"},
+            "verb": "read",
+            "object": {"kind": "Bare", "text": "config.yml"},
+            "post": []
+          },
+          "tail": [],
+          "pipe": null
+        }
+      ]
+    }
+  }
 }
