@@ -76,6 +76,45 @@ python3 tools/diff/diff.py --layer ast      # PH-14 预演（忽略 span）
 AST 字段顺序按 Python 的 `FIELDS` 表；JSON 里键顺序不影响 harness（它按对象比对），
 但保持顺序能让本实现自己的输出也可读。
 
+### 语句产生式 → 代码位置（PH-14-T4，31 条）
+
+规范 §三 EBNF 共 27 条命名产生式；另有 4 条在 EBNF 中内联、由 §3.1 / §3.2 / §4.4 /
+§4.14 定义，合计 31 条。行号为 PH-14 收口时 `ct/rill_ct.ct` 的位置。
+
+| # | 产生式 | 代码位置 | 说明 |
+| --- | --- | --- | --- |
+| 1 | `program` | `p_parse_program` L1345 | 先 `header*`，再 `statement*`，到 EOF 收口 |
+| 2 | `header` | `p_parse_program` L1345 | 按 `MAP_HEADER` / `FN_HEADER` 分派到两条块规则 |
+| 3 | `map_block` | `p_parse_map_block` L1297 | `MAP_HEADER` 后逐条 `map_entry`，`RBRACE` 收口 |
+| 4 | `fn_block` | `p_parse_fn_block` L1280 | `FN_HEADER` 后逐条 `fn_def`，`RBRACE` 收口 |
+| 5 | `map_entry` | `p_parse_map_block` L1297 / `lx_map_line` L617 | 词法期已按“短词-标记-长词”切好，语法期只做结构装配 |
+| 6 | `statement` | `p_parse_statement` L1321 | 按首 token 分派 7 种语句 |
+| 7 | `simple_stmt` | `p_parse_simple_stmt` L1337 / `p_parse_statement_tail` L1040 | 动词调用 + 尾随块 + 可选 `|>` |
+| 8 | `verb_call` | `p_parse_verb_call` L1533 | 主语可选；宾语、状语、介宾按序消费 |
+| 9 | `subject` | `p_parse_verb_call` L1533 / `p_word_node` L1392 | 角色/裸词/引号/变量四态 |
+| 10 | `prep_phrase` | `p_parse_prep_phrase` L1509 | 冻结介词表校验，表外 `E-PARSE-UNKNOWN-PREP` |
+| 11 | `prep_block_stmt` | `p_parse_prep_block_stmt` L1073 | `[into]/[ok]/[error]` + 变量或动词调用 + 块 |
+| 12 | `trailing_block` | `p_parse_trailing_block` L995 | `[ok]` 0..1、`[error]` 0..1、`[into]` 0..N |
+| 13 | `block` | `p_parse_block` L1370 | `LBRACE` `statement*` `RBRACE`，缺块报 `E-PARSE-MISSING-BLOCK` |
+| 14 | `if_clause` | `p_parse_if` L1105 | `if` / `else-if` / `else` 三分支链 |
+| 15 | `condition` | `p_parse_expr` L1217 | 条件共用 `expr` |
+| 16 | `each_clause` | `p_parse_each` L1129 | `each $var [in] expr` + `each_body` |
+| 17 | `each_body` | `p_parse_each` L1129 / `p_parse_block` L1370 / `p_parse_trailing_block` L995 | 块 + 尾随块序列 |
+| 18 | `parallel_clause` | `p_parse_parallel` L1154 | 分支列表 + 可选 `[results]` + 可选 `|>` |
+| 19 | `branch` | `p_parse_parallel` L1154 / `p_parse_trailing_block` L995 | 分支限简单语句与 `[ok]/[error]/[into]` |
+| 20 | `break_stmt` | `p_parse_break` L1189 | `break` + 可选值 + 可选 `-> $var` |
+| 21 | `call_stmt` | `p_parse_call_stmt` L1235 | `@STRING arg*` + 尾随块 + 可选 `|>` |
+| 22 | `arg` | `p_parse_call_stmt` L1235 / `p_parse_word` L1424 | 实参按 `value` 解析 |
+| 23 | `expr` | `p_parse_expr` L1217 | `value` / `verb_call` / `pipe` 三选一 |
+| 24 | `value` | `p_parse_word` L1424 / `p_word_node` L1392 | 引号/数字/裸词/变量/字段；裸词在 value 位归为字符串 |
+| 25 | `pipe` | `p_parse_pipe` L1032 / `p_parse_statement_tail` L1040 | `|>` 串接，逐段独立尾随块 |
+| 26 | `fn_def` | `p_parse_fn_def` L1256 | `@STRING` + 模板 + 块 |
+| 27 | `fn_template` | `p_parse_fn_def` L1256 / `p_parse_pipe` L1032 | 模板内 `$x?` 出 `Default`，出模板即关闭 |
+| 28 | `adverb`（§4.4 内联） | `p_parse_adverb` L1487 | `(` 单词列表 `)`，逗号分隔 |
+| 29 | `[results]` 块（§4.14 内联） | `p_parse_parallel` L1154 / `p_reject_results` L981 | 只在 `parallel` 块尾允许，其余入口统一拒绝 |
+| 30 | 映射标记符（§3.2 内联） | `lx_map_line` L617 | 单字符 ``'`` / `` ` `` / `<`，非法标记 `E-01` |
+| 31 | 区块头判定（§3.1 内联） | `lx_comment_or_header` L559 | `//` 后接 `map`/`fn` 且有块才发头 token |
+
 ## 验证记录
 
 2026-11-15，`ctc v0.44.1`，macOS arm64：
