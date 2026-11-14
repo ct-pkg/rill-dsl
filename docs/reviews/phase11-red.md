@@ -107,3 +107,17 @@ exit=1
   object 优先。`process-tool-fail` 的 `[error]` 块收口按 PH-7 规则
   回退到失败段的 `host_meta`，所以断言改为 `process.tool` 而不是
   `stdio.tool`。红证仍以 fixture 目录缺失为准。
+
+## PH-11-T5 能力矩阵
+
+- 红提交：`test(host): PH-11-T5 红`（baseline `7fd5357`）
+- 红命令：`python3 tests/phase11/test_matrix_doc.py`
+- 红输出：
+
+```text
+Traceback (most recent call last):
+  File ".../tests/phase11/test_matrix_doc.py", line 20, in read_doc
+    assert os.path.isfile(DOC), "缺少能力矩阵：%s" % DOC
+AssertionError: 缺少能力矩阵：.../docs/planning/rill-0.1.0-host-matrix.md
+exit=1
+```
