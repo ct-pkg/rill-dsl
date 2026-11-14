@@ -100,7 +100,7 @@
 | 3 | §6.6 T-7 / §3 T4 | 原 verify `bash tools/check-0.1.0.sh --bucket host` 在开工前已全绿，不能证明双 profile 文档被更新 | **复核时改为 `python3 tests/phase12/test_host_matrix.py`**，断言文档新增的验收章节与 host-specific 表 |
 | 4 | §6.6 T-7 / §3 T5、T6 | 原 verify `test -s <doc>` 只检查文件非空，文件一旦存在就无法继续失败 | **复核时改为 `python3 tests/phase12/test_acceptance_doc.py` / `test_known_limits_doc.py`**，断言四类清单、pending 计数与已知限制条款 |
 | 5 | §3 T2 / `tools/rill_harness/cli.py` | 卡片假定 `--all` 已存在，但 harness 的 argparse 没有该选项；直接运行以“unrecognized arguments”退出 2 | **裁定：在 harness 增加 `--all`**，要求 pending=0 且所有桶（positive/negative/host/smoke）无 FAIL/BLOCK/DRAFT；退出码沿用 0/1/3 |
-| 6 | §4 E-2 | `testdata/0.1.0/pending/` 仍有 5 个 `{"retired": true}` 目录，harness 不发现、不统计；只看目录会误报 pending>0 | **裁定：报告同时写“发现到的 pending 数”与“retired 目录数”**；E-2 以 harness 的 pending 计数 0 为准，退役痕迹不删除、不冒充通过 |
+| 6 | §4 E-2 | `testdata/0.1.0/pending/` 仍有 4 个 `{"retired": true}` 目录，harness 不发现、不统计；只看目录会误报 pending>0 | **裁定：报告同时写“发现到的 pending 数”与“retired 目录数”**；E-2 以 harness 的 pending 计数 0 为准，退役痕迹不删除、不冒充通过 |
 | 7 | §4.16 / §三 | 规范只写“加空格、缩进、展开映射表”，未规定 `fmt` 的 CLI 退出码与错误形状 | **裁定：`fmt` 沿用 harness 协议**，成功 0（stdout 文本），词法/语法/加载诊断 2（stdout JSON error），参数错误 2（stage=cli） |
 | 8 | §4.16 | 展示态展开映射时，值类长词“无特殊字符则原文”；但 parser 对裸词与 `MAP_REF` 的节点类型不同（`Bare` vs `String`），直接输出原文会让回读 AST 不等 | **裁定：展开后的值类长词一律加引号**；若与相邻词元拼接，则把整个相邻片段引成一个 `STRING`。压缩时再按长词前缀拆回短词引用，保证 AST 等价 |
 | 9 | §3 T4 / §4 E-4 | “host-specific 差异全部有记录”没有可机械判定的清单形状 | **裁定：`host-matrix.md` 必须有一节同时给出 shell/agent 两列与“差异”列，并附 `run` 能否真实跑脚本的对照表**；由 `test_host_matrix.py` 逐项断言 |
