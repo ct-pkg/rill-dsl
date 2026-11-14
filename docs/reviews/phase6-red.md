@@ -21,3 +21,17 @@ ImportError: cannot import name 'value' from 'rill' (/Users/samxx/trae-ws/rill-d
 - green: `python3 tests/phase6/test_value.py` → `rc=0`，
   `PASS value: 11 种值形态、Bytes/Opaque 只读与透传、真值判定`。
 
+## PH-6-T2
+
+- baseline: `1fde2fe`
+- 命令: `python3 tests/phase6/test_result.py`
+- 退出码: `1`
+- 原始输出:
+
+```text
+Traceback (most recent call last):
+  File "/Users/samxx/trae-ws/rill-dsl/tests/phase6/test_result.py", line 12, in <module>
+    from rill import result
+ImportError: cannot import name 'result' from 'rill' (/Users/samxx/trae-ws/rill-dsl/tests/phase6/../../src/rill/__init__.py)
+```
+
