@@ -121,3 +121,7 @@ Traceback (most recent call last):
 AssertionError: 缺少能力矩阵：.../docs/planning/rill-0.1.0-host-matrix.md
 exit=1
 ```
+
+- 绿提交：`docs(host): PH-11-T5 能力矩阵`
+- 绿命令与输出：`python3 tests/phase11/test_matrix_doc.py` →
+  `PASS phase11 matrix: 五类能力 Shell/Agent 两列 + 文字差异`（exit 0）

@@ -18,8 +18,8 @@
 | `search` | — | 无真实映射 | 否 |
 | `parse` / `replace` / `contains` / `review` | — | 无真实映射 | 否 |
 
-`run` / `env` 只加进 shell profile 的加载期动词集（`loader.SHELL_VERBS`）；
-agent profile 仍按 0.1.0 动词集校验。parser 不感知宿主。
+`run` / `env` 从 PH-11 起两种宿主共用（`loader.SHELL_VERBS` / `loader.AGENT_VERBS`）；
+差异回到能力实现，见 `docs/planning/rill-0.1.0-host-matrix.md`。parser 不感知宿主。
 
 ## 2. 能力清单（外部 manifest）
 
@@ -60,7 +60,7 @@ agent profile 仍按 0.1.0 动词集校验。parser 不感知宿主。
 
 ## 4. 与 Agent profile 的对照
 
-| 维度 | Shell（PH-10） | Agent（PH-11 预留） |
+| 维度 | Shell（PH-10） | Agent（PH-11） |
 | --- | --- | --- |
 | 主语/权限 | OS 用户 | 角色 + 权限 |
 | 进程 | `process.run`，argv 由宿主切分 | 工具/任务调度 |
@@ -68,9 +68,11 @@ agent profile 仍按 0.1.0 动词集校验。parser 不感知宿主。
 | env | 进程级快照，只读 | 由工具决定 |
 | stdio | stderr 文本 | 会话/消息通道 |
 | 退出码 | `exit_codes` 表 | 由引擎策略给出 |
-| 真实宿主 | 已接（本 phase） | 未接，无 `--fakes` 时报 `E-RUN-HOST-UNAVAILABLE` |
+| 真实宿主 | 已接（本 phase） | 已接（PH-11，工具注册表） |
 
-两个 profile 的 AST 必须相同（`test_host_fixtures.py` 逐 fixture 比对）。
+两个 profile 的 AST 必须相同（`test_host_fixtures.py` 与
+`tests/phase11/test_agent_fixtures.py` 逐 fixture 比对）。Agent 细节见
+`docs/planning/rill-0.1.0-host-matrix.md`。
 
 ## 5. fixture 形态
 
