@@ -84,3 +84,23 @@ exit=1
   任一阶段的 AST 不等都会列出前 5 个 `(path, stage)`。
 - 说明：71 = 可解析正例（去掉 tokens-only 用例）+ host 脚本；tokens-only
   用例不是合法 program，不纳入 round-trip（卡 §7 #1）。
+
+## PH-12-T4 双 profile 对照
+
+- 红提交：`test(host): PH-12-T4 红`（baseline `9636b84`）
+- 红命令：`python3 tests/phase12/test_host_matrix.py`
+- 红输出：
+
+```text
+Traceback (most recent call last):
+  File ".../tests/phase12/test_host_matrix.py", line 76, in <module>
+    main()
+  File ".../tests/phase12/test_host_matrix.py", line 70, in main
+    case_ph12_acceptance_section()
+  File ".../tests/phase12/test_host_matrix.py", line 42, in case_ph12_acceptance_section
+    assert "## 9. PH-12 双 profile 验收" in doc, "缺少 PH-12 验收章节"
+AssertionError: 缺少 PH-12 验收章节
+exit=1
+```
+
+- 绿提交：`feat(host): PH-12-T4 双 profile 对照`
