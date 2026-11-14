@@ -162,13 +162,13 @@ class Interpreter(object):
                     }
                 )
                 if not block_outcome.ok:
-                    return self._unhandled(block_outcome)
+                    return self._finish(statement, scope, self._unhandled(block_outcome))
                 cur = block_dollar
             if error_block is not None:
                 self.trace.append(
                     {"event": "error", "triggered": False, "value": None}
                 )
-            return result.ExecOutcome.success(cur)
+            return self._finish(statement, scope, result.ExecOutcome.success(cur))
 
         if ok_block is not None:
             self.trace.append({"event": "ok", "triggered": False, "value": None})
@@ -185,9 +185,17 @@ class Interpreter(object):
                 }
             )
             if not block_outcome.ok:
-                return self._unhandled(block_outcome)
-            return result.ExecOutcome.success(block_dollar)
-        return self._unhandled(failure)
+                return self._finish(statement, scope, self._unhandled(block_outcome))
+            return self._finish(
+                statement, scope, result.ExecOutcome.success(block_dollar)
+            )
+        return self._finish(statement, scope, self._unhandled(failure))
+
+    def _finish(self, statement, scope, outcome):
+        """§4.6：段尾 ok 为真才把 value 交给 ``|>`` 下游；失败中断管道。"""
+        if statement["pipe"] is None or not outcome.ok:
+            return outcome
+        return self.eval_simple(statement["pipe"], scope, outcome.value)
 
     def _run_block(self, block, scope, dollar):
         block_scope = Scope(scope)
