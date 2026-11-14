@@ -1,0 +1,1 @@
+<read> a.yml [into] { <send> $ [to] user } [into] { <write> b.yml }

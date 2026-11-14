@@ -1,0 +1,8 @@
+{
+  "case": "positive/run/segment/success-ok",
+  "run": {
+    "ok": true,
+    "value": "V",
+    "error": null
+  }
+}

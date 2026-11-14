@@ -1,0 +1,10 @@
+{
+  "kind": "run",
+  "phase": "r1",
+  "note": "成功且无 [ok]：段输出是语句执行结果（§4.11）",
+  "expect": {
+    "profile": "shell",
+    "ok": true,
+    "value": "host: a\n"
+  }
+}

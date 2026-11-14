@@ -1,0 +1,10 @@
+{
+  "kind": "run",
+  "phase": "r1",
+  "note": "管道成功：下游只收到上一段 value（§4.6，E-5）",
+  "expect": {
+    "profile": "shell",
+    "ok": true,
+    "value": null
+  }
+}

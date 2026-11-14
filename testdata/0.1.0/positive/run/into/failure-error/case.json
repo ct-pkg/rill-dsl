@@ -1,0 +1,10 @@
+{
+  "kind": "run",
+  "phase": "r1",
+  "note": "[into] 失败 + 用户 [error]：轨迹唯一（E-2）",
+  "expect": {
+    "profile": "shell",
+    "ok": true,
+    "value": "RILL DSL ERROR"
+  }
+}

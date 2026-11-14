@@ -1,0 +1,10 @@
+{
+  "kind": "run",
+  "phase": "r1",
+  "note": "多个 [into] 按书写顺序执行，后续看到前一个结果（§4.11）",
+  "expect": {
+    "profile": "shell",
+    "ok": true,
+    "value": "host: a\n"
+  }
+}

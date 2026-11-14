@@ -1,0 +1,8 @@
+{
+  "case": "positive/run/segment/failure-error",
+  "run": {
+    "ok": true,
+    "value": "boom",
+    "error": null
+  }
+}

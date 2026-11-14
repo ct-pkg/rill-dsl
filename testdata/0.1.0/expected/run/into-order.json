@@ -1,0 +1,12 @@
+{
+  "case": "positive/run/into/order",
+  "run": {
+    "ok": true,
+    "value": "host: a\n",
+    "error": null
+  },
+  "trace": [
+    {"event": "into", "ok": true, "value": "host: a\n"},
+    {"event": "into", "ok": true, "value": "host: a\n"}
+  ]
+}

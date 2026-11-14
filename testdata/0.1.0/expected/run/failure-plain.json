@@ -1,0 +1,8 @@
+{
+  "case": "positive/run/segment/failure-plain",
+  "run": {
+    "ok": false,
+    "value": null,
+    "error": "RILL DSL ERROR"
+  }
+}

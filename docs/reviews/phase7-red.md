@@ -45,3 +45,23 @@ rill.eval_simple.EvalError: [ok] 在 PH-7-T2 实现
 
 原因：T1 只实现 `[into]`，`[ok]/[error]` 仍是显式未实现分支。
 
+## T3 4 种段输出与管道下游
+
+- 命令：`python3 tests/phase7/test_segment.py`
+- 退出码：`1`
+- 原始输出：
+
+```text
+Traceback (most recent call last):
+  File "/Users/samxx/trae-ws/rill-dsl/tests/phase7/test_segment.py", line 145, in <module>
+    main()
+  File "/Users/samxx/trae-ws/rill-dsl/tests/phase7/test_segment.py", line 137, in main
+    case_pipe_passes_value_only()
+  File "/Users/samxx/trae-ws/rill-dsl/tests/phase7/test_segment.py", line 91, in case_pipe_passes_value_only
+    assert out.ok is True and out.value is None
+AssertionError
+```
+
+原因：`eval_simple` 还没有消费 `SimpleStmt.pipe`，`<read> |> <write>` 只执行了第一段。
+
+

@@ -1,0 +1,11 @@
+{
+  "kind": "run",
+  "phase": "r1",
+  "note": "管道内未处理失败：中断管道，下游不执行（§4.6）",
+  "expect": {
+    "profile": "shell",
+    "ok": false,
+    "value": null,
+    "error": "RILL DSL ERROR"
+  }
+}
