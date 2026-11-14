@@ -163,12 +163,35 @@ def case_cli_real_tools_read_and_run():
         assert payload["value"]["stdout"] == "agent-egress", payload
 
 
+def case_canonical_manifest_runs_real_tools():
+    """canonical manifest 的工具是 command 形态；真实文件内容经工具进程返回。"""
+    profile = os.path.join(HOST_ROOT, "profiles", "agent.json")
+    script = os.path.join(HOST_ROOT, "real-transport.rill")
+    with tempfile.TemporaryDirectory() as tmp:
+        log = os.path.join(tmp, "calls.log")
+        result = run_cli(
+            ["run", script, "--profile", "agent", "--host-profile", profile],
+            cwd=HOST_ROOT,
+            env={"RILL_TOOL_LOG": log},
+        )
+        assert result.returncode == 0, (result.returncode, result.stdout, result.stderr)
+        payload = payload_of(result)
+        assert payload["ok"] is True, payload
+        assert payload["value"] == "region=cn\n", payload
+        assert result.stderr == "", result.stderr
+        with open(log, encoding="utf-8") as handle:
+            calls = [json.loads(line) for line in handle if line.strip()]
+        assert [item["tool"] for item in calls] == ["read", "send"], calls
+        assert all(item["pid"] != os.getpid() for item in calls), calls
+
+
 def main():
     case_registry_accepts_command_spec()
     case_tool_leaves_process()
     case_transport_failure_is_string()
     case_transport_timeout()
     case_cli_real_tools_read_and_run()
+    case_canonical_manifest_runs_real_tools()
     print("PASS phase11 transport: command 工具走真实子进程、pid/日志可观察")
 
 

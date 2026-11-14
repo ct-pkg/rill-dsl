@@ -1,16 +1,22 @@
 """RILL 0.1.x 智能体宿主能力层（PH-11）。
 
-把工具注册表映射到与 Shell 相同的 ``HostCapabilities`` 槽位，不直接碰 OS：
-- ``ToolRegistry`` 读 ``ril-fakes-tools/0``（与 harness 的 fake 工具同形），
-  返回 ``{value, ok}``；工具错误只进错误字符串；
-- ``run`` / ``exec`` 是工具，不是进程；``send`` / ``emit`` 是工具，不写 OS stdout；
+把工具注册表映射到与 Shell 相同的 ``HostCapabilities`` 槽位，工具本体是
+外部进程：
+- ``ToolRegistry`` 读 ``ril-fakes-tools/0``（与 harness 的 fake 工具同形）：
+  ``queue/default`` 是确定性桩，``command`` 由宿主 spawn 子进程并以 JSON
+  stdin/stdout 传输，返回 ``{value, ok}``；
+- ``run`` / ``exec`` 是工具，不是宿主直接 spawn 的业务命令；``send`` / ``emit``
+  是工具，不写 OS stdout；
 - manifest 是外部能力声明（``--host-profile``），脚本无权声明授权（§五.1）。
 
 规范缺口与裁定见 ``docs/phases/PH-11/card.md`` §7。
 """
 
+import base64
 import json
 import os
+import shlex
+import subprocess
 import time
 
 from .. import fakes as fakes_mod
@@ -49,6 +55,9 @@ DEFAULT_VERBS = (
 
 TOOL_UNREGISTERED = "E-HOST-TOOL-UNREGISTERED"
 TOOL_ARGS = "E-HOST-TOOL-ARGS"
+TOOL_TRANSPORT = "E-HOST-TOOL-TRANSPORT"
+TOOL_TIMEOUT = "E-HOST-TOOL-TIMEOUT"
+TOOL_SPAWN = "E-HOST-TOOL-SPAWN"
 ENV_MISSING = "E-HOST-ENV-MISSING"
 FS_OUTSIDE = "E-HOST-FS-OUTSIDE"
 FS_TYPE = "E-HOST-FS-TYPE"
@@ -184,21 +193,75 @@ class ExecLimits(object):
             )
 
 
-class ToolRegistry(object):
-    """工具注册表；队列/默认值语义复用 PH-6 的 ``FakeVerbRegistry``。"""
+def _encode(value):
+    """把 ``Bytes`` 转成 JSON 可传输的形状（递归）；其余原样返回。"""
+    if isinstance(value, Bytes):
+        return {"$bytes": base64.b64encode(value.data).decode("ascii")}
+    if isinstance(value, list):
+        return [_encode(item) for item in value]
+    if isinstance(value, dict):
+        return {key: _encode(item) for key, item in value.items()}
+    return value
 
-    def __init__(self, spec=None, path=None):
+
+def _decode(value):
+    """还原工具响应里的 ``{"$bytes": ...}``；其余原样返回。"""
+    if isinstance(value, dict):
+        if set(value) == {"$bytes"} and isinstance(value["$bytes"], str):
+            return Bytes(base64.b64decode(value["$bytes"]))
+        return {key: _decode(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_decode(item) for item in value]
+    return value
+
+
+class ToolRegistry(object):
+    """工具注册表；``queue/default`` 是确定性桩，``command`` 是真实子进程。"""
+
+    DEFAULT_TIMEOUT_MS = 5000
+
+    def __init__(self, spec=None, path=None, cwd=None, env=None, timeout_ms=None):
         spec = spec or {}
         self.path = path
+        self.cwd = cwd or os.getcwd()
+        self.env = dict(env or {})
+        self.timeout_ms = timeout_ms or self.DEFAULT_TIMEOUT_MS
         self._names = tuple(sorted(spec))
+        self._commands = {}
         self._verbs = fakes_mod.FakeVerbRegistry()
         for name, item in spec.items():
             if not isinstance(item, dict):
                 raise ValueError("工具 %r 的描述必须是对象" % name)
+            if "command" in item:
+                self._commands[name] = self._command_spec(name, item)
+                continue
             self._verbs.register(name, item.get("queue", []), default=item.get("default"))
 
+    def _command_spec(self, name, item):
+        command = item["command"]
+        if isinstance(command, str):
+            argv = shlex.split(command)
+        elif isinstance(command, list) and all(
+            isinstance(part, str) and part for part in command
+        ):
+            argv = list(command)
+        else:
+            raise ValueError(
+                "工具 %r.command: 必须是非空字符串或非空字符串数组" % name
+            )
+        if not argv:
+            raise ValueError("工具 %r.command: 不能为空" % name)
+        timeout = item.get("timeout_ms", self.timeout_ms)
+        if not isinstance(timeout, int) or timeout <= 0:
+            raise ValueError("工具 %r.timeout_ms: 必须是正整数" % name)
+        allowed = {"command", "timeout_ms", "description"}
+        for key in sorted(item):
+            if key not in allowed:
+                raise ValueError("工具 %r: command 形态不接受字段 %r" % (name, key))
+        return argv, timeout
+
     @classmethod
-    def load(cls, path):
+    def load(cls, path, cwd=None):
         try:
             with open(path, encoding="utf-8") as handle:
                 doc = json.load(handle)
@@ -211,7 +274,7 @@ class ToolRegistry(object):
         tools = doc.get("tools")
         if not isinstance(tools, dict):
             raise ValueError("%s.tools: 必须是对象" % path)
-        return cls(tools, path=path)
+        return cls(tools, path=path, cwd=cwd)
 
     @property
     def names(self):
@@ -220,7 +283,13 @@ class ToolRegistry(object):
     def has(self, name):
         return name in self._names
 
+    def has_command(self, name):
+        """``True`` 表示该工具走真实子进程，不是队列桩。"""
+        return name in self._commands
+
     def call(self, name, args):
+        if name in self._commands:
+            return self._call_command(name, args)
         try:
             return self._verbs.call(name, args)
         except KeyError:
@@ -231,6 +300,79 @@ class ToolRegistry(object):
                     "tool": {"name": name, "args": args, "code": TOOL_UNREGISTERED}
                 },
             )
+
+    def _call_command(self, name, args):
+        argv, timeout = self._commands[name]
+        request = json.dumps(
+            {"tool": name, "args": _encode(args)}, ensure_ascii=False
+        ).encode("utf-8")
+        merged = dict(os.environ)
+        merged.update(self.env)
+        try:
+            proc = subprocess.Popen(
+                argv,
+                cwd=self.cwd,
+                env=merged,
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            )
+        except OSError as exc:
+            return result.ExecOutcome.failure(
+                "%s: 无法启动工具 %r（%s）" % (TOOL_SPAWN, name, exc),
+                host_meta={"transport": {"kind": "process", "tool": name}},
+            )
+
+        try:
+            stdout, stderr = proc.communicate(request, timeout=timeout / 1000.0)
+        except subprocess.TimeoutExpired:
+            proc.kill()
+            stdout, stderr = proc.communicate()
+            return result.ExecOutcome.failure(
+                "%s: 工具 %r 超时（%dms）"
+                % (TOOL_TIMEOUT, name, timeout),
+                host_meta={
+                    "transport": {
+                        "kind": "process",
+                        "tool": name,
+                        "pid": proc.pid,
+                        "argv": argv,
+                    }
+                },
+            )
+
+        meta = {
+            "transport": {
+                "kind": "process",
+                "tool": name,
+                "pid": proc.pid,
+                "argv": argv,
+                "code": proc.returncode,
+            }
+        }
+        text = stdout.decode("utf-8", "replace").strip()
+        if not text:
+            return result.ExecOutcome.failure(
+                "%s: 工具 %r 没有输出 JSON（stderr=%r）"
+                % (TOOL_TRANSPORT, name, stderr.decode("utf-8", "replace").strip()),
+                host_meta=meta,
+            )
+        try:
+            doc = json.loads(text)
+        except ValueError:
+            return result.ExecOutcome.failure(
+                "%s: 工具 %r 的输出不是 JSON：%r" % (TOOL_TRANSPORT, name, text),
+                host_meta=meta,
+            )
+        if not isinstance(doc, dict) or not isinstance(doc.get("ok"), bool):
+            return result.ExecOutcome.failure(
+                "%s: 工具 %r 的响应缺少布尔 ok" % (TOOL_TRANSPORT, name),
+                host_meta=meta,
+            )
+        if doc["ok"]:
+            return result.ExecOutcome.success(_decode(doc.get("value")), host_meta=meta)
+        error = doc.get("error") or "E-HOST-TOOL-FAILED: 工具 %r 返回 ok=false" % name
+        return result.ExecOutcome.failure(str(error), host_meta=meta)
 
 
 def _attach(outcome, meta):
@@ -282,10 +424,10 @@ class AgentPolicy(object):
         return "AgentPolicy(%s, role=%r)" % (self.name, self.role)
 
 
-def _load_tools(path):
+def _load_tools(path, workspace=None):
     if not path:
-        return ToolRegistry({}, path=None)
-    return ToolRegistry.load(path)
+        return ToolRegistry({}, path=None, cwd=workspace)
+    return ToolRegistry.load(path, cwd=workspace)
 
 
 def load_agent_profile(path, cwd=None):
@@ -366,7 +508,7 @@ def load_agent_profile(path, cwd=None):
     if tools_ref and not isinstance(tools_ref, str):
         raise ValueError("%s.tools: 必须是相对路径字符串" % path)
     tools_path = os.path.join(os.path.dirname(os.path.abspath(path)), tools_ref) if tools_ref else ""
-    tools = _load_tools(tools_path)
+    tools = _load_tools(tools_path, workspace)
 
     return AgentPolicy(
         doc["name"],
