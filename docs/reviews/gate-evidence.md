@@ -89,3 +89,35 @@ check g8-version: 0 passed, 0 failed, 1 warnings, 1 skipped
   检查会 `SKIP` 而不是误判为通过。收口对照表需贴 `git log --oneline` 佐证命名。
 - `g1-phase-card` 的 T-5 采用“任务 `覆盖` 列不得等于全部退出判据”的机械近似；
   判据是否真的写死、是否可核对，仍需 REVIEW 逐条读卡。
+
+## 6. DOC-S2 豁免与版本措辞（2026-11-15）
+
+`doc_size.py` 新增 `WAIVED` 表后，必须证明“仍会红、豁免只对登记路径生效”。
+构造：`ROOT=<tmp>`，先放一份 302 行 `README.md`（未登记），再放一份 301 行
+`docs/RILL-0.1.0.md`（已登记）。
+
+```console
+$ ROOT=/tmp/probe python3 tools/checks/doc_size.py   # README 302 行
+FAIL  README.md:1 302 行 > 300（DOC-S2）
+WARN  豁免 docs/RILL-0.1.0.md：语言规范正文，0.1.x 只读；拆分会破坏 PH 卡与决策引用的稳定锚点
+check doc-size: 0 passed, 1 failed, 1 warnings, 0 skipped
+rc=1
+
+$ ROOT=/tmp/probe python3 tools/checks/doc_size.py   # README 改回 1 行
+PASS  1 份文档均在 300 行以内（含 AGENTS.md 剔除生成块）
+WARN  豁免 docs/RILL-0.1.0.md：语言规范正文，0.1.x 只读；拆分会破坏 PH 卡与决策引用的稳定锚点
+check doc-size: 1 passed, 0 failed, 1 warnings, 0 skipped
+rc=0
+```
+
+`version_wording.py` 跳过 sha256 锁定的主规范副本后，仍对项目措辞报错：
+
+```console
+$ printf 'v9.9.9\n' > /tmp/probe/docs/spec/x.md
+$ ROOT=/tmp/probe python3 tools/checks/version_wording.py
+FAIL  docs/spec/x.md:1 出现未定义版本 'v9.9.9'（允许：v0.1、v0.12.0、v1.7.0、v1.9.0）
+check version-wording: 0 passed, 1 failed, 0 warnings, 0 skipped
+rc=1
+```
+
+真实仓库当前：`bash tools/check.sh all` → 0 FAIL，7 份豁免逐份 `WARN`。

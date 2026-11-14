@@ -2,7 +2,7 @@
 
 用法：python3 tests/phase12/test_known_limits_doc.py（退出 0 = 通过）。
 覆盖 E-7 的收尾说明：生产工具/权限、并发调度、pending、formatter 缺口与
-``tools/check.sh all`` 的既有失败必须逐类写清，且基线数量与实测一致。
+``tools/check.sh all`` 的门禁状态必须逐类写清，且数量与实测一致。
 """
 
 import os
@@ -61,20 +61,20 @@ def case_baseline_failures_match():
         text=True,
     )
     fails = [line for line in result.stdout.splitlines() if line.startswith("FAIL")]
-    assert len(fails) == 21, (
-        "check.sh all 的 FAIL 数变了：%d（先判断是否本阶段新增）" % len(fails),
+    assert len(fails) == 0, (
+        "check.sh all 仍有 FAIL：%d（先判断是否本阶段新增）" % len(fails),
         fails[:5],
     )
-    assert "21" in doc, "限制清单必须写出基线 FAIL 数 21"
+    assert "0 FAIL" in doc, "限制清单必须写出文档门禁 0 FAIL"
     for kind in ("DOC-S2", "断链", "未定义版本"):
-        assert kind in doc, "基线失败分类缺少：%s" % kind
+        assert kind in doc, "基线分类缺少：%s" % kind
 
 
 def main():
     case_sections_exist()
     case_key_limits_are_named()
     case_baseline_failures_match()
-    print("PASS phase12 limits: 生产/并发/pending/formatter/基线 21 FAIL")
+    print("PASS phase12 limits: 生产/并发/pending/formatter/文档门禁 0 FAIL")
 
 
 if __name__ == "__main__":

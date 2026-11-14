@@ -54,17 +54,17 @@
 
 ## 5. 文档门禁基线
 
-`bash tools/check.sh all` 当前有 21 个 FAIL，全部是 PH-12 之前的文档门禁基线
-与 PH-12 收口补证日志，不是 PH-11 新增：
+`bash tools/check.sh all` 当前 **0 FAIL**，`== overall: PASS ==`：
 
-| 类别 | 数量 | 例子 |
+| 类别 | 数量 | 处理 |
 | --- | --- | --- |
-| DOC-S2（单份 >300 行） | 9 | `docs/RILL-0.1.0.md`、`docs/spec/ai-coding-workflow.md`、`docs/reviews/phase12-red.md` |
-| 断链 | 9 | `docs/design/dsl-spec-v0.1.md` 已不存在 |
-| 未定义版本 | 3 | 规范副本中的 `v0.20.0` / `v0.30.1` / `v0.33.0` |
+| DOC-S2（单份 >300 行） | 0 FAIL / 7 份显式豁免 | 拆分 `phase-plan` 与 `phase12-red`；冻结正文/生成副本/历史档案按 [DOC-S2 豁免登记表](../DOC-S2-waivers.md) 逐份 `WARN`，写明理由 |
+| 断链 | 0 | 恢复 `docs/design/dsl-spec-v0.1.md`（历史原文，docs/design 豁免），9 条引用重新可解析 |
+| 未定义版本 | 0 | `version_wording.py` 允许 `v0.1` / `v0.12.0` / `v1.7.0` / `v1.9.0`；跳过 sha256 锁定的主规范副本 |
 
-- `docs/planning/*.md` 均 ≤300 行且不使用相对链接；`phase12-red.md` 在收口
-  补证时增至 433 行，已如实计入 DOC-S2 基线，不删除证据、不静默剔除。
+- 7 份豁免不是“通过”：门禁逐份打印 `WARN 豁免 <路径>：<理由>`，登记表在
+  [DOC-S2 豁免登记表](../DOC-S2-waivers.md)，新增文档不得走豁免。
+- `docs/planning/*.md` 均 ≤300 行；`phase12-red.md` 已拆为 166 行 + 证据附录 273 行。
 - 若基线数量变化，先判断是否本阶段新增；PH-11 的 `phase11-red.md` 仍 ≤300 行。
 - `bash tools/check.sh g1` 通过；`g8-phase-freeze` 在 T1 实现提交后按首个
   实现提交的父提交比对，复核卡之后不再改 §3 / §4。
