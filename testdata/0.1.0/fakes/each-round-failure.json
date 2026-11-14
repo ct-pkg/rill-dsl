@@ -1,0 +1,16 @@
+{
+  "schema": "rill-fakes-tools/0",
+  "description": "each 第二轮失败：用于失败轮占 null、循环继续与 each 级 [error]。",
+  "tools": {
+    "search": {"queue": [], "default": {"ok": true, "value": ["a", "b", "c"]}},
+    "read": {
+      "queue": [
+        {"ok": true, "value": "A"},
+        {"ok": false, "error": "boom"},
+        {"ok": true, "value": "C"}
+      ],
+      "default": {"ok": false, "error": "E_SCRIPT_EXHAUSTED"}
+    },
+    "send": {"queue": [], "default": {"ok": true, "value": null}}
+  }
+}

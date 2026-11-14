@@ -1,0 +1,11 @@
+{
+  "kind": "run",
+  "phase": "r1",
+  "note": "3 段管道中段失败由本段 [error] 处理：错误不回溯上游，下游照常收到处理的 value（E-1）",
+  "fakes": "fakes/write-fail.json",
+  "expect": {
+    "profile": "shell",
+    "ok": true,
+    "value": {"format": "yaml"}
+  }
+}

@@ -107,6 +107,7 @@ def case_trace_golden():
         assert outcome.value == golden["run"]["value"], "%s: value 不符" % name
         assert outcome.error == golden["run"]["error"], "%s: error 不符" % name
         assert interp.trace == golden["trace"], "%s: 轨迹与 golden 不符" % name
+        assert interp.log == golden["log"], "%s: 工具调用序列与 golden 不符" % name
 
 
 def main():

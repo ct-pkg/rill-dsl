@@ -1,0 +1,10 @@
+{
+  "schema": "rill-fakes-tools/0",
+  "description": "write 失败：用于管道段内 [error] 的覆盖范围与 break 场域。",
+  "tools": {
+    "read": {"queue": [], "default": {"ok": true, "value": "V"}},
+    "write": {"queue": [], "default": {"ok": false, "error": "boom"}},
+    "parse": {"queue": [], "default": {"ok": true, "value": {"format": "yaml"}}},
+    "send": {"queue": [], "default": {"ok": true, "value": null}}
+  }
+}

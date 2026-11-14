@@ -1,0 +1,133 @@
+{
+  "case": "positive/run/control/each-round-failure",
+  "run": {
+    "ok": false,
+    "value": null,
+    "error": "RILL DSL ERROR"
+  },
+  "trace": [
+    {
+      "event": "call",
+      "verb": "search",
+      "ok": true,
+      "value": [
+        "a",
+        "b",
+        "c"
+      ],
+      "error": null
+    },
+    {
+      "event": "call",
+      "verb": "read",
+      "ok": true,
+      "value": "A",
+      "error": null
+    },
+    {
+      "event": "segment",
+      "ok": true,
+      "value": "A",
+      "error": null
+    },
+    {
+      "event": "round",
+      "index": 0,
+      "ok": true,
+      "value": "A",
+      "error": null
+    },
+    {
+      "event": "call",
+      "verb": "read",
+      "ok": false,
+      "value": null,
+      "error": "boom"
+    },
+    {
+      "event": "segment",
+      "ok": false,
+      "value": null,
+      "error": "RILL DSL ERROR"
+    },
+    {
+      "event": "round",
+      "index": 1,
+      "ok": false,
+      "value": null,
+      "error": "RILL DSL ERROR"
+    },
+    {
+      "event": "call",
+      "verb": "read",
+      "ok": true,
+      "value": "C",
+      "error": null
+    },
+    {
+      "event": "segment",
+      "ok": true,
+      "value": "C",
+      "error": null
+    },
+    {
+      "event": "round",
+      "index": 2,
+      "ok": true,
+      "value": "C",
+      "error": null
+    },
+    {
+      "event": "segment",
+      "ok": false,
+      "value": null,
+      "error": "RILL DSL ERROR"
+    }
+  ],
+  "log": [
+    {
+      "verb": "search",
+      "subject": null,
+      "object": "*.yml",
+      "post": [],
+      "input": null,
+      "ok": true,
+      "value": [
+        "a",
+        "b",
+        "c"
+      ],
+      "error": null
+    },
+    {
+      "verb": "read",
+      "subject": null,
+      "object": "a",
+      "post": [],
+      "input": "a",
+      "ok": true,
+      "value": "A",
+      "error": null
+    },
+    {
+      "verb": "read",
+      "subject": null,
+      "object": "b",
+      "post": [],
+      "input": "b",
+      "ok": false,
+      "value": null,
+      "error": "boom"
+    },
+    {
+      "verb": "read",
+      "subject": null,
+      "object": "c",
+      "post": [],
+      "input": "c",
+      "ok": true,
+      "value": "C",
+      "error": null
+    }
+  ]
+}

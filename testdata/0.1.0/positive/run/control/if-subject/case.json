@@ -1,0 +1,11 @@
+{
+  "kind": "run",
+  "phase": "r1",
+  "note": "if 条件带主语：$cfg <contains> debug=true 在运行期归约并求值（E-2）",
+  "fakes": "fakes/if-subject.json",
+  "expect": {
+    "profile": "shell",
+    "ok": true,
+    "value": "on"
+  }
+}

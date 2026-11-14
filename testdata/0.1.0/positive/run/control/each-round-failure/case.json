@@ -1,0 +1,12 @@
+{
+  "kind": "run",
+  "phase": "r1",
+  "note": "某轮未处理失败：循环继续，each 无 [error] 时按默认 break 收口（E-4）",
+  "fakes": "fakes/each-round-failure.json",
+  "expect": {
+    "profile": "shell",
+    "ok": false,
+    "value": null,
+    "error": "RILL DSL ERROR"
+  }
+}

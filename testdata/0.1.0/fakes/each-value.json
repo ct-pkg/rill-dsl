@@ -1,0 +1,15 @@
+{
+  "schema": "rill-fakes-tools/0",
+  "description": "each 正常遍历：search 给两项，read 每项返回可区分的值。",
+  "tools": {
+    "search": {"queue": [], "default": {"ok": true, "value": ["a.yml", "b.yml"]}},
+    "read": {
+      "queue": [
+        {"ok": true, "value": "a.yml"},
+        {"ok": true, "value": "b.yml"}
+      ],
+      "default": {"ok": false, "error": "E_SCRIPT_EXHAUSTED"}
+    },
+    "send": {"queue": [], "default": {"ok": true, "value": null}}
+  }
+}

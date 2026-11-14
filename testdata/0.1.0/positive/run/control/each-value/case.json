@@ -1,0 +1,11 @@
+{
+  "kind": "run",
+  "phase": "r1",
+  "note": "each 正常遍历：结果数组按轮数、每轮取最后一条语句的段输出（E-3/E-4）",
+  "fakes": "fakes/each-value.json",
+  "expect": {
+    "profile": "shell",
+    "ok": true,
+    "value": ["a.yml", "b.yml"]
+  }
+}

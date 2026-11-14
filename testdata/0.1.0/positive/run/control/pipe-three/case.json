@@ -1,0 +1,10 @@
+{
+  "kind": "run",
+  "phase": "r1",
+  "note": "3 段管道全部成功：段间只传 value，最终 value 是末段结果（E-1）",
+  "expect": {
+    "profile": "shell",
+    "ok": true,
+    "value": null
+  }
+}

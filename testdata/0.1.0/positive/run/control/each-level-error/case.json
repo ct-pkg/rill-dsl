@@ -1,0 +1,11 @@
+{
+  "kind": "run",
+  "phase": "r1",
+  "note": "each 级 [error]：有未处理失败轮时触发，$ 是第一个失败轮的错误串（E-4）",
+  "fakes": "fakes/each-round-failure.json",
+  "expect": {
+    "profile": "shell",
+    "ok": true,
+    "value": "RILL DSL ERROR"
+  }
+}

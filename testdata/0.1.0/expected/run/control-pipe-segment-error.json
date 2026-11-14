@@ -1,0 +1,117 @@
+{
+  "case": "positive/run/control/pipe-segment-error",
+  "run": {
+    "ok": true,
+    "value": {
+      "format": "yaml"
+    },
+    "error": null
+  },
+  "trace": [
+    {
+      "event": "call",
+      "verb": "read",
+      "ok": true,
+      "value": "V",
+      "error": null
+    },
+    {
+      "event": "call",
+      "verb": "write",
+      "ok": false,
+      "value": null,
+      "error": "boom"
+    },
+    {
+      "event": "call",
+      "verb": "send",
+      "ok": true,
+      "value": null,
+      "error": null
+    },
+    {
+      "event": "segment",
+      "ok": true,
+      "value": null,
+      "error": null
+    },
+    {
+      "event": "error",
+      "triggered": true,
+      "value": "boom"
+    },
+    {
+      "event": "call",
+      "verb": "parse",
+      "ok": true,
+      "value": {
+        "format": "yaml"
+      },
+      "error": null
+    },
+    {
+      "event": "assign",
+      "target": "last",
+      "value": {
+        "format": "yaml"
+      }
+    },
+    {
+      "event": "segment",
+      "ok": true,
+      "value": {
+        "format": "yaml"
+      },
+      "error": null
+    }
+  ],
+  "log": [
+    {
+      "verb": "read",
+      "subject": null,
+      "object": "a.yml",
+      "post": [],
+      "input": null,
+      "ok": true,
+      "value": "V",
+      "error": null
+    },
+    {
+      "verb": "write",
+      "subject": null,
+      "object": "b.yml",
+      "post": [],
+      "input": "V",
+      "ok": false,
+      "value": null,
+      "error": "boom"
+    },
+    {
+      "verb": "send",
+      "subject": null,
+      "object": "handled",
+      "post": [
+        {
+          "prep": "to",
+          "object": "user"
+        }
+      ],
+      "input": "boom",
+      "ok": true,
+      "value": null,
+      "error": null
+    },
+    {
+      "verb": "parse",
+      "subject": null,
+      "object": "boom",
+      "post": [],
+      "input": "boom",
+      "ok": true,
+      "value": {
+        "format": "yaml"
+      },
+      "error": null
+    }
+  ]
+}

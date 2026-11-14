@@ -1,0 +1,1 @@
+<read> a.yml |> <parse> yaml |> <write> b.yml

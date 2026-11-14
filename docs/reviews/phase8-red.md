@@ -95,3 +95,29 @@ AssertionError: 缺少用例：positive/run/control/if-subject
 
 原因：`control/` 下的 run 用例与 `expected/run/control-*.json` 尚未落盘；
 T4 的交付物就是这批可独立验收的用例与轨迹。
+
+## 转绿记录
+
+| 任务 | 命令 | 结果 |
+| --- | --- | --- |
+| T1 | `python3 tests/phase8/test_if.py` | `PASS phase8 if: truthy 表、[ok] 分离、主语条件、else-if、条件管道`，exit 0 |
+| T2 | `python3 tests/phase8/test_each.py` | `PASS phase8 each: 三形态、每轮作用域、失败轮 null、each 级 ok/error`，exit 0 |
+| T3 | `python3 tests/phase8/test_break.py` | `PASS phase8 break: 三场域、each+break 三组合、裸词捕捉`，exit 0 |
+| T4 | `python3 tests/phase8/test_cases.py` | `PASS phase8 cases: 7 个 run 用例、2 份轨迹 golden`，exit 0 |
+
+整桶与整仓：
+
+```text
+bash tools/check-0.1.0.sh --kind run --bucket positive
+→ compliance: 15 passed, 0 failed, 0 blocked, 0 draft
+→ VERDICT: PASS (exit 0)
+
+bash tools/check-0.1.0.sh
+→ compliance: 73 passed, 0 failed, 0 blocked, 0 draft
+→ smoke: 2 passed, 0 failed
+→ VERDICT: PASS (exit 0)
+
+bash tools/check.sh g1 / g8
+→ g1: PARTIAL（卡片与索引已校验，验收命令按“尚未落盘”登记）
+→ g8: PARTIAL（phase 冻结与版本落点已校验）
+```

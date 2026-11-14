@@ -1,0 +1,9 @@
+{
+  "schema": "rill-fakes-tools/0",
+  "description": "if 主语条件：read 出对象，contains 对主语返回 true。",
+  "tools": {
+    "read": {"queue": [], "default": {"ok": true, "value": {"debug": true}}},
+    "contains": {"queue": [], "default": {"ok": true, "value": true}},
+    "send": {"queue": [], "default": {"ok": true, "value": null}}
+  }
+}

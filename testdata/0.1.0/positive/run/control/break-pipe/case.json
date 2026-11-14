@@ -1,0 +1,11 @@
+{
+  "kind": "run",
+  "phase": "r1",
+  "note": "管道段内 [error] 里 break：只中断管道，program 以 break 值收口（E-5）",
+  "fakes": "fakes/write-fail.json",
+  "expect": {
+    "profile": "shell",
+    "ok": true,
+    "value": "halt"
+  }
+}
