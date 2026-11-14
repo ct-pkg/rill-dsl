@@ -135,3 +135,25 @@ exit=1
 - 绿命令与输出：`python3 tests/phase12/test_acceptance_doc.py` →
   `PASS phase12 acceptance: 四类清单 + 真实计数 85/83/pending 0`（exit 0）
 - 说明：报告里的计数直接由 `--all --json` 复算，避免手抄漂移。
+
+## PH-12-T6 已知限制
+
+- 红提交：`test(acceptance): PH-12-T6 红`（baseline `1c34c21`）
+- 红命令：`python3 tests/phase12/test_known_limits_doc.py`
+- 红输出：
+
+```text
+Traceback (most recent call last):
+  File ".../tests/phase12/test_known_limits_doc.py", line 81, in <module>
+    main()
+  File ".../tests/phase12/test_known_limits_doc.py", line 74, in main
+    case_sections_exist()
+  File ".../tests/phase12/test_known_limits_doc.py", line 27, in case_sections_exist
+    doc = read_doc()
+  File ".../tests/phase12/test_known_limits_doc.py", line 21, in read_doc
+    assert os.path.isfile(DOC), "缺少已知限制：%s" % DOC
+AssertionError: 缺少已知限制：.../docs/planning/rill-0.1.0-known-limits.md
+exit=1
+```
+
+- 绿提交：`docs(acceptance): PH-12-T6 已知限制`
