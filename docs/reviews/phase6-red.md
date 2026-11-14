@@ -71,5 +71,8 @@ Traceback (most recent call last):
 ImportError: cannot import name 'verbs' from 'rill' (/Users/samxx/trae-ws/rill-dsl/tests/phase6/../../src/rill/__init__.py)
 ```
 
+- green: `python3 tests/phase6/test_verbs.py` → `rc=0`，
+  `PASS verbs: 队列顺序、default、空队列失败、未注册 KeyError`。
+
 
 
