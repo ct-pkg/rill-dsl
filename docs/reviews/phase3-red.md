@@ -37,3 +37,25 @@ VERDICT: NOT IMPLEMENTED (exit 3)
 ```
 
 - green: 待实现
+
+## PH-3-T3
+
+- baseline: `ff534e1`
+- 命令: `bash tools/check-0.1.0.sh --kind ast --bucket positive`
+- 退出码: `1`
+- 原始输出（节选；`map/verb-marker` 与 `simple/subject-var` 已被 T2 覆盖，故提前 PASS）：
+
+```text
+FAIL    positive/call/basic (ast)  SUT 错误：//fn{} 区块在 PH-3-T3 加入
+FAIL    positive/map/header (ast)  SUT 错误：管道在 PH-3-T3 加入
+FAIL    positive/pipe/multi-line (ast)  SUT 错误：管道在 PH-3-T3 加入
+FAIL    positive/prep/ok-as-prep (ast)  SUT 错误：尾随块在 PH-3-T4 加入
+FAIL    positive/quotes/escapes (ast)  SUT 错误：尾随块在 PH-3-T4 加入
+FAIL    positive/simple/assign (ast)  SUT 错误：-> 赋值在 PH-3-T3 加入
+FAIL    positive/simple/prep-phrases (ast)  SUT 错误：尾随块在 PH-3-T4 加入
+summary
+  compliance: 5 passed, 7 failed, 0 blocked, 10 draft
+VERDICT: FAIL (exit 1)
+```
+
+- green: 待实现

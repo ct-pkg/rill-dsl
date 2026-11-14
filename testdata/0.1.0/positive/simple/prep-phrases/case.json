@@ -1,6 +1,30 @@
 {
   "kind": "ast",
   "phase": "p2",
-  "note": "多个介宾短语按书写顺序保留（评审 R-01）",
-  "expect": {"profiles": ["shell"]}
+  "note": "多个介宾短语按书写顺序保留；状语可夹在介宾之间（规范 §4.13 示例，见卡片 §8 缺口 2）",
+  "expect": {
+    "profiles": ["shell"],
+    "ast": {
+      "kind": "Program",
+      "headers": [],
+      "body": [
+        {
+          "kind": "SimpleStmt",
+          "call": {
+            "kind": "VerbCall",
+            "subject": null,
+            "verb": "replace",
+            "object": {"kind": "Bare", "text": "localhost"},
+            "post": [
+              {"kind": "PrepPhrase", "prep": "with", "object": {"kind": "Bare", "text": "prod"}},
+              {"kind": "Adverb", "items": [{"kind": "Bare", "text": "global"}]},
+              {"kind": "PrepPhrase", "prep": "in", "object": {"kind": "Variable", "name": "file"}}
+            ]
+          },
+          "tail": [],
+          "pipe": null
+        }
+      ]
+    }
+  }
 }

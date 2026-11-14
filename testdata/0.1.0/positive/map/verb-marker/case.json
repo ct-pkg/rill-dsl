@@ -1,6 +1,34 @@
 {
   "kind": "ast",
   "phase": "p2",
-  "note": "B1：//map{} 块内 < 是 MAP_MARK（r<read），块外 <r> 是动词定界；s'my application 是值映射（§3.2 / §4.17 / §4.20）",
-  "expect": {"profiles": ["shell"]}
+  "note": "B1：//map{} 块内 < 是 MAP_MARK（r<read），块外 <r> 是动词；s'my application 是值映射（§3.2 / §4.17）",
+  "expect": {
+    "profiles": ["shell"],
+    "ast": {
+      "kind": "Program",
+      "headers": [
+        {
+          "kind": "MapBlock",
+          "entries": [
+            {"kind": "MapEntry", "short": "r", "marker": "<", "long": "read"},
+            {"kind": "MapEntry", "short": "s", "marker": "'", "long": "my application"}
+          ]
+        }
+      ],
+      "body": [
+        {
+          "kind": "SimpleStmt",
+          "call": {
+            "kind": "VerbCall",
+            "subject": null,
+            "verb": "read",
+            "object": {"kind": "String", "value": "my application"},
+            "post": []
+          },
+          "tail": [],
+          "pipe": null
+        }
+      ]
+    }
+  }
 }
