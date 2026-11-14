@@ -1,6 +1,7 @@
-# phase 卡片与收口账体系（PH-1…PH-12）
+# phase 卡片与收口账体系（PH-1…PH-21）
 
-本目录把 `docs/planning/rill-0.1.0-roadmap.md` 的 12 个阶段落成可冻结、可门禁的 phase 卡片。
+本目录把 `docs/planning/rill-0.1.0-roadmap.md` 的 12 个阶段与
+`docs/planning/rill-0.1.0-ct-rewrite-roadmap.md` 的 9 个 CT 重写阶段落成可冻结、可门禁的 phase 卡片。
 体系依据：主规范 `ai-coding-workflow.md` 1.9.0 §6.2（phase 交付流程）、§6.3（三档流程）、
 §6.4（门禁）、§6.6（任务切分）、§6.7（版本号）。本目录只记账，不改
 `docs/RILL-0.1.0.md` 正文，也不改 roadmap / phase-plan 的阶段编号与并行结论。
@@ -12,7 +13,8 @@
 | 卡片 | `docs/phases/PH-<n>/card.md`，`n` 与 roadmap 的 phase `n` 一一对应 |
 | 收口对照表 | `docs/reviews/closeout-<n>.md`（阶段 2、3 的模板已建，其余收口时新建） |
 | 门禁红证 | `docs/reviews/gate-evidence.md`（新增检查的负例原始输出） |
-| 编号口径 | `PH-1`=基座、`PH-2`=词法、…、`PH-12`=双宿主集成，见 roadmap 附录新旧对照 |
+| 编号口径 | `PH-1`=基座、`PH-2`=词法、…、`PH-12`=双宿主集成；`PH-13`…`PH-21` 是 CT 重写 P1…P9，见 `docs/planning/rill-0.1.0-ct-rewrite-roadmap.md` |
+| 对拍产物 | `tools/diff/`（脚本，PH-13 首次建立）与 `docs/reviews/diff/PH-<n>.md`（每阶段收口必附） |
 
 `PH-1` 与 `PH-2` 的实物产出早于本体系，因此写「对照卡」：格式与正常卡一致，但明确标注
 事后补记、判据与红证在该阶段未成立，并列出可还原证据与永久缺失项（见各自 §7）。

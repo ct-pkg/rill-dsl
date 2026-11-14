@@ -48,6 +48,21 @@ RILL 的早期目标有两个宿主：
 - **phase 12 双 profile 验收**：同一 fixture 在两个 profile 上必须得到相同 AST；运行结果只在能力可等价时比较，不等价处标记 host-specific。
 - **禁止语法的宿主特判**：任何“反正只在智能体里跑”或“反正在 shell 里跑”的语法放宽/收紧，必须回到 0.1.1 正文重审，不能写进 parser 分支。
 
+## 0.2 实现状态与重写去向（2026-11-15 补记）
+
+上表 §0 是 0.1.1 规划期的历史快照（当时 lexer/parser/解释器确为 0），保留不改。当前状态：
+
+| 项 | 状态 |
+| --- | --- |
+| Python 参考实现 | `src/rill/`，产品 0.12.0，PH-1…PH-12 已收口；**永久保留为参考实现与对拍基准**，不随 CT 版淘汰 |
+| CT 正式实现 | 未完成。`ct/rill_ct.ct` 覆盖 tokenize → parse → JSON，属另一会话在途；其余层未开始 |
+| 实现语言账 | R-005 已从 pending 翻面为 decided：CT 为正式实现，Python 为长期参考实现 |
+| 重写路线图 | `docs/planning/rill-0.1.0-ct-rewrite-roadmap.md`（PH-13…PH-21，P1…P9） |
+| fixture / golden | 语言中立，继续作为**第三方基准**复用；不得为迁就任一实现修改 |
+| 对拍 | 每阶段收口固定附 `docs/reviews/diff/PH-<n>.md`；脚本在 `tools/diff/`（PH-13 首次建立） |
+
+本文件 phase 1–12 的编号、依赖与并行结论不因重写而改变；CT 重写另立续号，不改写历史。
+
 ## 1. 完成定义
 
 本路线图的“可运行实现”指：
