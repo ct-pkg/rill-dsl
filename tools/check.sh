@@ -45,7 +45,8 @@ g0() {
 
 g1() {
   run_py spec_index.py
-  printf '\nNOTE  g1: PARTIAL — S/T 编号与索引已校验；每条要求的验收命令/阈值与 phase 卡片检查在 Phase 1 后启用（当前统一写“尚未落盘”）\n'
+  run_py phase_card.py
+  printf '\nNOTE  g1: PARTIAL — S/T 编号、索引与 phase 卡片已校验；每条要求的验收命令/阈值仍按“尚未落盘”登记\n'
 }
 
 g4() {
@@ -62,6 +63,12 @@ g6() {
   printf '\nNOTE  g6: PARTIAL — Issue 状态词与台账闭合在 Phase 1 后启用（当前 0 条 issue）\n'
 }
 
+g8() {
+  run_py g8_phase_freeze.py
+  run_py g8_version.py
+  printf '\nNOTE  g8: PARTIAL — 只校验 phase 卡片冻结与 tag/版本落点；提交粒度、T-7 父子提交与 PATCH 计数在收口对照表人工核\n'
+}
+
 g9() {
   run_py g9_spec_pin.py
   printf '\nNOTE  g9: PARTIAL — 主规范仓库侧的 sync-agents.sh 校验已由 g0-block 覆盖\n'
@@ -72,13 +79,13 @@ all() {
   g1
   g4
   g6
+  g8
   g9
   disabled g2 "无 ACC-* 条目"
   disabled g3 "无构建、无单测"
   disabled g5 "无测试用例与红证"
   disabled g7 "无源码与依赖锁"
-  disabled g8 "无实现提交；提交粒度与红证规则从 Phase 1 起生效"
-  printf '\ndisabled: g2 g3 g5 g7 g8（依赖实现或 ACC/测试资产，当前启用必然失败）\n'
+  printf '\ndisabled: g2 g3 g5 g7（依赖实现或 ACC/测试资产，当前启用必然失败）\n'
 }
 
 case "${1:-all}" in
@@ -90,7 +97,7 @@ case "${1:-all}" in
   g5) disabled g5 "无测试用例与红证" ;;
   g6) g6 ;;
   g7) disabled g7 "无源码与依赖锁" ;;
-  g8) disabled g8 "无实现提交" ;;
+  g8) g8 ;;
   g9) g9 ;;
   all) all ;;
   *)
