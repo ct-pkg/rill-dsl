@@ -49,7 +49,7 @@
 | PH-13-T2 | `ct/README.md` 与 `tools/diff/sut.ct.json` | `docs(ct): PH-13-T2 CT 协议说明` | `git revert <sha>` | `bash tools/check-0.1.0.sh --sut './ct/bin/rill_ct' --kind tokens` | S | E-2 |
 | PH-13-T3 | `tools/diff/diff.py`（token 层） | `feat(diff): PH-13-T3 token 对拍入口` | `git revert <sha>` | `python3 tools/diff/diff.py --layer token` | M | E-4,E-5 |
 | PH-13-T4 | `docs/reviews/diff/PH-13.md` 与 `registry.md` | `docs(diff): PH-13-T4 token 差异报告` | `git revert <sha>` | `test -s docs/reviews/diff/PH-13.md` | S | E-4,E-6 |
-| PH-13-T5 | 词法负例接管清单（9 条） | `test(ct): PH-13-T5 词法负例对齐` | `git revert <sha>` | `bash tools/check-0.1.0.sh --sut './ct/bin/rill_ct' --bucket negative --kind error` | S | E-3 |
+| PH-13-T5 | 词法负例接管清单（9 条） | `test(ct): PH-13-T5 词法负例对齐` | `git revert <sha>` | `bash tools/check-0.1.0.sh --sut './ct/bin/rill_ct' --bucket negative --kind error --case negative/tokenize/bad-escape-bare --case negative/tokenize/bad-escape-string --case negative/tokenize/map-bad-marker --case negative/tokenize/map-missing-short --case negative/tokenize/map-space-before-marker --case negative/tokenize/map-unclosed --case negative/tokenize/unclosed-map-ref --case negative/tokenize/unclosed-quote --case negative/tokenize/unclosed-verb` | S | E-3 |
 
 ## 4. 退出判据（exit-criteria）
 

@@ -23,9 +23,9 @@
 | E-5 | 成功退出 0、词法失败退出 2，stdout 信封同形 | `ok_rc=0` / 顶层键 `['tokens']`；`err_rc=2` / 顶层键 `{"error":...}` | PASS |
 | E-6 | 任务清单每项可独立验收（T-6） | §3 六条 verify 与原始输出 | PASS（T5 见注） |
 
-注：T5 的卡片原文 verify 会连同 7 个 `negative/load/**` 一起选中，整体退出 1；这 7 条
-属 PH-15（§5）。词法 9 条用等价的 `--case` 过滤单跑为 9/9 PASS。本卡不改卡片、不把
-load 计入通过。E-6 按“词法范围内可独立验收”判 PASS，并保留两条命令的原始输出。
+注：T5 的 verify 已按用户裁定改为 9 个 `--case` 的精确过滤（见卡片 §3 原文），原
+`--bucket negative --kind error` 会连带选中 7 条 `negative/load/**`（PH-15），整体退出 1。
+判据 E-3 的实质不变；词法 9 条单跑 9/9 PASS，load 7 条仍在 §5 列红，不计入通过。
 
 ## 3. 任务 verify
 

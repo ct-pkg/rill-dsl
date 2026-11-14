@@ -44,7 +44,7 @@
 | --- | --- | --- | --- | --- | --- | --- |
 | PH-14-T1 | `ct/rill_ct.ct`（AST 字段顺序与序列化补差） | `feat(ct): PH-14-T1 AST 序列化对齐` | `git revert <sha>` | `bash tools/check-0.1.0.sh --sut './ct/bin/rill_ct' --kind ast --bucket positive` | M | E-1 |
 | PH-14-T2 | `docs/reviews/diff/PH-14.md`（AST 对拍） | `docs(diff): PH-14-T2 AST 差异报告` | `git revert <sha>` | `python3 tools/diff/diff.py --layer ast` | M | E-3,E-5 |
-| PH-14-T3 | parse 负例接管清单（10 条） | `test(ct): PH-14-T3 parse 负例对齐` | `git revert <sha>` | `bash tools/check-0.1.0.sh --sut './ct/bin/rill_ct' --bucket negative --kind error` | M | E-2,E-4 |
+| PH-14-T3 | parse 负例接管清单（10 条） | `test(ct): PH-14-T3 parse 负例对齐` | `git revert <sha>` | `bash tools/check-0.1.0.sh --sut './ct/bin/rill_ct' --bucket negative --kind error --case negative/parse/break-verb-value --case negative/parse/duplicate-error --case negative/parse/duplicate-ok --case negative/parse/fn-def-in-body --case negative/parse/missing-block --case negative/parse/results-as-prep --case negative/parse/results-in-branch --case negative/parse/results-in-simple --case negative/parse/results-outside-parallel --case negative/parse/unknown-prep` | M | E-2,E-4 |
 | PH-14-T4 | `ct/README.md`（产生式映射） | `docs(ct): PH-14-T4 产生式映射` | `git revert <sha>` | `test -s ct/README.md` | S | E-6 |
 
 ## 4. 退出判据（exit-criteria）
