@@ -110,3 +110,25 @@ exit=1
   `PASS host/shared/read-send ...`（1 passed, 0 failed）；
   `python3 tests/phase11/test_agent_fixtures.py` →
   `PASS phase11 fixtures: agent 五类能力 + role/limits/type + AST 一致`
+
+## PH-12-T5 验收报告
+
+- 红提交：`test(acceptance): PH-12-T5 红`（baseline `e6be23e`）
+- 红命令：`python3 tests/phase12/test_acceptance_doc.py`
+- 红输出：
+
+```text
+Traceback (most recent call last):
+  File ".../tests/phase12/test_acceptance_doc.py", line 92, in <module>
+    main()
+  File ".../tests/phase12/test_acceptance_doc.py", line 84, in main
+    case_four_lists_exist()
+  File ".../tests/phase12/test_acceptance_doc.py", line 39, in case_four_lists_exist
+    doc = read_doc()
+  File ".../tests/phase12/test_acceptance_doc.py", line 22, in read_doc
+    assert os.path.isfile(DOC), "缺少验收报告：%s" % DOC
+AssertionError: 缺少验收报告：.../docs/planning/rill-0.1.0-acceptance.md
+exit=1
+```
+
+- 绿提交：`docs(acceptance): PH-12-T5 验收报告`
