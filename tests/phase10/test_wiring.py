@@ -16,7 +16,6 @@ sys.path.insert(0, os.path.dirname(__file__))
 from support import payload_of, run_cli, write_script
 
 from rill import lexer, loader, parser
-from rill.errors import LoadError
 from rill.host.shell import (
     CapabilityDenied,
     ShellHost,
@@ -229,16 +228,10 @@ def case_missing_host_profile_is_diagnostic():
 
 
 def case_shell_verbs_are_profile_scoped():
-    tree = parse_source('<run> "echo hi"\n')
-    tables = loader.check_program(tree, "shell")
-    assert "run" in tables.verbs and "env" in tables.verbs
-    for profile in ("agent",):
-        try:
-            loader.check_program(parse_source('<run> "echo hi"\n'), profile)
-        except LoadError as exc:
-            assert exc.code == "E-LOAD-VERB-UNKNOWN", exc.code
-        else:
-            raise AssertionError("%s 不应接受 run 动词" % profile)
+    # PH-11 起两种宿主共用 run/env 动词集；差异回到能力实现（PH-11 卡 §7 #6）。
+    for profile in ("shell", "agent"):
+        tables = loader.check_program(parse_source('<run> "echo hi"\n'), profile)
+        assert "run" in tables.verbs and "env" in tables.verbs, (profile, tables.verbs)
 
 
 def main():
