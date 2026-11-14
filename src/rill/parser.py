@@ -139,31 +139,81 @@ class Parser(object):
     def _parse_statement(self):
         token = self._peek()
         if token.kind == "KEYWORD":
+            if token.text == "if":
+                return self._parse_if()
+            if token.text == "each":
+                return self._parse_each()
+            if token.text == "parallel":
+                return self._parse_parallel()
+            if token.text == "break":
+                return self._parse_break()
             self._error(
-                "E-PARSE-UNEXPECTED",
-                "关键字 %r 的语句在 PH-3-T4 加入" % token.text,
+                "E-PARSE-UNEXPECTED", "关键字 %r 不能出现在语句起始位" % token.text
             )
         if token.kind == "AT":
             return self._parse_call_stmt()
         if token.kind == "LBRACKET":
-            self._error("E-PARSE-UNEXPECTED", "独立介宾块在 PH-3-T4 加入")
+            return self._parse_prep_block_stmt()
         return self._parse_simple_stmt()
 
     def _parse_simple_stmt(self):
         span = {"line": self._peek().line, "col": self._peek().col}
         call = self._parse_verb_call()
+        tail = self._parse_statement_tail()
+        pipe = self._parse_pipe(lambda: self._parse_simple_stmt())
+        return ast.make("SimpleStmt", span=span, call=call, tail=tail, pipe=pipe)
+
+    def _parse_statement_tail(self, allow_assign=True):
         tail = []
-        if self._at("ARROW"):
-            tail.append(self._parse_assign())
+        counts = {"ok": 0, "error": 0}
+        while True:
+            if allow_assign and self._at("ARROW"):
+                tail.append(self._parse_assign())
+                continue
+            if self._is_trailing_block():
+                tail.append(self._parse_trailing_block(counts))
+                continue
+            break
         if self._at("LBRACKET"):
-            self._error("E-PARSE-UNEXPECTED", "尾随块在 PH-3-T4 加入")
+            self._error(
+                "E-PARSE-UNEXPECTED", "方括号后必须跟块或介宾宾语：%r" % self._peek().text
+            )
         if not (self._at("NEWLINE") or self._at("EOF") or self._at("RBRACE")):
             if not self._at("PIPE"):
                 self._error(
                     "E-PARSE-UNEXPECTED", "语句后出现意外 token %r" % self._peek().text
                 )
-        pipe = self._parse_pipe(lambda: self._parse_simple_stmt())
-        return ast.make("SimpleStmt", span=span, call=call, tail=tail, pipe=pipe)
+        return tail
+
+    def _parse_trailing_block(self, counts):
+        bracket = self._take()
+        prep = self._take()
+        if prep.text == "results":
+            self._error(
+                "E-PARSE-RESULTS-CONTEXT",
+                "[results] 只允许出现在 parallel 块级",
+                bracket,
+            )
+        if prep.text not in ("ok", "error", "into"):
+            self._error(
+                "E-PARSE-UNKNOWN-PREP",
+                "尾随块只允许 [ok] / [error] / [into]，实际 [%s]" % prep.text,
+                bracket,
+            )
+        if not self._at("RBRACKET"):
+            self._error("E-PARSE-UNEXPECTED", "尾随块头缺 ]", bracket)
+        self._take()
+        if prep.text in ("ok", "error"):
+            counts[prep.text] += 1
+            if counts[prep.text] > 1:
+                self._error(
+                    "E-PARSE-DUP-OK" if prep.text == "ok" else "E-PARSE-DUP-ERROR",
+                    "[%s] 每条语句最多一次" % prep.text,
+                    bracket,
+                )
+        body = self._parse_block("[%s] 尾随块" % prep.text)
+        kind = {"ok": "OkBlock", "error": "ErrorBlock", "into": "IntoBlock"}[prep.text]
+        return ast.make(kind, span={"line": bracket.line, "col": bracket.col}, body=body)
 
     def _parse_assign(self):
         arrow = self._take()
@@ -181,6 +231,149 @@ class Parser(object):
         self._skip_newlines()
         return parse_next()
 
+    def _parse_prep_block_stmt(self):
+        bracket = self._take()
+        prep = self._take()
+        if not self._at("RBRACKET"):
+            self._error("E-PARSE-UNEXPECTED", "独立介宾块头缺 ]", bracket)
+        self._take()
+        if prep.text not in ("into", "ok", "error"):
+            self._error(
+                "E-PARSE-UNKNOWN-PREP",
+                "独立介宾块只允许 [into] / [ok] / [error]，实际 [%s]" % prep.text,
+                bracket,
+            )
+        if self._at("VARIABLE"):
+            subject = self._parse_word(bare_as_string=False)
+        elif self._at("VERB") or self._peek(1).kind == "VERB":
+            subject = self._parse_verb_call()
+        else:
+            self._error(
+                "E-PARSE-UNEXPECTED", "独立介宾块需要 $变量 或 verb_call 作宾语"
+            )
+        body = self._parse_block("[%s] 独立形式" % prep.text)
+        return ast.make(
+            "PrepBlockStmt",
+            span={"line": bracket.line, "col": bracket.col},
+            prep=prep.text,
+            subject=subject,
+            block=body,
+        )
+
+    def _parse_if(self):
+        keyword = self._take()
+        span = {"line": keyword.line, "col": keyword.col}
+        branches = []
+        condition = self._parse_expr()
+        body = self._parse_block("if 体")
+        branches.append(
+            ast.make("IfBranch", span=span, condition=condition, body=body)
+        )
+        else_body = None
+        while self._at("KEYWORD") and self._peek().text == "else-if":
+            self._take()
+            branch_span = {"line": self._peek().line, "col": self._peek().col}
+            condition = self._parse_expr()
+            body = self._parse_block("else-if 体")
+            branches.append(
+                ast.make(
+                    "IfBranch", span=branch_span, condition=condition, body=body
+                )
+            )
+        if self._at("KEYWORD") and self._peek().text == "else":
+            self._take()
+            else_body = self._parse_block("else 体")
+        return ast.make(
+            "IfStmt", span=span, branches=branches, else_body=else_body
+        )
+
+    def _parse_each(self):
+        keyword = self._take()
+        span = {"line": keyword.line, "col": keyword.col}
+        var = self._expect("VARIABLE", "each 后的 $变量")
+        if not self._at("LBRACKET"):
+            self._error("E-PARSE-UNEXPECTED", "each 缺 [in]")
+        self._take()
+        prep = self._take()
+        if prep.text != "in":
+            self._error("E-PARSE-UNKNOWN-PREP", "each 头只接受 [in]，实际 [%s]" % prep.text, prep)
+        self._expect("RBRACKET", "[in] 的 ]")
+        source = self._parse_expr()
+        body = self._parse_block("each 体")
+        tail = self._parse_statement_tail(allow_assign=False)
+        return ast.make(
+            "EachStmt", span=span, var=var.text, source=source, body=body, tail=tail
+        )
+
+    def _parse_parallel(self):
+        keyword = self._take()
+        span = {"line": keyword.line, "col": keyword.col}
+        self._expect("LBRACE", "parallel 的 {")
+        branches = []
+        while True:
+            self._skip_newlines()
+            if self._at("RBRACE"):
+                self._take()
+                break
+            if self._at("EOF"):
+                self._error("E-PARSE-MISSING-BLOCK", "parallel 缺 }", keyword)
+            if not (
+                self._peek().kind in ("BARE", "STRING", "VARIABLE", "DOLLAR", "FIELD", "MAP_REF")
+                or self._at("VERB")
+            ):
+                self._error(
+                    "E-PARSE-UNEXPECTED", "parallel 分支只能是 simple_stmt"
+                )
+            branches.append(self._parse_simple_stmt())
+        results = None
+        if (
+            self._at("LBRACKET")
+            and self._peek(1).text == "results"
+            and self._peek(2).kind == "RBRACKET"
+        ):
+            self._take()
+            self._take()
+            self._take()
+            results = self._parse_block("parallel [results]")
+        pipe = self._parse_pipe(lambda: self._parse_simple_stmt())
+        return ast.make(
+            "ParallelStmt", span=span, branches=branches, results=results, pipe=pipe
+        )
+
+    def _parse_break(self):
+        keyword = self._take()
+        span = {"line": keyword.line, "col": keyword.col}
+        value = None
+        if self._at("VERB"):
+            self._error(
+                "E-PARSE-BREAK-VALUE", "break 的值只能是 value，不能是动词调用"
+            )
+        if not (self._at("NEWLINE", "EOF", "RBRACE", "ARROW")):
+            if self._peek().kind in _WORD_KINDS:
+                value = self._parse_word(bare_as_string=True)
+            else:
+                self._error("E-PARSE-UNEXPECTED", "break 后出现意外 token")
+        target = None
+        if self._at("ARROW"):
+            self._take()
+            target = self._expect("VARIABLE", "break -> 后的 $变量").text
+        return ast.make("BreakStmt", span=span, value=value, target=target)
+
+    def _parse_expr(self):
+        starts_verb = self._at("VERB") or (
+            self._peek().kind in _WORD_KINDS and self._peek(1).kind == "VERB"
+        )
+        if not starts_verb:
+            return self._parse_word(bare_as_string=True)
+        stages = [self._parse_verb_call()]
+        while self._at("PIPE"):
+            self._take()
+            self._skip_newlines()
+            stages.append(self._parse_verb_call())
+        if len(stages) == 1:
+            return stages[0]
+        return ast.make("Pipe", span=stages[0]["span"], stages=stages)
+
     def _parse_call_stmt(self):
         at = self._take()
         span = {"line": at.line, "col": at.col}
@@ -196,11 +389,7 @@ class Parser(object):
         args = []
         while self._peek().kind in _WORD_KINDS:
             args.append(self._parse_word(bare_as_string=True))
-        tail = []
-        if self._at("ARROW"):
-            tail.append(self._parse_assign())
-        if self._at("LBRACKET"):
-            self._error("E-PARSE-UNEXPECTED", "尾随块在 PH-3-T4 加入")
+        tail = self._parse_statement_tail()
         pipe = self._parse_pipe(lambda: self._parse_simple_stmt())
         return ast.make("CallStmt", span=span, name=name.text, args=args, tail=tail, pipe=pipe)
 
