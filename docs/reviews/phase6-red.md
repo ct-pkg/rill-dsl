@@ -74,5 +74,20 @@ ImportError: cannot import name 'verbs' from 'rill' (/Users/samxx/trae-ws/rill-d
 - green: `python3 tests/phase6/test_verbs.py` → `rc=0`，
   `PASS verbs: 队列顺序、default、空队列失败、未注册 KeyError`。
 
+## PH-6-T5
+
+- baseline: `1fde2fe`
+- 命令: `python3 tests/phase6/test_pipe.py`
+- 退出码: `1`
+- 原始输出:
+
+```text
+Traceback (most recent call last):
+  File "/Users/samxx/trae-ws/rill-dsl/tests/phase6/test_pipe.py", line 12, in <module>
+    from rill import pipe, result
+ImportError: cannot import name 'pipe' from 'rill' (/Users/samxx/trae-ws/rill-dsl/tests/phase6/../../src/rill/__init__.py)
+```
+
+
 
 
