@@ -35,18 +35,30 @@
 | --- | --- |
 | `src/rill/host/agent.py` | 工具注册表→能力适配、角色/limits |
 | `src/rill/cli.py` | `rill run --profile agent` |
+| `src/rill/loader.py` | agent profile 的 `run` / `env` 动词集（parser 不感知宿主） |
 | `testdata/0.1.0/host/agent/` | 与 Shell 同源 fixture + agent 专属能力 |
+| `tests/phase11/` | 可失败单测 5 个 + 共用夹具 |
 | `docs/planning/rill-0.1.0-host-matrix.md` | 五类能力在两种宿主下的形态与差异 |
+| `docs/reviews/phase11-red.md` | 逐任务红证与转绿记录 |
+
+fixture 不叫 `source.rill` / `case.json`，避免被 harness 当成 `--fakes` run 用例：
+本 phase 的 fixture 由 `tests/phase11/test_agent_fixtures.py` 在临时 cwd 里驱动
+真实 Agent 宿主（工具注册表来自 fixture 自己的 manifest）。
 
 ## 3. 任务清单
 
 | ID | 交付物 | 提交 | 回滚 | verify | effort | 覆盖 |
 | --- | --- | --- | --- | --- | --- | --- |
-| PH-11-T1 | `src/rill/host/agent.py`（工具→进程/stdio） | `feat(host): PH-11-T1 工具能力适配` | `git revert <sha>` | `bash tools/check-0.1.0.sh --show host/shared/read-send` | M | E-1,E-3 |
-| PH-11-T2 | `src/rill/host/agent.py`（fs/env） | `feat(host): PH-11-T2 工具文件与环境` | `git revert <sha>` | `bash tools/check-0.1.0.sh --kind host-ast-equal` | M | E-1 |
-| PH-11-T3 | `src/rill/host/agent.py`（role/limits） | `feat(host): PH-11-T3 角色与 limits` | `git revert <sha>` | `bash tools/check-0.1.0.sh --check-fakes` | M | E-3 |
-| PH-11-T4 | `testdata/0.1.0/host/agent/` | `feat(host): PH-11-T4 Agent fixture` | `git revert <sha>` | `bash tools/check-0.1.0.sh --bucket host` | S | E-1 |
-| PH-11-T5 | `docs/planning/rill-0.1.0-host-matrix.md` | `docs(host): PH-11-T5 能力矩阵` | `git revert <sha>` | `git diff --quiet HEAD -- src/rill/lexer.py src/rill/parser.py` | S | E-2,E-4,E-5 |
+| PH-11-T1 | `src/rill/host/agent.py`（工具→进程/stdio）+ `src/rill/cli.py`（agent 宿主接线）+ `src/rill/loader.py`（agent 动词集） | `feat(host): PH-11-T1 工具能力适配` | `git revert <sha>` | `python3 tests/phase11/test_tools_process_stdio.py` | M | E-1,E-3 |
+| PH-11-T2 | `src/rill/host/agent.py`（fs/env） | `feat(host): PH-11-T2 工具文件与环境` | `git revert <sha>` | `python3 tests/phase11/test_fs_env.py` | M | E-1 |
+| PH-11-T3 | `src/rill/host/agent.py`（role/limits） | `feat(host): PH-11-T3 角色与 limits` | `git revert <sha>` | `python3 tests/phase11/test_role_limits.py` | M | E-3 |
+| PH-11-T4 | `testdata/0.1.0/host/agent/` | `feat(host): PH-11-T4 Agent fixture` | `git revert <sha>` | `python3 tests/phase11/test_agent_fixtures.py` | S | E-1 |
+| PH-11-T5 | `docs/planning/rill-0.1.0-host-matrix.md` | `docs(host): PH-11-T5 能力矩阵` | `git revert <sha>` | `python3 tests/phase11/test_matrix_doc.py` | S | E-2,E-4,E-5 |
+
+依赖顺序：T1 → T2 → T3 → T4 → T5。T1 同时接 CLI 与 agent 动词集，
+否则 T4 的 fixture 没有可执行的宿主。verify 一律是可失败的单测；
+`--show` / `--kind` / `--check-fakes` / `--bucket` 只作为 §4 的补充证据，
+不作为任务验收依据（与 PH-10 卡 §3 的口径一致，见 §7 #8）。
 
 ## 4. 退出判据（exit-criteria）
 
@@ -73,3 +85,20 @@
 
 - 收口时产品版本 `0.11.0`；annotated tag `v0.11.0`，message 含 `PH-11` 与收口提交 sha 前 7 位。
 - 只推 tag，不推分支、不对外发布。收口对照表：`docs/reviews/closeout-11.md`（收口时新建）。
+
+## 7. 规范缺口与实现裁定（不改变规范正文）
+
+下列各条在规范里没有唯一表述。裁定只写进本表，不写进 `docs/RILL-0.1.0.md`；
+红证与实现位置见 `docs/reviews/phase11-red.md`。
+
+| # | 位置 | 缺口 | 本 phase 的实测与裁定 |
+| --- | --- | --- | --- |
+| 1 | §4.1 / §五 | agent 的主语角色在哪一阶段校验、错误码是什么，未定义 | **裁定：AgentHost 在 parse 之后、exec 之前校验字面量主语**；未知角色 `E-HOST-ROLE-UNKNOWN`，越权 `E-HOST-ROLE-DENIED`，走 run 诊断（退出 2）。`$变量` 等动态主语按默认角色处理，登记为后续 CR |
+| 2 | §4.1 / §五 | Shell 是否必须有 role，未定义 | **裁定：Shell 继续无角色**；只有 agent 宿主有 manifest 默认角色，避免把 agent role 变成所有宿主必选（风险 1） |
+| 3 | §五.2 | `ExecLimits` 的字段与超限语义未定义 | **裁定：manifest `limits.{steps,time_ms,bytes}`**；`steps` 数工具调用次数，`time_ms` 是墙钟毫秒，`bytes` 是工具结果 JSON 的 UTF-8 字节数。超限返回 `ok=false` + `host_meta.limits`，不截断值。parallel 分支数/搜索深度未实现，登记后续 CR |
+| 4 | §4.1 / §五 | `类型:值` 在 agent 侧如何拆分、workspace root 怎么约束，未定义 | **裁定：manifest `types` 表**（`path` / `text`）；`path` 约束下相对/绝对路径都必须落在 `workspace` 内，越界是工具错误 `E-HOST-FS-OUTSIDE`，不是 OS 错误。plain 路径同样受约束 |
+| 5 | §4.10 / §五 | agent 失败是否产生 OS 退出码，未定义 | **裁定：agent 不产生 OS 退出码**；脚本执行完成即退出 0（payload 仍带 `ok=false`），只有 CLI/加载/角色诊断退出 2。与 PH-10 卡 §8 #12 的 `--fakes` 协议不同 |
+| 6 | §4.2 / §五.8 | agent 加载期动词集未定义 | **裁定：两种宿主共用 `read/write/parse/send/search/replace/contains/review/run/env`**；能力差异只在实现。取代 PH-10 卡 §8 #2 中“agent 不扩 `run`/`env`”的裁定 |
+| 7 | §4.2 / §4.16 | agent 的 `send` 落点未定义 | **裁定：调用 `send`/`emit` 工具**；没有 OS stdout/stderr；工具返回值即段值，`host_meta.stdio.channel = "tool"` |
+| 8 | §6.6 T-7 | 本卡原 §3 的 verify 是 `--show` / `--kind` / `--check-fakes` / `--bucket`，只能打印或校验资产，无法产出“实现前真实失败”的红证 | **复核时改为 `tests/phase11/test_*.py` 可失败单测**（见 §3）；这是流程口径冲突，不是语言规范缺口。§4 的退出判据仍保留原命令作为补充证据 |
+| 9 | §4.16 | agent 的 stdin 形态未定义 | **裁定：`run` 工具的 stdin 来自 `$`/管道输入，按文本传递**；没有 OS stdin，二进制不作为本 phase 的 agent 契约 |
