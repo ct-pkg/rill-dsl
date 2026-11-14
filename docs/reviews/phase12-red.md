@@ -26,3 +26,5 @@ exit=1
 - 绿提交：`feat(cli): PH-12-T1 CLI 统一`
 - 绿命令与输出：`python3 tests/phase12/test_cli_contract.py` →
   `PASS phase12 cli: 四子命令/退出码分层/fmt 回读`（exit 0）
+- 实现说明：`fmt` 依赖 PH-5 未交付的最小 `src/rill/formatter.py`（卡 §7 #1）；
+  `--compress` / `--display` 的 AST 等价由 T3 的 round-trip 门禁扩大覆盖。

@@ -11,6 +11,7 @@ import os
 import sys
 
 from . import fakes as fakes_mod
+from . import formatter
 from . import loader
 from .errors import LexError, LoadError, ParseError
 from .eval_simple import EvalError, Interpreter
@@ -65,11 +66,6 @@ def _diagnostic(code, message):
         },
         EXIT_DIAGNOSTIC,
     )
-
-
-def _not_implemented(what):
-    sys.stderr.write("not implemented: %s\n" % what)
-    return EXIT_NOT_IMPLEMENTED
 
 
 def _source_path(args):
@@ -294,6 +290,40 @@ def cmd_run(args):
     )
 
 
+def cmd_fmt(args):
+    mode = ""
+    paths = []
+    for arg in args:
+        if arg == "--compress":
+            if mode:
+                return _usage("fmt 只能选一种格式（--compress / --display）")
+            mode = "compress"
+        elif arg == "--display":
+            if mode:
+                return _usage("fmt 只能选一种格式（--compress / --display）")
+            mode = "display"
+        elif arg.startswith("-"):
+            return _usage("fmt 不认识的参数 %r" % arg)
+        else:
+            paths.append(arg)
+    if not mode:
+        return _usage("fmt 需要 --compress 或 --display")
+    if len(paths) != 1:
+        return _usage("fmt 需要且只需要一个源文件参数")
+    path = paths[0]
+    try:
+        with open(path, encoding="utf-8") as handle:
+            source = handle.read()
+    except OSError as exc:
+        return _usage("无法读取 %s：%s" % (path, exc))
+    try:
+        text = formatter.format_source(source, mode)
+    except LexError as exc:
+        return _emit({"error": exc.as_dict()}, EXIT_DIAGNOSTIC)
+    sys.stdout.write(text)
+    return EXIT_OK
+
+
 def main(argv=None):
     argv = list(sys.argv[1:] if argv is None else argv)
     if not argv:
@@ -308,13 +338,14 @@ def main(argv=None):
     if command == "run":
         return cmd_run(argv[1:])
     if command == "fmt":
-        return _not_implemented(command)
+        return cmd_fmt(argv[1:])
     if command in ("-h", "--help"):
         sys.stdout.write(
             "usage: rill tokenize <file> | rill parse --dump-ast <file> [--profile shell|agent]"
             " | rill check <file> [--profile shell|agent]"
             " | rill run <file> [--profile shell|agent] [--fakes <path>]"
-            " [--host-profile <path>]\n"
+            " [--host-profile <path>]"
+            " | rill fmt --compress|--display <file>\n"
         )
         return EXIT_OK
     return _usage("未知子命令 %r" % command)
