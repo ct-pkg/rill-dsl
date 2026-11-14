@@ -99,9 +99,9 @@ verify 一律是可失败的单测命令：`--show` 只打印被测输出，不�
 | 5 | §4.14 / §4.8 | 分支内 `$` 的初始值（进入 parallel 的 `$`、`null`，还是分支未完成输出） | **实测：进入 parallel 的当前 `$`**（顶层为 `null`），不是结果数组；避免执行中成环。`case_branch_dollar_is_not_results_array` |
 | 6 | §4.14 / §4.15 | 分支内未处理 `break` 的归属与 `->$var` 捕捉落点 | **实测：分支失败、元素 `null`，错误串 = break 值**；`->$var` 写 parallel 所在作用域（显式捕捉，不按“禁止分支写外部变量”处理）。`case_three_state_array` |
 | 7 | §4.14 / §4.6 | parallel 有失败时其后的 `\|>` 是否执行；`[results]` 块失败时整体状态 | 管道：**整体失败则下游不执行**（`case_pipe_skipped_after_failure`）。`[results]`：**分支失败也触发**，值=结果数组、状态仍失败；块自身失败（含块内未处理 break）**覆盖整体错误串**（`case_results_block_failure_overrides`） |
-| 8 | §4.18 | 函数体 `break` 的场域：中断函数返回、转成调用失败，还是穿到调用方 | 待实测（T3） |
-| 9 | §4.18 / §4.8 | 函数体内 `$` 的初始值；函数体写外层变量的可见性 | 待实测（T3） |
-| 10 | §4.18 | 默认值表达式在何处求值（调用方作用域/函数体作用域）；同名默认值冲突 | 待实测（T3） |
+| 8 | §4.18 | 函数体 `break` 的场域：中断函数返回、转成调用失败，还是穿到调用方 | **实测：转成调用失败**，错误串 = break 值；调用上的 `[error]` 可处理，`->$var` 写调用方作用域。`case_body_break_becomes_call_failure` |
+| 9 | §4.18 / §4.8 | 函数体内 `$` 的初始值；函数体写外层变量的可见性 | **实测：`$` = 调用语句进入时的当前 `$`**（顶层 `null`）；函数体新变量不泄漏，外层已有变量按 Scope 链可读。`case_body_dollar_is_call_dollar`、`case_body_scope_does_not_leak`、`case_body_reads_outer_variable` |
+| 10 | §4.18 | 默认值表达式在何处求值（调用方作用域/函数体作用域）；同名默认值冲突 | **实测：在调用方作用域、调用时求值**；同名默认值冲突取**首次出现**（`setdefault`）。`case_default_name_conflict_keeps_first` |
 | 11 | §4.18 | 参数个数不匹配的报错阶段（加载期静态可知 vs 运行期） | 待实测（T4） |
-| 12 | §3.1 / §4.18 | `//fn{}` 块内再出现 `//fn {` / `//map {` 时的词法归属 | 待实测（T3） |
-| 13 | §4.18 | 模板同名参数在不同出现处写不同默认值的行为 | 待实测（T3） |
+| 12 | §3.1 / §4.18 | `//fn{}` 块内再出现 `//fn {` / `//map {` 时的词法归属 | **实测：块内 `//` 一律行注释**，不再产生 header；嵌套定义形状改由解析期 `E-PARSE-FN-DEF-BODY` 拒绝。`case_comment_inside_fn_block`、`case_nested_fn_definition_is_rejected` |
+| 13 | §4.18 | 模板同名参数在不同出现处写不同默认值的行为 | **实测：取首次出现的默认值**，后续同名默认值忽略。`case_default_name_conflict_keeps_first` |

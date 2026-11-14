@@ -56,7 +56,7 @@ def case_default_tail_can_be_omitted():
         },
     )
     assert out.ok is True, out
-    assert objects(interp, "parse") == ["PARSED"], "省略的尾部参数应取默认值"
+    assert objects(interp, "parse") == ["yaml"], "省略的尾部参数应取默认值"
 
 
 def case_default_tail_can_be_overridden():
@@ -196,6 +196,34 @@ def case_body_scope_does_not_leak():
     raise AssertionError("函数体内新建的 $tmp 不应泄漏到调用方")
 
 
+def case_body_reads_outer_variable():
+    source = (
+        "//fn{\n"
+        '@ "outer" $x <read> $x {\n'
+        "    <send> $cfg [to] user\n"
+        "}\n"
+        "}\n"
+        '@ "outer" "a.yml"\n'
+    )
+    interp, out = run_loaded(source, {"read": READ, "send": SEND}, variables={"cfg": "OUTER"})
+    assert out.ok is True, out
+    assert objects(interp, "send") == ["OUTER"], objects(interp, "send")
+
+
+def case_default_name_conflict_keeps_first():
+    source = (
+        "//fn{\n"
+        '@ "dup" $a?one <read> $a |> $a?two <parse> $a {\n'
+        "    <read> $a\n"
+        "}\n"
+        "}\n"
+        '@ "dup"\n'
+    )
+    interp, out = run_loaded(source, {"read": READ})
+    assert out.ok is True, out
+    assert objects(interp, "read") == ["one"], "同名默认值冲突取首次出现"
+
+
 def case_spaced_fn_header():
     source = (
         "//fn {\n"
@@ -256,6 +284,8 @@ def main():
     case_body_dollar_is_call_dollar()
     case_body_break_becomes_call_failure()
     case_body_scope_does_not_leak()
+    case_body_reads_outer_variable()
+    case_default_name_conflict_keeps_first()
     case_spaced_fn_header()
     case_comment_inside_fn_block()
     case_nested_fn_definition_is_rejected()

@@ -49,6 +49,7 @@ def check_program(program, profile="shell"):
     host = load_profile(profile)
     maps = _collect_maps(program)
     functions = _collect_functions(program)
+    _check_fn_defaults(functions)
     verbs = set(DEFAULT_VERBS)
     _check_nodes(program, functions, verbs)
     return LoadTables(maps=maps, functions=functions, verbs=verbs, profile=host)
@@ -85,6 +86,61 @@ def _collect_functions(program):
         for definition in header["defs"]:
             functions.setdefault(definition["name"], definition)
     return functions
+
+
+def template_params(definition):
+    """§4.18：模板 ``$变量`` 去重后按首次出现顺序；返回 ``(names, defaults)``。"""
+    names = []
+    defaults = {}
+    for stage in definition["template"]:
+        _collect_params(stage, names, defaults)
+    return names, defaults
+
+
+def _collect_params(node, names, defaults):
+    if not isinstance(node, dict):
+        return
+    kind = node.get("kind")
+    if kind == "Variable":
+        if node["name"] not in names:
+            names.append(node["name"])
+        return
+    if kind == "Default":
+        if node["name"] not in names:
+            names.append(node["name"])
+        defaults.setdefault(node["name"], node["value"])
+        return
+    if kind == "VerbCall":
+        _collect_params(node["subject"], names, defaults)
+        _collect_params(node["object"], names, defaults)
+        for item in node["post"]:
+            _collect_params(item, names, defaults)
+        return
+    if kind == "Adverb":
+        for item in node["items"]:
+            _collect_params(item, names, defaults)
+        return
+    if kind == "PrepPhrase":
+        _collect_params(node["object"], names, defaults)
+
+
+def _check_fn_defaults(functions):
+    """§4.18：默认值只允许尾部连续省略，中间缺省在加载期报错。"""
+    for definition in functions.values():
+        names, defaults = template_params(definition)
+        tail_started = False
+        for name in names:
+            if name in defaults:
+                tail_started = True
+            elif tail_started:
+                span = definition["span"]
+                raise LoadError(
+                    "E-LOAD-FN-DEFAULT-NOT-TAIL",
+                    "函数 %r 的默认值只能出现在尾部；$%s 缺少默认值"
+                    % (definition["name"], name),
+                    span["line"],
+                    span["col"],
+                )
 
 
 def _check_nodes(node, functions, verbs):

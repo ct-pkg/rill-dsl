@@ -41,6 +41,9 @@ class Lexer(object):
         self.tokens = []
         self.map_mode = False
         self.map_pos = None
+        # `//fn{}` 块内的花括号深度；>0 时 `//` 一律是行注释（§3.1 只在
+        # 区块头位置生效），避免块内再触发 `//map` / `//fn` 特例。
+        self.fn_depth = 0
 
     # ---- 游标 ----------------------------------------------------------
 
@@ -123,6 +126,11 @@ class Lexer(object):
             }
             self._emit(kinds[ch], ch)
             self._advance()
+            if self.fn_depth:
+                if ch == "{":
+                    self.fn_depth += 1
+                elif ch == "}":
+                    self.fn_depth -= 1
             return
         if ch == "<":
             self._lex_verb()
@@ -297,6 +305,11 @@ class Lexer(object):
 
     def _lex_comment_or_header(self):
         line, col = self.line, self.col
+        if self.fn_depth:
+            # §4.18：//fn 区块内部不再产生 header；`//` 回到普通行注释。
+            while self.i < self.n and self._peek() != "\n":
+                self._advance()
+            return
         probe = self.i + 2
         word = ""
         for candidate in ("map", "fn"):
@@ -322,6 +335,8 @@ class Lexer(object):
             if word == "map":
                 self.map_mode = True
                 self.map_pos = (line, col)
+            else:
+                self.fn_depth = 1
             return
         # 行注释：吃掉到行尾，不含换行。
         while self.i < self.n and self._peek() != "\n":

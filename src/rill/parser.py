@@ -57,6 +57,8 @@ class Parser(object):
         self.i = 0
         self.maps = {}
         self.warnings = []
+        # §4.18：`$变量?默认值` 只允许出现在 //fn{} 的模板里。
+        self.template_mode = False
 
     # ---- token 游标 ----------------------------------------------------
 
@@ -449,15 +451,26 @@ class Parser(object):
         at = self._take()
         span = {"line": at.line, "col": at.col}
         name = self._expect("STRING", "函数名（@ 后必须是字符串）")
-        if not (self._at("VERB") or self._peek(1).kind == "VERB"):
-            self._error("E-PARSE-UNEXPECTED", "函数定义缺模板")
-        template = [self._parse_verb_call()]
-        while self._at("PIPE"):
-            self._take()
-            self._skip_newlines()
-            template.append(self._parse_verb_call())
+        self.template_mode = True
+        try:
+            if not (self._at("VERB") or self._peek(1).kind == "VERB" or self._default_subject_ahead()):
+                self._error("E-PARSE-UNEXPECTED", "函数定义缺模板")
+            template = [self._parse_verb_call()]
+            while self._at("PIPE"):
+                self._take()
+                self._skip_newlines()
+                template.append(self._parse_verb_call())
+        finally:
+            self.template_mode = False
         body = self._parse_block("函数体")
         return ast.make("FnDef", span=span, name=name.text, template=template, body=body)
+
+    def _default_subject_ahead(self):
+        """模板主语写成 ``$变量?默认值`` 时，``?`` 挡住了 ``<动词>`` 的探测。"""
+        return (
+            self._peek().kind == "VARIABLE"
+            and self._peek(1).kind == "QUESTION"
+        )
 
     def _parse_block(self, what):
         if not self._at("LBRACE"):
@@ -486,7 +499,10 @@ class Parser(object):
     def _parse_verb_call(self):
         span = {"line": self._peek().line, "col": self._peek().col}
         subject = None
-        if self._peek().kind in _WORD_KINDS and self._peek(1).kind == "VERB":
+        if self._peek().kind in _WORD_KINDS and (
+            self._peek(1).kind == "VERB"
+            or (self.template_mode and self._default_subject_ahead())
+        ):
             subject = self._parse_word(bare_as_string=False)
         verb = self._expect("VERB", "动词 <name>")
         verb_name = verb.text
@@ -556,7 +572,22 @@ class Parser(object):
 
     def _parse_word(self, bare_as_string):
         """读一个单词，并把无空格的相邻单词折叠：全静态则并为 STRING。"""
-        parts = [self._word_node(self._take(), bare_as_string)]
+        first = self._take()
+        if self.template_mode and first.kind == "VARIABLE" and self._at("QUESTION"):
+            self._take()
+            if self._at("NEWLINE", "EOF", "RBRACE", "PIPE"):
+                self._error(
+                    "E-PARSE-FN-DEFAULT",
+                    "默认值缺失：$%s? 后必须有 value" % first.text,
+                )
+            default = self._parse_word(bare_as_string=True)
+            return ast.make(
+                "Default",
+                span={"line": first.line, "col": first.col},
+                name=first.text,
+                value=default,
+            )
+        parts = [self._word_node(first, bare_as_string)]
         while _adjacent(self.tokens[self.i - 1], self._peek()):
             parts.append(self._word_node(self._take(), bare_as_string))
         if len(parts) == 1:

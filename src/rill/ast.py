@@ -41,6 +41,7 @@ FIELDS = {
     "String": ("value",),
     "Number": ("value",),
     "Variable": ("name",),
+    "Default": ("name", "value"),
     "Self": (),
     "Field": ("name",),
     "Bare": ("text",),

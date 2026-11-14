@@ -189,9 +189,9 @@ def cmd_run(args):
         return _usage("无法读取 %s：%s" % (path, exc))
     try:
         tree = parse(tokenize(source))
-        loader.check_program(tree, profile)
+        tables = loader.check_program(tree, profile)
         verbs = fakes_mod.load_tools(fakes_path) if fakes_path else FakeVerbRegistry()
-        outcome = Interpreter(verbs).eval_program(tree)
+        outcome = Interpreter(verbs, functions=tables.functions).eval_program(tree)
     except LexError as exc:
         return _emit({"error": exc.as_dict()}, EXIT_DIAGNOSTIC)
     except ParseError as exc:

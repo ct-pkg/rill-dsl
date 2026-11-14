@@ -68,9 +68,10 @@ class Scope(object):
 class Interpreter(object):
     """按 AST 执行语句；``verbs`` 只需提供 ``call(name, arg) -> ExecOutcome``。"""
 
-    def __init__(self, verbs, trace=None):
+    def __init__(self, verbs, trace=None, functions=None):
         self.verbs = verbs
         self.trace = trace if trace is not None else []
+        self.functions = functions
         self.log = []
 
     # ---- 程序 / 语句 ---------------------------------------------------
@@ -114,6 +115,10 @@ class Interpreter(object):
             from . import eval_parallel
 
             return eval_parallel.eval_parallel(self, statement, scope, dollar)
+        if kind == "CallStmt":
+            from . import eval_fn
+
+            return eval_fn.eval_call(self, statement, scope, dollar)
         raise EvalError(
             "E-RUN-UNSUPPORTED",
             "%s 不在 PH-9 的执行范围" % kind,
