@@ -13,7 +13,7 @@ sys.path.insert(0, os.path.dirname(__file__))
 from support import ROOT
 
 RUN_ROOT = os.path.join("testdata", "0.1.0", "positive", "run")
-FAKES = os.path.join("testdata", "0.1.0", "fakes", "tools.json")
+FAKES_ROOT = os.path.join("testdata", "0.1.0")
 
 
 def cases():
@@ -24,7 +24,7 @@ def cases():
     return sorted(found)
 
 
-def run_cli(relative_case):
+def run_cli(relative_case, fakes):
     env = dict(os.environ)
     env["PYTHONPATH"] = os.path.join(ROOT, "src")
     source = os.path.join(relative_case, "source.rill")
@@ -38,7 +38,7 @@ def run_cli(relative_case):
             "--profile",
             "shell",
             "--fakes",
-            FAKES,
+            fakes,
         ],
         cwd=ROOT,
         env=env,
@@ -54,7 +54,8 @@ def main():
         with open(os.path.join(case_dir, "case.json"), encoding="utf-8") as handle:
             spec = json.load(handle)
         relative = os.path.relpath(case_dir, ROOT)
-        result = run_cli(relative)
+        fakes = os.path.join(FAKES_ROOT, spec.get("fakes", "fakes/tools.json"))
+        result = run_cli(relative, fakes)
         assert result.returncode == 0, "%s: exit %d，stderr=%r" % (
             relative,
             result.returncode,

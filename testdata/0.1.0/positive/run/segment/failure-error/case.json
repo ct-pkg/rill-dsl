@@ -2,6 +2,7 @@
   "kind": "run",
   "phase": "r1",
   "note": "失败且有 [error]：$ 是宿主错误串，处理后段继续（§4.10/§4.11）",
+  "fakes": "fakes/read-fail-first.json",
   "expect": {
     "profile": "shell",
     "ok": true,

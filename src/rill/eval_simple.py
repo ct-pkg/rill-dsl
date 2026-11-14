@@ -227,7 +227,13 @@ class Interpreter(object):
             "post": post,
             "input": dollar,
         }
-        outcome = self.verbs.call(call["verb"], entry)
+        try:
+            outcome = self.verbs.call(call["verb"], entry)
+        except KeyError as exc:
+            span = call["span"]
+            raise EvalError(
+                "E-RUN-VERB-UNREGISTERED", str(exc), span["line"], span["col"]
+            )
         entry["ok"] = outcome.ok
         entry["value"] = outcome.value
         entry["error"] = outcome.error

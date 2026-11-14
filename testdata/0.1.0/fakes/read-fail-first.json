@@ -1,0 +1,14 @@
+{
+  "schema": "rill-fakes-tools/0",
+  "description": "首个 read 即失败：用于失败段与管道中断用例。",
+  "tools": {
+    "read": {
+      "queue": [
+        {"ok": false, "error": "E_NOT_FOUND"}
+      ],
+      "default": {"ok": false, "error": "E_NOT_FOUND"}
+    },
+    "write": {"queue": [], "default": {"ok": true, "value": null}},
+    "send": {"queue": [], "default": {"ok": true, "value": null}}
+  }
+}

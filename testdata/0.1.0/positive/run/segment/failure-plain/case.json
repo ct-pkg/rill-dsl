@@ -2,6 +2,7 @@
   "kind": "run",
   "phase": "r1",
   "note": "失败且无 [error]：默认 break \"RILL DSL ERROR\"（§4.10）",
+  "fakes": "fakes/read-fail-first.json",
   "expect": {
     "profile": "shell",
     "ok": false,

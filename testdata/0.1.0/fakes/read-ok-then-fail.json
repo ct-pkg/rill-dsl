@@ -1,0 +1,15 @@
+{
+  "schema": "rill-fakes-tools/0",
+  "description": "第一次 read 成功、第二次失败：用于 [into] 内失败转用户 [error]。",
+  "tools": {
+    "read": {
+      "queue": [
+        {"ok": true, "value": "host: a\n"},
+        {"ok": false, "error": "E_NOT_FOUND"}
+      ],
+      "default": {"ok": false, "error": "E_NOT_FOUND"}
+    },
+    "write": {"queue": [], "default": {"ok": true, "value": null}},
+    "send": {"queue": [], "default": {"ok": true, "value": null}}
+  }
+}

@@ -2,6 +2,7 @@
   "kind": "run",
   "phase": "r1",
   "note": "[into] 失败 + 用户 [error]：轨迹唯一（E-2）",
+  "fakes": "fakes/read-ok-then-fail.json",
   "expect": {
     "profile": "shell",
     "ok": true,
