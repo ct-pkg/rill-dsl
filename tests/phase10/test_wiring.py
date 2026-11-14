@@ -18,6 +18,7 @@ from support import payload_of, run_cli, write_script
 from rill import lexer, loader, parser
 from rill.errors import LoadError
 from rill.host.shell import (
+    CapabilityDenied,
     ShellHost,
     ShellPolicy,
     ShellVerbRegistry,
@@ -107,17 +108,19 @@ def case_real_read_write_run_env():
         assert env.ok is True and env.value == "8080", env
 
 
-def case_denial_becomes_failure():
+def case_denial_is_visible_exception():
     policy = ShellPolicy({"fs": ["read"]})
     with tempfile.TemporaryDirectory() as tmp:
-        outcome = ShellVerbRegistry(host(policy, cwd=tmp)).call(
-            "write", entry("write", object="out.txt", input_value="x")
-        )
-        assert outcome.ok is False, outcome
-        assert "E-HOST-CAPABILITY-DENIED" in outcome.error, outcome.error
-        assert "fs.write" in outcome.error, outcome.error
-        assert outcome.host_meta["denied"]["slot"] == "fs", outcome.host_meta
-        assert not os.path.exists(os.path.join(tmp, "out.txt"))
+        try:
+            ShellVerbRegistry(host(policy, cwd=tmp)).call(
+                "write", entry("write", object="out.txt", input_value="x")
+            )
+        except CapabilityDenied as exc:
+            assert exc.code == "E-HOST-CAPABILITY-DENIED", exc.code
+            assert "fs.write" in str(exc), str(exc)
+            assert not os.path.exists(os.path.join(tmp, "out.txt"))
+            return
+        raise AssertionError("未声明 fs.write 时应拒绝写入")
 
 
 def case_profile_loads_manifest():
@@ -242,7 +245,7 @@ def main():
     case_verb_map_boundary()
     case_unmapped_verbs_raise()
     case_real_read_write_run_env()
-    case_denial_becomes_failure()
+    case_denial_is_visible_exception()
     case_profile_loads_manifest()
     case_cli_real_read()
     case_cli_fakes_win_over_real_host()

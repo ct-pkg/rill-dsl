@@ -15,9 +15,11 @@ from . import loader
 from .errors import LexError, LoadError, ParseError
 from .eval_simple import EvalError, Interpreter
 from .host.shell import (
+    CapabilityDenied,
     ShellHost,
     ShellVerbRegistry,
     default_shell_policy,
+    jsonable,
     load_shell_profile,
 )
 from .lexer import tokenize
@@ -258,14 +260,21 @@ def cmd_run(args):
         return _emit({"error": exc.as_dict()}, EXIT_DIAGNOSTIC)
     except EvalError as exc:
         return _emit({"error": exc.as_dict()}, EXIT_DIAGNOSTIC)
+    except CapabilityDenied as exc:
+        # §4.10 的隐式 [error] 会把失败改写成 "RILL DSL ERROR"；能力拒绝必须
+        # 在诊断里保留 slot.operation，所以走 run 诊断而不是 ok=false。
+        return _diagnostic(exc.code, exc.message)
+    code = EXIT_OK
+    if policy is not None:
+        code = policy.exit_code(outcome.ok)
     return _emit(
         {
             "ok": outcome.ok,
-            "value": outcome.value,
+            "value": jsonable(outcome.value),
             "error": outcome.error,
-            "host_meta": outcome.host_meta or {},
+            "host_meta": jsonable(outcome.host_meta or {}),
         },
-        EXIT_OK,
+        code,
     )
 
 

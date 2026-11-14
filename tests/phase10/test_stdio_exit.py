@@ -18,6 +18,7 @@ sys.path.insert(0, os.path.dirname(__file__))
 from support import payload_of, run_cli, write_script
 
 from rill.host.shell import (
+    CapabilityDenied,
     ExitCapability,
     ShellHost,
     ShellPolicy,
@@ -62,11 +63,16 @@ def case_send_writes_stderr():
 
 def case_send_denied():
     denied = ShellPolicy({"stdio": []})
-    outcome, captured = sent(denied, text="hello")
-    assert outcome.ok is False, outcome
-    assert "E-HOST-CAPABILITY-DENIED" in outcome.error, outcome.error
-    assert "stdio.write" in outcome.error, outcome.error
-    assert captured == "", repr(captured)
+    sink = io.StringIO()
+    host = ShellHost(denied)
+    host.stdio = StdioCapability(denied, stderr=sink)
+    try:
+        ShellVerbRegistry(host).call("send", entry("send", object="hello"))
+    except CapabilityDenied as exc:
+        assert "stdio.write" in str(exc), str(exc)
+        assert sink.getvalue() == "", repr(sink.getvalue())
+        return
+    raise AssertionError("未声明 stdio.write 时应拒绝输出")
 
 
 def case_exit_capability_maps_table():
@@ -94,7 +100,21 @@ def case_cli_unhandled_failure_exits_nonzero():
         assert result.returncode == 1, (result.returncode, result.stdout, result.stderr)
         payload = payload_of(result)
         assert payload["ok"] is False, payload
-        assert "E-HOST-FS-READ" in payload["error"], payload
+        # §4.10 的隐式 [error]：未处理失败的 DSL 层错误串固定为规范串。
+        assert payload["error"] == "RILL DSL ERROR", payload
+
+
+def case_cli_denial_is_diagnostic():
+    with tempfile.TemporaryDirectory() as tmp:
+        with open(os.path.join(tmp, "in.txt"), "w", encoding="utf-8") as handle:
+            handle.write("x")
+        write_script(tmp, "script.rill", "<read> in.txt |> <write> out.txt\n")
+        result = run_cli(["run", "script.rill", "--profile", "shell"], cwd=tmp)
+        assert result.returncode == 2, (result.returncode, result.stdout, result.stderr)
+        error = payload_of(result)["error"]
+        assert error["code"] == "E-HOST-CAPABILITY-DENIED", error
+        assert "fs.write" in error["message"], error
+        assert not os.path.exists(os.path.join(tmp, "out.txt"))
 
 
 def case_cli_handled_failure_exits_zero():
@@ -107,7 +127,9 @@ def case_cli_handled_failure_exits_zero():
         result = run_cli(["run", "script.rill", "--profile", "shell"], cwd=tmp)
         assert result.returncode == 0, (result.returncode, result.stdout, result.stderr)
         payload = payload_of(result)
-        assert payload["ok"] is True and payload["value"] == "handled", payload
+        # [error] 块内没有改写 $，块输出仍是错误串（PH-7 的块输出规则）。
+        assert payload["ok"] is True, payload
+        assert "E-HOST-FS-READ" in payload["value"], payload
         assert "handled" in result.stderr, result.stderr
 
 
@@ -134,7 +156,11 @@ def case_cli_exit_codes_come_from_profile():
 
 def case_fakes_keep_harness_exit_code():
     with tempfile.TemporaryDirectory() as tmp:
-        write_script(tmp, "script.rill", "<read> missing.txt\n")
+        write_script(
+            tmp,
+            "script.rill",
+            "<read> missing.txt [error] { <send> $ [to] user }\n",
+        )
         fakes = os.path.join(tmp, "fakes.json")
         with open(fakes, "w", encoding="utf-8") as handle:
             json.dump(
@@ -144,7 +170,11 @@ def case_fakes_keep_harness_exit_code():
                         "read": {
                             "queue": [{"ok": False, "error": "E_FAKE_FAIL"}],
                             "default": {"ok": False, "error": "E_FAKE_FAIL"},
-                        }
+                        },
+                        "send": {
+                            "queue": [{"ok": True, "value": "sent"}],
+                            "default": {"ok": True, "value": "sent"},
+                        },
                     },
                 },
                 handle,
@@ -154,7 +184,8 @@ def case_fakes_keep_harness_exit_code():
         )
         assert result.returncode == 0, (result.returncode, result.stdout, result.stderr)
         payload = payload_of(result)
-        assert payload["ok"] is False and payload["error"] == "E_FAKE_FAIL", payload
+        # 错误串来自 fake（真实宿主会给 E-HOST-FS-READ），证明 fake 路径优先。
+        assert payload["ok"] is True and payload["value"] == "E_FAKE_FAIL", payload
 
 
 def case_bytes_survive_json_output():
@@ -176,6 +207,7 @@ def main():
     case_exit_capability_maps_table()
     case_cli_send_ok()
     case_cli_unhandled_failure_exits_nonzero()
+    case_cli_denial_is_diagnostic()
     case_cli_handled_failure_exits_zero()
     case_cli_exit_codes_come_from_profile()
     case_fakes_keep_harness_exit_code()

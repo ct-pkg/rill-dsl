@@ -15,6 +15,7 @@ import json
 import os
 import shlex
 import subprocess
+import sys
 
 from .. import result
 from ..value import Bytes
@@ -139,9 +140,13 @@ def _decode_bytes(raw):
 
 
 def jsonable(value):
-    """把 ``Bytes`` / ``Opaque`` 转成 CLI 可序列化的形状；其余原样返回。"""
+    """把 ``Bytes`` 转成 CLI 可序列化的形状（递归）；其余原样返回。"""
     if isinstance(value, Bytes):
         return {"$bytes": base64.b64encode(value.data).decode("ascii")}
+    if isinstance(value, list):
+        return [jsonable(item) for item in value]
+    if isinstance(value, dict):
+        return {key: jsonable(item) for key, item in value.items()}
     return value
 
 
@@ -295,6 +300,38 @@ class EnvCapability(object):
         return self._env[name]
 
 
+class StdioCapability(object):
+    """脚本输出能力；Shell 宿主的落点是 stderr，避免污染 ``run`` 的 JSON stdout。"""
+
+    CHANNEL = "stderr"
+
+    def __init__(self, policy, stdin=None, stdout=None, stderr=None):
+        self.policy = policy
+        self.stdin = stdin
+        self.stdout = stdout
+        self.stderr = stderr if stderr is not None else sys.stderr
+
+    def write(self, text):
+        self.policy.require("stdio", "write")
+        if isinstance(text, Bytes):
+            text = text.data.decode("utf-8", "replace")
+        elif not isinstance(text, str):
+            text = json.dumps(text, ensure_ascii=False, sort_keys=True)
+        self.stderr.write(text + "\n")
+        self.stderr.flush()
+        return {"channel": self.CHANNEL, "text": text}
+
+
+class ExitCapability(object):
+    """退出码映射钩子；数字来自能力清单，不写进 DSL。"""
+
+    def __init__(self, policy):
+        self.policy = policy
+
+    def code(self, ok):
+        return self.policy.exit_code(ok)
+
+
 class ShellHost(object):
     """一次 ``rill run`` 的宿主句柄；能力对象共享同一份 policy。"""
 
@@ -304,8 +341,8 @@ class ShellHost(object):
         self.process = ProcessCapability(policy, cwd=cwd)
         self.fs = FsCapability(policy, cwd=cwd)
         self.env = EnvCapability(policy, env=env)
-        self.stdio = None
-        self.exit = None
+        self.stdio = StdioCapability(policy, stdin=stdin, stdout=stdout, stderr=stderr)
+        self.exit = ExitCapability(policy)
 
 
 def _require_text(value, message):
@@ -324,6 +361,7 @@ class ShellVerbRegistry(object):
         "write": ("fs", "write"),
         "run": ("process", "run"),
         "env": ("env", "get"),
+        "send": ("stdio", "write"),
     }
 
     def __init__(self, host):
@@ -337,17 +375,6 @@ class ShellVerbRegistry(object):
             )
         try:
             return self._dispatch(name, entry)
-        except CapabilityDenied as exc:
-            return result.ExecOutcome.failure(
-                str(exc),
-                host_meta={
-                    "denied": {
-                        "code": exc.code,
-                        "slot": exc.slot,
-                        "operation": exc.operation,
-                    }
-                },
-            )
         except HostError as exc:
             return result.ExecOutcome.failure(
                 str(exc), host_meta={"host_error": {"code": exc.code}}
@@ -383,6 +410,19 @@ class ShellVerbRegistry(object):
         if name == "env":
             return result.ExecOutcome.success(
                 self.host.env.get(_require_text(entry["object"], "env 需要一个变量名"))
+            )
+
+        if name == "send":
+            text = entry["subject"]
+            if text is None:
+                text = entry["object"]
+            if text is None:
+                text = entry["input"]
+            if text is None:
+                text = ""
+            info = self.host.stdio.write(text)
+            return result.ExecOutcome.success(
+                info["text"], host_meta={"stdio": info}
             )
 
         raise KeyError("E-RUN-VERB-UNREGISTERED: 动词 %r 没有真实宿主映射" % name)

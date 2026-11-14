@@ -100,7 +100,7 @@ fixture 不叫 `source.rill` / `case.json`，避免被 harness 当成 `--fakes` 
 | 4 | §4.8 | 进程结果放哪里 | **实测：`value` = stdout（UTF-8 文本；非法 UTF-8 为 `Bytes`），`host_meta.process = {argv, code, stdout, stderr, timed_out}`**；`$` 不出现结构化结果 |
 | 5 | §4.10 / §五 | 未处理失败的退出码从哪来 | **实测：能力清单的 `exit_codes {ok, unhandled}` 映射**，默认 `{0, 1}`；`[error]` 处理后走 `ok` 映射。DSL 不写数字 |
 | 6 | §4.2 | `send` 在 Shell 宿主写到哪里 | **实测：写 stderr**（避免污染 `run` 的 JSON stdout 协议），并在 `host_meta.stdio.channel` 记录 `stderr` |
-| 7 | §4.7 | 危险操作（`write` / 进程 spawn）如何授权 | **实测：外部能力清单 `--host-profile` 的 `allow` 声明**；未声明时返回 `ok=false`，错误串以 `E-HOST-CAPABILITY-DENIED` 开头并写明 `slot.operation`。脚本内不能声明授权（§五.1） |
+| 7 | §4.7 / §4.10 | 危险操作（`write` / 进程 spawn）如何授权 | **实测：外部能力清单 `--host-profile` 的 `allow` 声明**；未声明时 `rill run` 直接给 `E-HOST-CAPABILITY-DENIED` 诊断（退出 2），消息写明 `slot.operation`。不用 `ok=false` 是因为 §4.10 的隐式 `[error]` 会把错误串改写成 `RILL DSL ERROR`，丢掉能力名。脚本内不能声明授权（§五.1） |
 | 8 | §五.8 | 有真实映射的动词之外怎么处理 | **实测：`search` / `parse` / `replace` / `contains` / `review` 无真实映射**，调用即 `E-RUN-VERB-UNREGISTERED`（stage=run），不静默成功 |
 | 9 | §4.16 | `Bytes` / `Opaque` 能否出现在最终 `run` 输出 | **实测：`Bytes` 序列化为 `{"$bytes": "<base64>"}`，`Opaque` 为 `{"$opaque": tag}`**；二进制不经过 `$` 字符串 |
 | 10 | §4.16 | stdin 初始值 | **实测：`run` 的 stdin = 管道/`$` 输入的字符串（`Bytes` 直接写字节）**；没有输入时 stdin 为空 |
