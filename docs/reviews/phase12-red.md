@@ -132,3 +132,6 @@ exit=1
 ```
 
 - 绿提交：`docs(acceptance): PH-12-T5 验收报告`
+- 绿命令与输出：`python3 tests/phase12/test_acceptance_doc.py` →
+  `PASS phase12 acceptance: 四类清单 + 真实计数 85/83/pending 0`（exit 0）
+- 说明：报告里的计数直接由 `--all --json` 复算，避免手抄漂移。
