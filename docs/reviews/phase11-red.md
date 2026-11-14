@@ -44,3 +44,17 @@ exit=1
 - 红后修正（断言）：顶层未处理失败按 §4.10 统一成 `RILL DSL ERROR`，
   工具错误串不会出现在 payload.error；红阶段的两条 CLI 断言改为读
   `host_meta`，工具错误串本身仍由 `test_tool_failure_is_string` 直接断言。
+
+## PH-11-T2 工具文件与环境
+
+- 红提交：`test(host): PH-11-T2 红`（baseline `30b0fa0`）
+- 红命令：`python3 tests/phase11/test_fs_env.py`
+- 红输出：
+
+```text
+Traceback (most recent call last):
+  File ".../tests/phase11/test_fs_env.py", line 23, in <module>
+    from rill.host.agent import (
+ImportError: cannot import name 'AgentEnvCapability' from 'rill.host.agent'
+exit=1
+```
