@@ -49,10 +49,9 @@ def check_program(program, profile="shell"):
     host = load_profile(profile)
     maps = _collect_maps(program)
     functions = _collect_functions(program)
-    _check_calls(program, functions)
-    return LoadTables(
-        maps=maps, functions=functions, verbs=set(DEFAULT_VERBS), profile=host
-    )
+    verbs = set(DEFAULT_VERBS)
+    _check_nodes(program, functions, verbs)
+    return LoadTables(maps=maps, functions=functions, verbs=verbs, profile=host)
 
 
 def _collect_maps(program):
@@ -88,11 +87,11 @@ def _collect_functions(program):
     return functions
 
 
-def _check_calls(node, functions):
-    """只查 ``@ STRING`` 的名字；模板与实参绑定留给 PH-9。"""
+def _check_nodes(node, functions, verbs):
+    """查 ``@ STRING`` 的名字与 ``VerbCall`` 的动词；不解绑实参。"""
     if isinstance(node, list):
         for item in node:
-            _check_calls(item, functions)
+            _check_nodes(item, functions, verbs)
         return
     if not isinstance(node, dict) or "kind" not in node:
         return
@@ -104,7 +103,15 @@ def _check_calls(node, functions):
             span["line"],
             span["col"],
         )
+    if node["kind"] == "VerbCall" and node["verb"] not in verbs:
+        span = node["span"]
+        raise LoadError(
+            "E-LOAD-VERB-UNKNOWN",
+            "未知动词 %r；0.1.0 动词集见 PH-4 卡 §8" % node["verb"],
+            span["line"],
+            span["col"],
+        )
     for key, value in node.items():
         if key in ("kind", "span"):
             continue
-        _check_calls(value, functions)
+        _check_nodes(value, functions, verbs)

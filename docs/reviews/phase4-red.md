@@ -95,4 +95,8 @@ summary
 VERDICT: FAIL (exit 1)
 ```
 
+- green: `bash tools/check-0.1.0.sh --case negative/load/unknown-verb
+  --case positive/check/host-profiles` → `rc=0`，
+  `PASS load E-LOAD-VERB-UNKNOWN@1:1`、`PASS check 通过（shell / agent）`。
+
 
