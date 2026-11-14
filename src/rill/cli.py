@@ -1,4 +1,4 @@
-"""``rill`` CLI（PH-3：tokenize 与 parse）。
+"""``rill`` CLI（tokenize / parse / check）。
 
 SUT 协议见 ``tools/rill_harness/sut.py``：
   0  成功，stdout 是 JSON；
@@ -9,7 +9,8 @@ SUT 协议见 ``tools/rill_harness/sut.py``：
 import json
 import sys
 
-from .errors import LexError, ParseError
+from . import loader
+from .errors import LexError, LoadError, ParseError
 from .lexer import tokenize
 from .parser import parse
 
@@ -39,7 +40,7 @@ def _usage(message):
 
 
 def _not_implemented(what):
-    sys.stderr.write("not implemented: %s (P1 only implements tokenize)\n" % what)
+    sys.stderr.write("not implemented: %s\n" % what)
     return EXIT_NOT_IMPLEMENTED
 
 
@@ -107,6 +108,46 @@ def cmd_parse(args):
     return _emit({"ast": tree}, EXIT_OK)
 
 
+def cmd_check(args):
+    profile = "shell"
+    paths = []
+    index = 0
+    while index < len(args):
+        arg = args[index]
+        if arg == "--profile":
+            index += 1
+            if index >= len(args):
+                return _usage("--profile 缺参数")
+            profile = args[index]
+        elif arg.startswith("--profile="):
+            profile = arg.split("=", 1)[1]
+        elif arg.startswith("-"):
+            return _usage("check 不认识的参数 %r" % arg)
+        else:
+            paths.append(arg)
+        index += 1
+    if len(paths) != 1:
+        return _usage("check 需要且只需要一个源文件参数")
+    if profile not in ("shell", "agent"):
+        return _usage("未知 profile %r（只允许 shell / agent）" % profile)
+    path = paths[0]
+    try:
+        with open(path, encoding="utf-8") as handle:
+            source = handle.read()
+    except OSError as exc:
+        return _usage("无法读取 %s：%s" % (path, exc))
+    try:
+        tree = parse(tokenize(source))
+        loader.check_program(tree, profile)
+    except LexError as exc:
+        return _emit({"error": exc.as_dict()}, EXIT_DIAGNOSTIC)
+    except ParseError as exc:
+        return _emit({"error": exc.as_dict()}, EXIT_DIAGNOSTIC)
+    except LoadError as exc:
+        return _emit({"error": exc.as_dict()}, EXIT_DIAGNOSTIC)
+    return _emit({"warnings": []}, EXIT_OK)
+
+
 def main(argv=None):
     argv = list(sys.argv[1:] if argv is None else argv)
     if not argv:
@@ -116,10 +157,15 @@ def main(argv=None):
         return cmd_tokenize(argv[1:])
     if command == "parse":
         return cmd_parse(argv[1:])
-    if command in ("check", "run", "fmt"):
+    if command == "check":
+        return cmd_check(argv[1:])
+    if command in ("run", "fmt"):
         return _not_implemented(command)
     if command in ("-h", "--help"):
-        sys.stdout.write("usage: rill tokenize <file> | rill parse --dump-ast <file> [--profile shell|agent]\n")
+        sys.stdout.write(
+            "usage: rill tokenize <file> | rill parse --dump-ast <file> [--profile shell|agent]"
+            " | rill check <file> [--profile shell|agent]\n"
+        )
         return EXIT_OK
     return _usage("未知子命令 %r" % command)
 

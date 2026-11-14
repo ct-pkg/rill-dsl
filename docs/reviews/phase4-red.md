@@ -39,3 +39,6 @@ Traceback (most recent call last):
     from rill import loader
 ImportError: cannot import name 'loader' from 'rill' (/Users/samxx/trae-ws/rill-dsl/tests/phase4/../../src/rill/__init__.py)
 ```
+
+- green: `bash tools/check-0.1.0.sh --case negative/load/map-duplicate-short` → `rc=0`，
+  `PASS load E-LOAD-MAP-DUP-SHORT@3:1`；`python3 tests/phase4/test_no_exec.py` → `rc=0`。
