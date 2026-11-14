@@ -35,18 +35,26 @@
 | --- | --- |
 | `src/rill/eval_parallel.py` | 分支执行与结果汇合 |
 | `src/rill/eval_fn.py` | 函数调用与参数绑定 |
-| `testdata/0.1.0/positive/run/` | 分支三态、`[results]`、函数 golden |
+| `src/rill/parser.py` | `[results]` 单判据；`$变量?默认值` 归约 |
+| `src/rill/lexer.py` | `//fn{}` 区块边界：块内 `//` 不再触发 header 特例 |
+| `src/rill/loader.py` | 模板参数表、默认值位置、调用 arity 校验 |
+| `testdata/0.1.0/positive/run/parallel/` | 分支三态、`[results]` run 用例 |
+| `testdata/0.1.0/positive/run/call/` | 函数调用、默认值、返回值 run 用例 |
 | `testdata/0.1.0/expected/run/` | 轨迹/结果 golden |
+| `tests/phase9/` | 可失败的单测（parallel / results / fn / errors / cases） |
+| `docs/reviews/phase9-red.md` | 逐任务红证与转绿记录 |
 
 ## 3. 任务清单
 
 | ID | 交付物 | 提交 | 回滚 | verify | effort | 覆盖 |
 | --- | --- | --- | --- | --- | --- | --- |
-| PH-9-T1 | `src/rill/eval_parallel.py`（分支与结果数组） | `feat(runtime): PH-9-T1 parallel 分支` | `git revert <sha>` | `bash tools/check-0.1.0.sh --show positive/parallel/results` | M | E-1 |
-| PH-9-T2 | `src/rill/eval_parallel.py`（`[results]`） | `feat(runtime): PH-9-T2 results 块` | `git revert <sha>` | `bash tools/check-0.1.0.sh --show positive/parallel/results` | S | E-2 |
-| PH-9-T3 | `src/rill/eval_fn.py` | `feat(runtime): PH-9-T3 fn 绑定与返回` | `git revert <sha>` | `bash tools/check-0.1.0.sh --show positive/call/basic` | M | E-3,E-4,E-6 |
-| PH-9-T4 | `src/rill/eval_fn.py`（调用错误码） | `feat(runtime): PH-9-T4 调用错误码` | `git revert <sha>` | `bash tools/check-0.1.0.sh --show negative/load/unknown-function` | S | E-5 |
-| PH-9-T5 | `testdata/0.1.0/expected/run/` 分支/函数 golden | `feat(runtime): PH-9-T5 golden 接入` | `git revert <sha>` | `bash tools/check-0.1.0.sh --kind run` | S | E-7 |
+| PH-9-T1 | `src/rill/eval_parallel.py`（分支与结果数组） | `feat(runtime): PH-9-T1 parallel 分支` | `git revert <sha>` | `python3 tests/phase9/test_parallel.py` | M | E-1 |
+| PH-9-T2 | `src/rill/eval_parallel.py`（`[results]`）+ `parser.py`（单判据） | `feat(runtime): PH-9-T2 results 块` | `git revert <sha>` | `python3 tests/phase9/test_results.py` | S | E-2 |
+| PH-9-T3 | `src/rill/eval_fn.py` + `parser.py`（默认值）+ `lexer.py`（区块边界） | `feat(runtime): PH-9-T3 fn 绑定与返回` | `git revert <sha>` | `python3 tests/phase9/test_fn.py` | M | E-3,E-4,E-6 |
+| PH-9-T4 | `src/rill/loader.py` + `src/rill/eval_fn.py`（调用错误码） | `feat(runtime): PH-9-T4 调用错误码` | `git revert <sha>` | `python3 tests/phase9/test_errors.py` | S | E-5 |
+| PH-9-T5 | `testdata/0.1.0/positive/run/` 分支/函数 golden | `feat(runtime): PH-9-T5 golden 接入` | `git revert <sha>` | `python3 tests/phase9/test_cases.py` | S | E-7 |
+
+verify 一律是可失败的单测命令：`--show` 只打印被测输出，不作为验收依据。
 
 ## 4. 退出判据（exit-criteria）
 
@@ -54,13 +62,13 @@
 
 | ID | 条件 | 判定 |
 | --- | --- | --- |
-| E-1 | 分支三态数组顺序与长度正确 | 成功/未处理失败/已处理失败三例逐位比对 |
-| E-2 | `[results]` 在非 parallel / 分支内出现时解析期报错 | 负例断言 `code/line/col` |
-| E-3 | 模板 3 处 `$path` 只收 1 个实参 | 参数位计数断言 |
-| E-4 | 默认值只允许尾部；中间缺省报错 | 两个负例 + 一个正例 |
-| E-5 | 未声明函数、错误参数个数有稳定错误码 | 负例逐条断言 |
-| E-6 | 函数返回值为最后一条语句的段输出 | golden 与源码末语句一致 |
-| E-7 | 任务清单每项可独立验收（T-6） | 收口对照表逐项贴 `verify` 原始输出 |
+| E-1 | 分支三态数组顺序与长度正确 | `test_parallel.py`：成功/未处理失败/已处理失败三例逐位比对，并断言分支内 `$` 不是结果数组 |
+| E-2 | `[results]` 在非 parallel / 分支内出现时解析期报错 | `test_results.py`：尾随块位、普通介宾位、独立介宾位、parallel 分支四个位置统一断言 `code/line/col` |
+| E-3 | 模板 3 处 `$path` 只收 1 个实参 | `test_fn.py`：参数位计数与同名绑定断言 |
+| E-4 | 默认值只允许尾部；中间缺省报错 | `test_fn.py`：两个负例 + 一个正例；正例断言默认值实参可省略 |
+| E-5 | 未声明函数、错误参数个数有稳定错误码 | `test_errors.py`：未声明（加载期）与少参/多参（加载期）逐条断言 |
+| E-6 | 函数返回值为最后一条语句的段输出 | `test_fn.py`：golden 与源码末语句一致，空体返回 `null` |
+| E-7 | 任务清单每项可独立验收（T-6） | `test_cases.py` + 全量 harness；收口对照表逐项贴 `verify` 原始输出 |
 
 ## 5. 依赖与风险
 
@@ -75,3 +83,25 @@
 
 - 收口时产品版本 `0.9.0`；annotated tag `v0.9.0`，message 含 `PH-9` 与收口提交 sha 前 7 位。
 - 只推 tag，不推分支、不对外发布。收口对照表：`docs/reviews/closeout-9.md`（收口时新建）。
+
+## 8. 规范缺口与实现裁定（不改变规范正文）
+
+下列各条在规范里没有唯一表述。**先实测、再裁定**：裁定只写进本表，不写进
+`docs/RILL-0.1.0.md`；后续 CR 需要逐条收口。红证与实现位置见
+`docs/reviews/phase9-red.md`。
+
+| # | 位置 | 缺口 | 本 phase 的实测与裁定 |
+| --- | --- | --- | --- |
+| 1 | §4.5 / §4.14 | `[results]` 与通用介词表的关系：只写“不是通用介词”，未给判定位置 | 待实测（T2） |
+| 2 | §4.14 | 分支自身产出按什么顺序汇集；逻辑并行还是真并发 | 待实测（T1） |
+| 3 | §4.14 | 某个分支失败时 parallel 整体的 `ok`/错误串；“不论整体成败”未定义成败判据 | 待实测（T1） |
+| 4 | §4.14 | 部分成功的表示：结果数组占位还是整体失败吞掉数组 | 待实测（T1） |
+| 5 | §4.14 / §4.8 | 分支内 `$` 的初始值（进入 parallel 的 `$`、`null`，还是分支未完成输出） | 待实测（T1） |
+| 6 | §4.14 / §4.15 | 分支内未处理 `break` 的归属与 `->$var` 捕捉落点 | 待实测（T1） |
+| 7 | §4.14 / §4.6 | parallel 有失败时其后的 `\|>` 是否执行；`[results]` 块失败时整体状态 | 待实测（T2） |
+| 8 | §4.18 | 函数体 `break` 的场域：中断函数返回、转成调用失败，还是穿到调用方 | 待实测（T3） |
+| 9 | §4.18 / §4.8 | 函数体内 `$` 的初始值；函数体写外层变量的可见性 | 待实测（T3） |
+| 10 | §4.18 | 默认值表达式在何处求值（调用方作用域/函数体作用域）；同名默认值冲突 | 待实测（T3） |
+| 11 | §4.18 | 参数个数不匹配的报错阶段（加载期静态可知 vs 运行期） | 待实测（T4） |
+| 12 | §3.1 / §4.18 | `//fn{}` 块内再出现 `//fn {` / `//map {` 时的词法归属 | 待实测（T3） |
+| 13 | §4.18 | 模板同名参数在不同出现处写不同默认值的行为 | 待实测（T3） |
