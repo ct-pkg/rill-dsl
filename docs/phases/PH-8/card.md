@@ -85,13 +85,13 @@
 
 | # | 位置 | 缺口 | 本 phase 的实测与裁定 |
 | --- | --- | --- | --- |
-| 1 | §4.13 + §4.15 | `each` 体内 `break`（非 `[error]` 块）是结束本轮还是结束整个 each | 待 T3 实测后补 |
-| 2 | §4.13 | 「某轮失败后 `[error]` 内 `break`」之后：该轮元素算 `null` 还是省略，each 级 `[error]` 是否触发 | 待 T3 实测后补 |
-| 3 | §4.13/§4.15 | `break` 的值作为 each 错误串时，裸词按 `STRING` 进入哪一层（each 级 `$` 还是捕捉变量） | 待 T3 实测后补 |
+| 1 | §4.13 + §4.15 | `each` 体内 `break`（非 `[error]` 块）是结束本轮还是结束整个 each | **实测：结束整个 each**（后续轮不再开始），该轮占 `null`；外层语句继续执行。与 §4.15「块内中断块」的字面读法有出入，此处按 §4.13「[error] 内 break 整个 each」外推。实测：`case_each_break_ends_loop` |
+| 2 | §4.13 | 「某轮失败后 `[error]` 内 `break`」之后：该轮元素算 `null` 还是省略，each 级 `[error]` 是否触发 | **实测：该轮占 `null`；each 级 `[error]` 不触发**，each 取成功 + 部分数组，break 值只走 `->$var`。实测：`case_each_break_after_failure` |
+| 3 | §4.13/§4.15 | `break` 的值作为 each 错误串时，裸词按 `STRING` 进入哪一层（each 级 `$` 还是捕捉变量） | **实测：不进入 each 级 `$`**；只有 `->$var` 能拿到，裸词按 `STRING`（`break done -> $err` → `$err == "done"`）。与「break 的值默认是错误串」并读时，错误串在本 phase 不落到 each 级。实测：`case_each_bareword_break_is_string` |
 | 4 | §4.12 | `if` 的段输出是什么（无动作的纯判断） | 取命中的分支块输出；块输出 = 进入 if 时的 `$`。无分支命中且无 `else` → 原样返回输入 `$`。实测：`case_falsy_body_uses_dollar`、`case_truthy_falsy_table` |
 | 5 | §4.12/§4.10 | `if` 条件求值为失败（动词 `ok=false`、条件管道中断）时的语义 | 条件失败原样返回该失败：不执行任何分支，`ok=false` 且保留宿主错误串（不换成 `RILL DSL ERROR`）。实测：`case_condition_failure_stops_if` |
-| 6 | §4.12 | `if` 体内 `$` 指代什么、体内 `break` 是否只中断 `if` | 体内 `$` = 进入 if 时的当前 `$`（顶层为 `null`）。体内 `break` 不在 T1 裁定，见 #1/#10 与 T3 实测 |
+| 6 | §4.12 | `if` 体内 `$` 指代什么、体内 `break` 是否只中断 `if` | 体内 `$` = 进入 if 时的当前 `$`（顶层为 `null`）。**体内 `break` 不中断 if 本身**：普通块不吞 break，穿到最近的多语句场域（program / each / 管道）。实测：`case_if_body_break_leaves_if_domain` |
 | 7 | §4.13 | `each` 源为 `null` 时的错误串；源为失败动词/中断管道时的语义 | `null` 源按默认失败处理，错误串 `RILL DSL ERROR`，0 轮；源 expr 失败（含管道中断）时把该失败交给 each 级 tail（`[error]` 的 `$` = 宿主错误串），0 轮。实测：`case_three_input_shapes` |
 | 8 | §4.13 | each 每轮作用域：`$变量` 与外层同名变量的读写关系 | 每轮新建子作用域，`$变量` 与 `$` 都是当前项；轮内 `->$x` 建在轮作用域，不泄漏到块外。实测：`case_round_dollar_and_var_are_item`、`case_round_scope_is_fresh` |
 | 9 | §4.13 | each 级 `[into]` 是否存在、收到什么值 | 解析器允许，执行按 §4.11 尾随块处理：收到结果数组。实测：`case_each_into_gets_result_array` |
-| 10 | §4.6/§4.15 | 管道段内 `break` 之后，管道场域的段输出与 program 的 `ok` | 待 T3 实测后补 |
+| 10 | §4.6/§4.15 | 管道段内 `break` 之后，管道场域的段输出与 program 的 `ok` | **实测：管道场域吞掉 break**，段输出 = break 值（`ok=true`），下游不执行，program 继续；`->$var` 写回管道所在作用域。实测：`case_pipe_break_stops_pipe_only`、`case_pipe_break_skips_downstream`、`case_block_break_captured_by_outer_scope` |

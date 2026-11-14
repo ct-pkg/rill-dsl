@@ -82,7 +82,7 @@ class Interpreter(object):
         last = input_value
         try:
             for statement in program["body"]:
-                outcome = self.eval_statement(statement, scope, input_value)
+                outcome = self.eval_statement_in_domain(statement, scope, input_value)
                 self._trace_segment(outcome)
                 if not outcome.ok:
                     return outcome
@@ -116,6 +116,17 @@ class Interpreter(object):
             statement["span"]["line"],
             statement["span"]["col"],
         )
+
+    def eval_statement_in_domain(self, statement, scope, dollar):
+        """§4.15：带 ``|>`` 的语句自成一个管道场域，break 止于管道。"""
+        if statement["kind"] == "SimpleStmt" and statement["pipe"] is not None:
+            try:
+                return self.eval_statement(statement, scope, dollar)
+            except BreakSignal as signal:
+                if signal.target:
+                    scope.set(signal.target, signal.value)
+                return result.ExecOutcome.success(signal.value)
+        return self.eval_statement(statement, scope, dollar)
 
     # ---- simple_stmt ---------------------------------------------------
 
@@ -263,7 +274,7 @@ class Interpreter(object):
         block_scope = Scope(scope)
         outcome = result.ExecOutcome.success(dollar)
         for statement in block["body"]:
-            outcome = self.eval_statement(statement, block_scope, dollar)
+            outcome = self.eval_statement_in_domain(statement, block_scope, dollar)
             self._trace_segment(outcome)
             if not outcome.ok:
                 return outcome, dollar

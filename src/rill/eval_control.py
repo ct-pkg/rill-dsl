@@ -9,7 +9,7 @@
 """
 
 from . import ast, result
-from .eval_simple import Scope
+from .eval_simple import BreakSignal, Scope
 from .value import truthy
 
 
@@ -74,9 +74,26 @@ def eval_each(interp, statement, scope, dollar):
     for index, item in enumerate(items):
         round_scope = Scope(scope)
         round_scope.set(statement["var"], item)
-        outcome, _ = interp._run_block(
-            statement["body"], round_scope, item, last_value=True
-        )
+        try:
+            outcome, _ = interp._run_block(
+                statement["body"], round_scope, item, last_value=True
+            )
+        except BreakSignal as signal:
+            # §4.13「[error] 内显式 break 整个 each」：循环在这里截住 break。
+            if signal.target:
+                scope.set(signal.target, signal.value)
+            interp.trace.append(
+                {
+                    "event": "round",
+                    "index": index,
+                    "ok": False,
+                    "value": None,
+                    "error": signal.value,
+                    "break": True,
+                }
+            )
+            values.append(None)
+            break
         interp.trace.append(
             {
                 "event": "round",
