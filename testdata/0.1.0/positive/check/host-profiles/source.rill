@@ -1,0 +1,12 @@
+//map{
+cfg`configuration
+}
+//fn{
+@ "load" $path <read> $path {
+    <read> $path
+}
+}
+@ "load" `cfg`.yml |> <send> "完成" [to] user
+each $item [in] $items {
+    <send> $item [to] user
+}

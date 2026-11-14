@@ -70,3 +70,29 @@ VERDICT: FAIL (exit 1)
 - green: `bash tools/check-0.1.0.sh --case negative/load/unknown-function` → `rc=0`，
   `PASS load E-LOAD-FN-UNDECLARED@1:1`。
 
+## PH-4-T3
+
+- baseline: `19d5cc7`
+- 命令: `bash tools/check-0.1.0.sh --case negative/load/unknown-verb --case positive/check/host-profiles`
+- 退出码: `1`
+- 原始输出:
+
+```text
+RILL 0.1.0 harness
+root     : testdata/0.1.0
+sut      : python3 -m rill
+profiles : agent, shell
+fixtures : 2 (positive 1, negative 1)
+filters  : case=negative/load/unknown-verb,positive/check/host-profiles
+
+FAIL    negative/load/unknown-verb (error)  期望诊断，实际成功（退出码 0）
+PASS    positive/check/host-profiles (check)  check 通过（shell / agent）
+
+summary
+  compliance: 1 passed, 1 failed, 0 blocked, 0 draft
+  smoke:     0 passed, 0 failed, 0 blocked, 0 draft
+  pending:   0 not run (A 0, B 0)
+VERDICT: FAIL (exit 1)
+```
+
+

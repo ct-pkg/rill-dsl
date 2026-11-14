@@ -12,7 +12,7 @@ import os
 import re
 
 BUCKETS = ("positive", "negative", "pending", "host", "smoke")
-KINDS = ("ast", "tokens", "error", "warning", "run", "host-ast-equal", "pending")
+KINDS = ("ast", "tokens", "error", "warning", "check", "run", "host-ast-equal", "pending")
 PHASES = ("p0", "p1", "p2", "p3", "p4", "r1", "r2", "r3", "r4", "h1", "h2", "i1")
 STAGES = ("tokenize", "parse", "load", "any")
 COMMANDS = ("tokenize", "parse", "check")
@@ -20,10 +20,10 @@ BLOCKED_BY = ("A", "B")
 
 # 桶决定用途，kind 必须落在桶允许的集合内；不靠文件名猜。
 BUCKET_KINDS = {
-    "positive": ("ast", "tokens", "warning", "run"),
+    "positive": ("ast", "tokens", "warning", "check", "run"),
     "negative": ("error",),
     "pending": ("pending",),
-    "host": ("host-ast-equal", "run"),
+    "host": ("host-ast-equal", "check", "run"),
     "smoke": ("ast", "host-ast-equal"),
 }
 
@@ -33,6 +33,7 @@ EXPECT_KEYS = {
     "tokens": ("tokens",),
     "error": ("stage", "command", "code", "line", "col", "message_contains"),
     "warning": ("command", "code", "line", "col", "message_contains"),
+    "check": ("profiles", "warnings"),
     "run": ("profile", "ok", "value", "error", "host_meta"),
     "host-ast-equal": ("profiles",),
     "pending": ("blocked_by", "reason", "unblocks_to", "profiles"),
@@ -146,6 +147,15 @@ def _validate_expect(case, where, errors):
         for key in ("line", "col"):
             if key in expect and not isinstance(expect[key], int):
                 errors.append("%s.expect.%s: 必须是整数" % (where, key))
+    elif kind == "check":
+        if "profiles" in expect:
+            _validate_profiles(expect["profiles"], where + ".expect", errors, minimum=1)
+        warnings = expect.get("warnings")
+        if warnings is not None and (
+            not isinstance(warnings, list)
+            or not all(isinstance(item, str) for item in warnings)
+        ):
+            errors.append("%s.expect.warnings: 必须是警告码字符串数组" % where)
     elif kind == "run":
         if expect.get("profile") not in PROFILE_NAMES:
             errors.append("%s.expect.profile: 必须是 shell 或 agent" % where)

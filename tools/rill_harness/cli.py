@@ -218,6 +218,10 @@ def cmd_show(case, sut, runner, repo_root):
             result = sut.run(["check", source, "--profile", "shell"], env=case.sut_env)
     elif case.kind == "warning":
         result = sut.run(["check", source, "--profile", "shell"], env=case.sut_env)
+    elif case.kind == "check":
+        result = sut.run(
+            ["check", source, "--profile", case.profiles()[0]], env=case.sut_env
+        )
     elif case.kind == "run":
         result = sut.run(
             [

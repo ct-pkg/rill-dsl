@@ -1,0 +1,6 @@
+{
+  "kind": "check",
+  "phase": "p4",
+  "note": "同一正例在 shell / agent 下 check 均通过；role 不是必填（§4.1、§五）",
+  "expect": {"profiles": ["shell", "agent"], "warnings": []}
+}

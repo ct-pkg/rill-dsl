@@ -177,6 +177,8 @@ class Runner(object):
             return self._run_error(case)
         if case.kind == "warning":
             return self._run_warning(case)
+        if case.kind == "check":
+            return self._run_check(case)
         if case.kind == "run":
             return self._run_run(case)
         if case.kind == "host-ast-equal":
@@ -317,6 +319,59 @@ class Runner(object):
             if needle and needle not in (item.get("message") or ""):
                 return Outcome(case, FAIL, "警告信息不含 %r：%r" % (needle, item.get("message")))
         return Outcome(case, PASS, "%s 已提示，check 退出 0" % code, matches[0])
+
+    def _run_check(self, case):
+        """正例 check：每个 profile 都必须退出 0；warnings 跨 profile 一致。"""
+        profiles = case.profiles()
+        seen = {}
+        for profile in profiles:
+            result = self.sut_for(case).run(
+                ["check", self._source_arg(case), "--profile", profile],
+                env=case.sut_env,
+            )
+            if result.status == "not_implemented":
+                return self._blocked(case, result)
+            if result.status == "diagnostic":
+                error = result.payload.get("error", {})
+                return Outcome(
+                    case,
+                    FAIL,
+                    "profile %s 期望 check 通过，实际报错 %s"
+                    % (profile, error.get("code", "?")),
+                )
+            if result.status != "ok":
+                return self._internal(case, result)
+            warnings = result.payload.get("warnings")
+            if not isinstance(warnings, list):
+                return Outcome(case, FAIL, "SUT 输出缺少 warnings 数组")
+            seen[profile] = [
+                item.get("code") for item in warnings if isinstance(item, dict)
+            ]
+
+        baseline_name = profiles[0]
+        for profile in profiles[1:]:
+            if seen[profile] != seen[baseline_name]:
+                return Outcome(
+                    case,
+                    FAIL,
+                    "warnings 跨 profile 不一致：%s=%r，%s=%r"
+                    % (baseline_name, seen[baseline_name], profile, seen[profile]),
+                )
+        if "warnings" in case.expect:
+            wanted = case.expect["warnings"]
+            actual = seen[baseline_name]
+            if actual != wanted:
+                return Outcome(
+                    case,
+                    FAIL,
+                    "warnings 不符：期望 %r，实际 %r" % (wanted, actual),
+                )
+        return Outcome(
+            case,
+            PASS,
+            "check 通过（%s）" % " / ".join(profiles),
+            seen[baseline_name],
+        )
 
     def _run_run(self, case):
         profile = case.expect["profile"]

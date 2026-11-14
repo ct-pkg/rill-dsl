@@ -47,10 +47,10 @@ testdata/0.1.0/
 
 | 桶 | 允许的 kind | 用途 |
 | --- | --- | --- |
-| `positive/` | `ast` / `tokens` / `warning` / `run` | 合法输入，应通过（含不阻断的警告） |
+| `positive/` | `ast` / `tokens` / `warning` / `check` / `run` | 合法输入，应通过（含不阻断的警告） |
 | `negative/` | `error` | 必须报错，断言阶段与位置 |
 | `pending/` | `pending` | 0.1.1 起应为空；保留格式供未来 CR 登记 |
-| `host/` | `host-ast-equal` / `run` | 双宿主同源 fixture |
+| `host/` | `host-ast-equal` / `check` / `run` | 双宿主同源 fixture |
 | `smoke/` | `ast` / `host-ast-equal`，且 `stub_only: true` | 占位链路自证 |
 
 `pending/` 下的 `case.json` 若写 `{"retired": true, "superseded_by": "..."}`，harness 会
@@ -64,6 +64,7 @@ testdata/0.1.0/
 | token | JSON 快照（`expected/tokens/<id>.json`） | 位置信息是 P1 的错误定位契约，快照能同时盯住边界与行列 |
 | 解析/加载错误 | 结构化断言（stage / code / line / col / message_contains） | 错误文案允许改进，阶段、错误码与位置才是契约；整段文案快照会把措辞修订误报成回归 |
 | 警告（如 `W-01`） | 结构化断言（`check` 退出 0 + `warnings[]` 中匹配 code / message） | 警告明确不阻断 `check`，放进错误桶会要求实现把警告变成失败，违背 0.1.1 |
+| `check` 通过（正例） | 每个 profile 的 `check` 都退出 0，`warnings[]` 跨 profile 一致 | 双宿主正例要证明“换 profile 不换合法性”，不靠 AST 间接推断 |
 | 运行结果 | 结构化子集断言（ok / value / error / host_meta） | 求值轨迹会随实现成熟而增删，只断言可观察结果，避免把内部轨迹焊死 |
 | 双 profile | 两次 `parse` 的 AST 相等断言 | 双宿主硬约束只要求“同一 AST”，不要求两次运行结果等价 |
 
@@ -80,7 +81,7 @@ testdata/0.1.0/
 
 | 字段 | 必填 | 说明 |
 | --- | --- | --- |
-| `kind` | 是 | `ast` / `tokens` / `error` / `warning` / `run` / `host-ast-equal` / `pending` |
+| `kind` | 是 | `ast` / `tokens` / `error` / `warning` / `check` / `run` / `host-ast-equal` / `pending` |
 | `phase` | 是 | 首次必须通过的阶段：`p0`–`p4` / `r1`–`r4` / `h1` / `h2` / `i1` |
 | `expect` | 是 | kind 相关，见下 |
 | `note` | 否 | 一句话说明该用例守规范哪一条或哪条评审 |
@@ -105,6 +106,10 @@ testdata/0.1.0/
 // warning：check 必须退出 0，且 warnings[] 中出现指定警告码（如 W-01）
 {"kind": "warning", "phase": "p3",
  "expect": {"command": "check", "code": "W-01", "message_contains": "按字符串处理"}}
+
+// check：每个 profile 的 check 都退出 0；warnings 按警告码精确比较（可省略）
+{"kind": "check", "phase": "p4",
+ "expect": {"profiles": ["shell", "agent"], "warnings": []}}
 
 // run：ok 必填；value/error/host_meta 按需断言（host_meta 是子集匹配）
 {"kind": "run", "phase": "r2",
