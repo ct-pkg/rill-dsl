@@ -106,9 +106,13 @@ class Interpreter(object):
             from . import eval_control
 
             return eval_control.eval_if(self, statement, scope, dollar)
+        if kind == "EachStmt":
+            from . import eval_control
+
+            return eval_control.eval_each(self, statement, scope, dollar)
         raise EvalError(
             "E-RUN-UNSUPPORTED",
-            "%s 不在 PH-8 的执行范围（each 见 T2，parallel/@ 见 PH-9）" % kind,
+            "%s 不在 PH-8 的执行范围（parallel/@ 见 PH-9）" % kind,
             statement["span"]["line"],
             statement["span"]["col"],
         )
@@ -117,12 +121,17 @@ class Interpreter(object):
 
     def eval_simple(self, statement, scope, dollar):
         outcome = self._call(statement["call"], scope, dollar)
+        outcome = self._apply_tail(statement["tail"], scope, outcome)
+        return self._finish(statement, scope, outcome)
+
+    def _apply_tail(self, tail, scope, outcome):
+        """§4.11 段尾处理；``each`` 复用同一份，不另写 [ok]/[error] 路径。"""
         cur = result.dollar(outcome)
         failure = None if outcome.ok else outcome
         ok_block = None
         error_block = None
 
-        for item in statement["tail"]:
+        for item in tail:
             kind = item["kind"]
             if kind == "Assign":
                 if failure is not None:
@@ -159,7 +168,7 @@ class Interpreter(object):
                 continue
             raise EvalError(
                 "E-RUN-UNSUPPORTED",
-                "%s 在 PH-7-T5 实现" % kind,
+                "尾随块 %s 尚未实现" % kind,
                 item["span"]["line"],
                 item["span"]["col"],
             )
@@ -177,13 +186,13 @@ class Interpreter(object):
                     }
                 )
                 if not block_outcome.ok:
-                    return self._finish(statement, scope, self._unhandled(block_outcome))
+                    return self._unhandled(block_outcome)
                 cur = block_dollar
             if error_block is not None:
                 self.trace.append(
                     {"event": "error", "triggered": False, "value": None}
                 )
-            return self._finish(statement, scope, result.ExecOutcome.success(cur))
+            return result.ExecOutcome.success(cur)
 
         if ok_block is not None:
             self.trace.append({"event": "ok", "triggered": False, "value": None})
@@ -200,11 +209,9 @@ class Interpreter(object):
                 }
             )
             if not block_outcome.ok:
-                return self._finish(statement, scope, self._unhandled(block_outcome))
-            return self._finish(
-                statement, scope, result.ExecOutcome.success(block_dollar)
-            )
-        return self._finish(statement, scope, self._unhandled(failure))
+                return self._unhandled(block_outcome)
+            return result.ExecOutcome.success(block_dollar)
+        return self._unhandled(failure)
 
     def _finish(self, statement, scope, outcome):
         """§4.6：段尾 ok 为真才把 value 交给 ``|>`` 下游；失败中断管道。"""
@@ -251,13 +258,17 @@ class Interpreter(object):
             scope.set(subject["name"], block_dollar)
         return result.ExecOutcome.success(block_dollar)
 
-    def _run_block(self, block, scope, dollar):
+    def _run_block(self, block, scope, dollar, last_value=False):
+        """块输出默认是块最终 ``$``；``each`` 的轮需要最后一条语句的段输出。"""
         block_scope = Scope(scope)
+        outcome = result.ExecOutcome.success(dollar)
         for statement in block["body"]:
             outcome = self.eval_statement(statement, block_scope, dollar)
             self._trace_segment(outcome)
             if not outcome.ok:
                 return outcome, dollar
+        if last_value:
+            return outcome, dollar
         return result.ExecOutcome.success(dollar), dollar
 
     def _unhandled(self, outcome):

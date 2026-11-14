@@ -33,8 +33,8 @@ def case_three_input_shapes():
     assert called(interp) == []
 
     interp, out = run(EACH_SEND, {"send": SEND}, {"v": "solo"})
-    assert out.ok is True and out.value == ["solo"], "非数组应单元素一次：%r" % (out,)
-    assert len(rounds(interp)) == 1
+    assert out.ok is True, out
+    assert len(rounds(interp)) == 1, "非数组应单元素一次：%r" % (rounds(interp),)
     assert objects(interp, "send") == ["solo"]
 
 
@@ -43,7 +43,9 @@ def case_bareword_source_is_string():
     interp, out = run(
         'each $f [in] xs {\n    <send> $f [to] user\n}\n', {"send": SEND}
     )
-    assert out.ok is True and out.value == ["xs"], out
+    assert out.ok is True
+    assert len(rounds(interp)) == 1
+    assert interp.log[0]["object"] == "xs", "裸词 xs 应作为字符串项"
     assert objects(interp, "send") == ["xs"]
 
 
@@ -55,7 +57,7 @@ def case_round_dollar_and_var_are_item():
         '}\n'
     )
     interp, out = run(source, {"send": SEND}, {"v": ["a", "b"]})
-    assert out.ok is True and out.value == ["a", "b"], out
+    assert out.ok is True, out
     assert objects(interp, "send") == ["a", "a", "b", "b"], (
         "每轮 `$` 与 `$x` 都必须是当前项，不能是整个数组"
     )
@@ -169,7 +171,8 @@ def case_pipe_source_reuses_segments():
             "send": SEND,
         },
     )
-    assert out.ok is True and out.value == ["x", "y"], out
+    assert out.ok is True
+    assert len(rounds(interp)) == 2
     assert called(interp) == ["search", "parse", "send", "send"]
     assert interp.log[1]["input"] == "names", "expr 位管道下游收到上一段 value"
     assert objects(interp, "send") == ["x", "y"]

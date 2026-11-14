@@ -91,7 +91,7 @@
 | 4 | §4.12 | `if` 的段输出是什么（无动作的纯判断） | 取命中的分支块输出；块输出 = 进入 if 时的 `$`。无分支命中且无 `else` → 原样返回输入 `$`。实测：`case_falsy_body_uses_dollar`、`case_truthy_falsy_table` |
 | 5 | §4.12/§4.10 | `if` 条件求值为失败（动词 `ok=false`、条件管道中断）时的语义 | 条件失败原样返回该失败：不执行任何分支，`ok=false` 且保留宿主错误串（不换成 `RILL DSL ERROR`）。实测：`case_condition_failure_stops_if` |
 | 6 | §4.12 | `if` 体内 `$` 指代什么、体内 `break` 是否只中断 `if` | 体内 `$` = 进入 if 时的当前 `$`（顶层为 `null`）。体内 `break` 不在 T1 裁定，见 #1/#10 与 T3 实测 |
-| 7 | §4.13 | `each` 源为 `null` 时的错误串；源为失败动词/中断管道时的语义 | 待 T2 实测后补 |
-| 8 | §4.13 | each 每轮作用域：`$变量` 与外层同名变量的读写关系 | 待 T2 实测后补 |
-| 9 | §4.13 | each 级 `[into]` 是否存在、收到什么值 | 待 T2 实测后补 |
+| 7 | §4.13 | `each` 源为 `null` 时的错误串；源为失败动词/中断管道时的语义 | `null` 源按默认失败处理，错误串 `RILL DSL ERROR`，0 轮；源 expr 失败（含管道中断）时把该失败交给 each 级 tail（`[error]` 的 `$` = 宿主错误串），0 轮。实测：`case_three_input_shapes` |
+| 8 | §4.13 | each 每轮作用域：`$变量` 与外层同名变量的读写关系 | 每轮新建子作用域，`$变量` 与 `$` 都是当前项；轮内 `->$x` 建在轮作用域，不泄漏到块外。实测：`case_round_dollar_and_var_are_item`、`case_round_scope_is_fresh` |
+| 9 | §4.13 | each 级 `[into]` 是否存在、收到什么值 | 解析器允许，执行按 §4.11 尾随块处理：收到结果数组。实测：`case_each_into_gets_result_array` |
 | 10 | §4.6/§4.15 | 管道段内 `break` 之后，管道场域的段输出与 program 的 `ok` | 待 T3 实测后补 |

@@ -9,6 +9,7 @@
 """
 
 from . import ast, result
+from .eval_simple import Scope
 from .value import truthy
 
 
@@ -48,3 +49,49 @@ def eval_if(interp, statement, scope, dollar):
         outcome, _ = interp._run_block(statement["else_body"], scope, dollar)
         return outcome
     return result.ExecOutcome.success(dollar)
+
+
+def eval_each(interp, statement, scope, dollar):
+    """§4.13：null → error 且 0 轮；数组遍历；其他非数组单元素一次。
+
+    每轮新建作用域，``$变量`` 与 ``$`` 都是当前项；轮内失败（未处理）占
+    ``null`` 并继续，处理过的失败取处理后 value。each 级 ``[ok]/[error]``
+    复用 ``_apply_tail``。
+    """
+    source = eval_expr_outcome(interp, statement["source"], scope, dollar)
+    if not source.ok:
+        return interp._apply_tail(statement["tail"], scope, source)
+    items = source.value
+    if items is None:
+        return interp._apply_tail(
+            statement["tail"], scope, result.ExecOutcome.failure()
+        )
+    if not isinstance(items, list):
+        items = [items]
+
+    values = []
+    first_error = None
+    for index, item in enumerate(items):
+        round_scope = Scope(scope)
+        round_scope.set(statement["var"], item)
+        outcome, _ = interp._run_block(
+            statement["body"], round_scope, item, last_value=True
+        )
+        interp.trace.append(
+            {
+                "event": "round",
+                "index": index,
+                "ok": outcome.ok,
+                "value": outcome.value if outcome.ok else None,
+                "error": outcome.error,
+            }
+        )
+        values.append(outcome.value if outcome.ok else None)
+        if not outcome.ok and first_error is None:
+            first_error = outcome.error
+
+    if first_error is None:
+        base = result.ExecOutcome.success(values)
+    else:
+        base = result.ExecOutcome(value=values, ok=False, error=first_error)
+    return interp._apply_tail(statement["tail"], scope, base)
