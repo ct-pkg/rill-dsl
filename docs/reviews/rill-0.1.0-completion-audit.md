@@ -67,9 +67,9 @@
 | --- | --- | --- | --- |
 | E-1 压缩→展示→压缩 AST 相等 | **替代锚点**：PH-5 未交付 formatter；PH-12-T1 的最小 `fmt` + 本命令 | F | PASS（替代） |
 | E-2 展示不改变语义、无 LongWord | 往返 AST 等价；没有 `expected/fmt/` golden | F | PASS（缩小） |
-| E-3 三类长词各有 golden | **未满足**：`testdata/0.1.0/expected/fmt/` 不存在 | `ls` 实测 | **未满足** |
+| E-3 三类长词各有 golden | **已裁定移出**：2026-11-15 用户裁定转 0.1.1 backlog `BL-001`；`expected/fmt/` 仍未建立 | `ls` 实测 + 裁定记录 | **移出（不计通过）** |
 | E-4 `//map {`/`//map{` 空格容忍 | `space-header` 往返 | F | PASS |
-| E-5 Bytes/Opaque 不有损格式化 | **未满足**：没有专门 fixture/断言 | 代码与 fixture 检索 | **未满足** |
+| E-5 Bytes/Opaque 不有损格式化 | **已裁定移出**：2026-11-15 用户裁定转 0.1.1 backlog `BL-002`；无专用 fixture/断言 | 代码与 fixture 检索 + 裁定记录 | **移出（不计通过）** |
 | E-6 T-6 | 本表 | 本文件 | PASS |
 
 ### PH-6 值模型
@@ -161,13 +161,15 @@
 | 1 | PH-1 E-4 | parse 未实现退出 3 | parse 已实现，退出 0；退出 3 只作历史桩 | 锚点过期 |
 | 2 | PH-5 E-1 | PH-5 自己的 formatter | PH-12-T1 最小 `fmt` + roundtrip | 依赖挪用 |
 | 3 | PH-5 E-2 | `expected/fmt/` golden | 往返 AST 等价，无 golden | 缩小 |
-| 4 | PH-5 E-3 | 三类长词 golden | 未交付 | 未满足 |
-| 5 | PH-5 E-5 | Bytes/Opaque 专用断言 | 未交付 | 未满足 |
+| 4 | PH-5 E-3 | 三类长词 golden | 未交付，2026-11-15 裁定移出 0.1.0 | 已裁定移出（`BL-001`） |
+| 5 | PH-5 E-5 | Bytes/Opaque 专用断言 | 未交付，2026-11-15 裁定移出 0.1.0 | 已裁定移出（`BL-002`） |
 | 6 | PH-11 E-1 | 队列桩工具 | canonical `command` 工具 + 真实 pid | 补锚点 |
 | 7 | PH-12 E-2 | 目录里 pending 计数 | harness pending 0 + retired 4 分开写 | 口径澄清 |
 
 替代/缩小共 7 条，超过“少数几条”，说明立卡时对“最终可观察锚点”写得不够实。
-对应的 lessons 见 §3；PH-5 的 E-3/E-5 不计为通过。
+对应的 lessons 见 §3。**PH-5 的 E-3/E-5 已由用户于 2026-11-15 裁定移出 0.1.0**，
+记入 `docs/planning/rill-0.1.1-backlog.md`；两项不计为通过，也不从判据总数里删除。
+因此 PH-5 记 **4/6**，0.1.0 **不是 12 张卡全绿**。
 
 ## 3. lessons
 
@@ -201,3 +203,8 @@
   0.1.1 不参与产品版本核对。
 - 本地提交，不打 tag、不 push（按用户指令）；tag 需另行授权。
 - 第一次运行证据见 [closeout-12.md](closeout-12.md) §6 与 README §2/§3。
+- **PH-13（CT 轨道）状态**：已收口，`GO`；token golden 12/12、82 个源 token 对拍 0 差异，
+  见 `docs/reviews/closeout-13.md` 与 `docs/reviews/diff/PH-13.md`。它不属于 0.1.0 对账范围。
+- **0.1.0 准确状态**：Python 参考实现已交付 12 张 phase 卡；PH-5 的 `E-3`/`E-5`
+  于 2026-11-15 裁定移出 0.1.0、转入 0.1.1 backlog，故 **0.1.0 不是 12 张卡全绿**，
+  PH-5 记 4/6 且两项不计通过。

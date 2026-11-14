@@ -41,13 +41,14 @@
 
 ## 4. 格式化器
 
-- PH-5 未交付：`src/rill/formatter.py` 是 PH-12 为 round-trip 门禁准备的
+- PH-5 **部分交付**：`src/rill/formatter.py` 是 PH-12 为 round-trip 门禁准备的
   最小实现（卡 §7 #1），只保证 `compress -> display -> compress` 的 AST
   等价，不保证展示风格与 golden。
 - `round-trip` 覆盖 71 个可解析 fixture；tokens-only 用例不是合法 program，
   不纳入。
-- 未实现 PH-5 的 `expected/fmt` golden、内层覆盖外层的完整反向映射、二进制
-  值（`Bytes` / `Opaque`）的格式规则。
+- PH-5 的 `expected/fmt` golden（三类长词）与二进制值（`Bytes` / `Opaque`）
+  的格式规则**已于 2026-11-15 裁定移出 0.1.0**，转入 0.1.1 backlog
+  `BL-001`/`BL-002`；不计为 0.1.0 通过。内层覆盖外层的完整反向映射仍未实现。
 - 展示态展开值类长词时一律加引号；与相邻词元拼接时整体引成一个 `STRING`
   （卡 §7 #8）。压缩态再按长词前缀拆回短词引用。
 - `fmt` 退出码：成功 0、词法/语法诊断 2、参数错误 2（stage=cli）；没有 3。

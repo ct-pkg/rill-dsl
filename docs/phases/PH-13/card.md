@@ -1,9 +1,9 @@
 # PH-13 立项卡：CT 词法层（P1）接管与收口
 
-> 状态：正常开卡。CT 重写轨道第 1 层。体系见 `docs/phases/README.md`，上游见
+> 状态：**已收口（2026-11-15，closeout-13 GO）**。CT 重写轨道第 1 层。体系见 `docs/phases/README.md`，上游见
 > `docs/planning/rill-0.1.0-ct-rewrite-roadmap.md`。语言规范 `docs/RILL-0.1.0.md`（0.1.1，只读）。
-> **在途项**：`ct/rill_ct.ct`（2,030 行，另一会话所有，已覆盖 tokenize → parse → JSON）。
-> 本卡不重写 lexer，只做构建、协议、golden 接管、对拍与收口。
+> 收口证据：token golden 12/12、82 个源 token 对拍 0 差异；见 `docs/reviews/closeout-13.md`
+> 与 `docs/reviews/diff/PH-13.md`。本卡不重写 lexer，只做构建、协议、golden 接管、对拍与收口。
 
 ## 0. 开卡必填
 

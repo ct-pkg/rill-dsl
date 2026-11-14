@@ -1,6 +1,8 @@
 # PH-5 立项卡：展示/压缩互转与回读（Parser 轨）
 
-> 状态：正常开卡。体系见 `docs/phases/README.md`。
+> 状态：**部分收口**。`E-3` 与 `E-5` 于 2026-11-15 经用户裁定**移出 0.1.0**，转入 0.1.1 backlog
+> （`docs/planning/rill-0.1.1-backlog.md`）；其余判据收口。本卡**不计为全绿**，见 §7。
+> 体系见 `docs/phases/README.md`。
 > 对齐：`docs/planning/rill-0.1.0-phase-plan.md` phase 5；roadmap phase 5「展示/压缩互转与回读」。
 > 规范版本快照：`1.9.0`。语言规范：`docs/RILL-0.1.0.md`（0.1.1，只读）。
 
@@ -55,9 +57,9 @@
 | --- | --- | --- |
 | E-1 | 压缩→展示→压缩的 AST 忽略 `span` 后相等 | `bash tools/check-fmt.sh --roundtrip` 退出 0 |
 | E-2 | 展示→压缩不改变语义，不产生 `LongWord` 节点 | golden 节点断言 |
-| E-3 | 含空格长词、含 `"` 长词、含 `'` 长词、三类标记各有 golden | `expected/fmt/` 可枚举且全绿 |
+| E-3 | 含空格长词、含 `"` 长词、含 `'` 长词、三类标记各有 golden | **已裁定移出 0.1.0（2026-11-15）→ 0.1.1 backlog `BL-001`；不计为通过** |
 | E-4 | `//map {` 与 `//map{` 的空格容忍 | 两个 fixture 的展示/压缩结果一致 |
-| E-5 | `Bytes`/`Opaque` 不做有损格式化 | 透传或 `cannot_format`，不得转 STRING |
+| E-5 | `Bytes`/`Opaque` 不做有损格式化 | **已裁定移出 0.1.0（2026-11-15）→ 0.1.1 backlog `BL-002`；不计为通过** |
 | E-6 | 任务清单每项可独立验收（T-6） | 收口对照表逐项贴 `verify` 原始输出 |
 
 ## 5. 依赖与风险
@@ -71,5 +73,21 @@
 
 ## 6. 收口与 tag
 
-- 收口时产品版本 `0.5.0`；annotated tag `v0.5.0`，message 含 `PH-5` 与收口提交 sha 前 7 位。
-- 只推 tag，不推分支、不对外发布。收口对照表：`docs/reviews/closeout-5.md`（收口时新建）。
+- 本卡**没有按原判据单独收口**：formatter 最终由 PH-12-T1 的最小 `fmt` 提供；
+  `E-3`/`E-5` 已裁定移出，见 §7。
+- 产品版本未按本卡目标 `0.5.0` 单独发布；tag 未打、不 push。
+- 收口对照表：无独立 `closeout-5.md`；PH-5 的判定记录在
+  `docs/reviews/rill-0.1.0-completion-audit.md` 与 §7。
+
+## 7. 2026-11-15 裁定记录：E-3 / E-5 移出 0.1.0
+
+- **裁定**：`E-3`（fmt golden，三类长词）与 `E-5`（`Bytes`/`Opaque` 格式化断言）
+  **移出 0.1.0，记入 0.1.1 遗留**。这是已裁定移出，不是“暂缓”“待定”，也不是通过。
+- **理由**：① PH-5 的 formatter 未按卡交付，`testdata/0.1.0/expected/fmt/` 从未建立；
+  ② 0.1.0 实际只有 PH-12-T1 的最小 `fmt`，没有独立 golden 与二进制值断言；
+  ③ `Bytes`/`Opaque` 的格式化口径可能需要在 0.1.1 修订规范正文，0.1.0 不扩语义。
+- **账目**：0.1.0 的 PH-5 记 4/6（`E-1`、`E-2` 按替代/缩小锚点，`E-4`、`E-6`），
+  `E-3`/`E-5` 记“移出”，**不计入通过数**；因此 0.1.0 不是 12 张卡全绿。
+- **去向**：`docs/planning/rill-0.1.1-backlog.md` 的 `BL-001`、`BL-002`。
+- **冻结说明**：PH-5 无 `PH-5` 实现提交，`g8-phase-freeze` 对该卡为 SKIP，
+  本次修改不破坏已冻结的判据。

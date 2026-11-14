@@ -1,10 +1,14 @@
 # rill-dsl
 
 RILL 0.1.x 的参考实现：一个把工具调用写成空格句子的小语言，带 lexer、parser、
-加载期校验、运行时、格式化器，以及 Shell / Agent 两个宿主 profile。
+加载期校验、运行时、最小格式化器（两端往返），以及 Shell / Agent 两个宿主 profile。
 
 当前产品版本 **0.12.0**（`src/rill/__init__.py#__version__`）。语言规范正文在
 [docs/RILL-0.1.0.md](docs/RILL-0.1.0.md)（0.1.1，只读）。
+
+> 完成度口径：0.1.0 **不是 12 张卡全绿**。PH-5 的 `E-3`（fmt golden，三类长词）与
+> `E-5`（`Bytes`/`Opaque` 格式化断言）已于 2026-11-15 裁定移出 0.1.0，转入
+> [0.1.1 backlog](docs/planning/rill-0.1.1-backlog.md)，**不计通过**；PH-5 记 4/6。
 
 ## 1. 环境
 
@@ -103,8 +107,10 @@ $ for f in tests/phase*/test_*.py; do python3 "$f" || exit 1; done
 | 层 | 位置 | 内容 |
 | --- | --- | --- |
 | 语言规范 | [docs/RILL-0.1.0.md](docs/RILL-0.1.0.md) | 0.1.1 正文（只读） |
-| 阶段账 | [docs/phases/README.md](docs/phases/README.md) | PH-1…PH-12 卡与收口体系 |
+| 阶段账 | [docs/phases/README.md](docs/phases/README.md) | PH-1…PH-21 卡与收口体系 |
 | 能力矩阵 | [host-matrix](docs/planning/rill-0.1.0-host-matrix.md) | Shell / Agent 五槽差异 |
 | 验收 | [acceptance](docs/planning/rill-0.1.0-acceptance.md) | 通过/失败/pending/host-specific |
-| 完成度对账 | [completion-audit](docs/reviews/rill-0.1.0-completion-audit.md) | 12 张卡判据与替代锚点 |
+| 完成度对账 | [completion-audit](docs/reviews/rill-0.1.0-completion-audit.md) | 12 张卡判据、替代锚点与 PH-5 移出项 |
+| 0.1.1 backlog | [backlog](docs/planning/rill-0.1.1-backlog.md) | 已裁定移出 0.1.0 的 `BL-001`/`BL-002` |
 | 收口 | [closeout-12](docs/reviews/closeout-12.md) | PH-12 收口与复测 |
+| CT 收口 | [closeout-13](docs/reviews/closeout-13.md) | PH-13 P1 收口（GO） |

@@ -54,14 +54,24 @@ RILL 的早期目标有两个宿主：
 
 | 项 | 状态 |
 | --- | --- |
-| Python 参考实现 | `src/rill/`，产品 0.12.0，PH-1…PH-12 已收口；**永久保留为参考实现与对拍基准**，不随 CT 版淘汰 |
-| CT 正式实现 | 未完成。`ct/rill_ct.ct` 覆盖 tokenize → parse → JSON，属另一会话在途；其余层未开始 |
+| Python 参考实现 | `src/rill/`，产品 0.12.0，PH-1…PH-12 已收口；**永久保留为参考实现与对拍基准**，不随 CT 版淘汰。PH-5 的 `E-3`/`E-5` 于 2026-11-15 裁定移出 0.1.0（见 §0.3），故不是 12 卡全绿 |
+| CT 正式实现 | P1 已收口（PH-13：token golden 12/12、82 个源 token 对拍 0 差异）；P2 起未开始 |
 | 实现语言账 | R-005 已从 pending 翻面为 decided：CT 为正式实现，Python 为长期参考实现 |
 | 重写路线图 | `docs/planning/rill-0.1.0-ct-rewrite-roadmap.md`（PH-13…PH-21，P1…P9） |
 | fixture / golden | 语言中立，继续作为**第三方基准**复用；不得为迁就任一实现修改 |
 | 对拍 | 每阶段收口固定附 `docs/reviews/diff/PH-<n>.md`；脚本在 `tools/diff/`（PH-13 首次建立） |
 
 本文件 phase 1–12 的编号、依赖与并行结论不因重写而改变；CT 重写另立续号，不改写历史。
+
+## 0.3 PH-5 判据移出记录（2026-11-15）
+
+- `PH-5` 的 `E-3`（fmt golden，三类长词）与 `E-5`（`Bytes`/`Opaque` 格式化断言）
+  经用户裁定**移出 0.1.0，记入 0.1.1 遗留**；不是暂缓，也不计为通过。
+- 去向：`docs/planning/rill-0.1.1-backlog.md` 的 `BL-001`/`BL-002`；
+  逐条账目见 `docs/phases/PH-5/card.md` §7 与
+  `docs/reviews/rill-0.1.0-completion-audit.md`。
+- 因此 0.1.0 的准确口径是：**12 张 phase 卡已交付，但 PH-5 记 4/6，不是全绿**。
+- 本记录只补状态与去向，不改 phase 1–12 的编号、依赖与并行结论。
 
 ## 1. 完成定义
 
@@ -84,7 +94,7 @@ RILL 的早期目标有两个宿主：
 | phase 2 | Parser | 词法：符号、关键字、引号、`//map`/`//fn` 头、标记符 | phase 1 | 无（phase 3 依赖它） | token golden 全绿；`//map {` 与 `//map` 注释分流正确；map 行模式与 `E-01` 正确 |
 | phase 3 | Parser | 完整 §三 产生式与 AST | phase 2 | 无（phase 4/5/6 依赖它） | AST golden 全绿；条件位/调用/独立介词块可归约 |
 | phase 4 | Parser | 加载期校验与诊断（不执行） | phase 3 | 与 phase 5、phase 6 | 负例全部有稳定错误码；map/fn 表校验完成 |
-| phase 5 | Parser | 展示/压缩互转与回读 | phase 3 | 与 phase 7/8/9 | 压缩→展示→压缩 AST 等价；长词/转义 property 通过 |
+| phase 5 | Parser | 展示/压缩互转与回读 | phase 3 | 与 phase 7/8/9 | 压缩→展示→压缩 AST 等价；长词/转义 property 通过。**E-3/E-5 已裁定移出 0.1.0（§0.3），不计通过** |
 | phase 6 | Runtime | 值模型、`{value, ok}`、`$` 基准 | phase 3 | 与 phase 4、phase 5 | truthy/falsy、ok 传播、默认 break 单测全绿 |
 | phase 7 | Runtime | 简单语句、尾随块、段输出 | phase 6 | 与 phase 4、phase 5 | 段输出 4 种情形 + `[into]` 失败顺序全绿 |
 | phase 8 | Runtime | 管道、`if`、`each`、`break` | phase 7 | 与 phase 5 | 管道只传 value；each 数组/失败继续；break 场域全绿 |

@@ -167,6 +167,9 @@
   - 证据：`#L164` PH-5 E-3“三类长词 golden 未交付”：`ls testdata/0.1.0/expected/` 只有 `ast/run/tokens`，无 `fmt/`；`#L165` PH-5 E-5“Bytes/Opaque 未交付”：`src/` 有 `Bytes`，但测试与夹具中无一处针对格式化的断言。另 `#L161` PH-1 E-4 锚点已过期（parse 已实现）。
   - 性质：确有问题（完成度口径）。
   - 影响：对外说“12 个 phase 已完成”时，PH-5 有 2 条判据不成立；只有读完 completion-audit 才会发现。
+  - **2026-11-15 更新**：`E-3`/`E-5` 已由用户裁定移出 0.1.0，转入 0.1.1 backlog
+    `BL-001`/`BL-002`。原“未满足”结论保留为当时事实；对外口径改为“已裁定移出，
+    不计通过，0.1.0 不是 12 卡全绿”。
 - **T7 宿主能力矩阵只有 4/16 格有真实用例**
   - 位置：`testdata/0.1.0/host/shell/**`（12 例）与 `host/agent/**`（14 例）。
   - 证据：真实宿主夹具只覆盖 `simple_stmt`、管道、角色主语、尾随 `[error]`；没有任何 `if`/`each`/`parallel`/`[into]`/`[ok]`/`//map`/`//fn` 的真实宿主用例。动词侧：Shell 真实实现 5/10（`read/write/run/env/send`），Agent canonical 工具 4/10（`read/write/run/send`）。
@@ -246,7 +249,7 @@
 9. **A7**：给 `docs/review/v1.3-*` 加“已被 0.1.1 取代”的抬头，避免旧结论被当现状。
 10. **A10/A11**：README 的 `run` 退出码限定宿主；`testdata/README.md` 删掉 P1 时代的“返回 3/删除 smoke”。
 11. **T3**：删除或标注 `E-RUN-FN-ARITY` / `E-RUN-FN-UNDECLARED` 这两个不可达码。
-12. **T6**：在对外口径里明确 PH-5 有 2 条判据未满足，不能只说“12 个 phase 已完成”。
+12. **T6**：在对外口径里明确 PH-5 有 2 条判据未满足，不能只说“12 个 phase 已完成”。（2026-11-15 已执行：两项裁定移出并登记 backlog；0.1.0 仍不得称 12 卡全绿）
 
 ### 可以放后面（缺例子、覆盖补强，不改变现有结论）
 
