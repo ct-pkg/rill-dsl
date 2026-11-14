@@ -61,11 +61,11 @@ def case_baseline_failures_match():
         text=True,
     )
     fails = [line for line in result.stdout.splitlines() if line.startswith("FAIL")]
-    assert len(fails) == 20, (
+    assert len(fails) == 21, (
         "check.sh all 的 FAIL 数变了：%d（先判断是否本阶段新增）" % len(fails),
         fails[:5],
     )
-    assert "20" in doc, "限制清单必须写出基线 FAIL 数 20"
+    assert "21" in doc, "限制清单必须写出基线 FAIL 数 21"
     for kind in ("DOC-S2", "断链", "未定义版本"):
         assert kind in doc, "基线失败分类缺少：%s" % kind
 
@@ -74,7 +74,7 @@ def main():
     case_sections_exist()
     case_key_limits_are_named()
     case_baseline_failures_match()
-    print("PASS phase12 limits: 生产/并发/pending/formatter/基线 20 FAIL")
+    print("PASS phase12 limits: 生产/并发/pending/formatter/基线 21 FAIL")
 
 
 if __name__ == "__main__":
