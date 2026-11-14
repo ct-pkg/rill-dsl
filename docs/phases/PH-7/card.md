@@ -45,7 +45,7 @@
 
 | ID | 交付物 | 提交 | 回滚 | verify | effort | 覆盖 |
 | --- | --- | --- | --- | --- | --- | --- |
-| PH-7-T1 | `src/rill/eval_simple.py`（`[into]` 顺序与失败） | `feat(runtime): PH-7-T1 into 语义` | `git revert <sha>` | `python3 tests/phase7/test_into.py` | M | E-2,E-3 |
+| PH-7-T1 | `src/rill/eval_simple.py`（`[into]` 顺序与失败） | `feat(runtime): PH-7-T1 into 语义` | `git revert <sha>` | `python3 tests/phase7/test_into.py` | M | E-3 |
 | PH-7-T2 | `src/rill/eval_simple.py`（`[ok]/[error]` 与 `$`） | `feat(runtime): PH-7-T2 ok 与 error 块` | `git revert <sha>` | `python3 tests/phase7/test_ok_error.py` | M | E-4 |
 | PH-7-T3 | `src/rill/eval_simple.py`（4 种段输出与管道下游） | `feat(runtime): PH-7-T3 段输出` | `git revert <sha>` | `python3 tests/phase7/test_segment.py` | M | E-1,E-5 |
 | PH-7-T4 | `src/rill/fakes.py` + `src/rill/cli.py`（run 入口） | `feat(runtime): PH-7-T4 run 子命令` | `git revert <sha>` | `python3 tests/phase7/test_run_cli.py` | S | E-6 |
