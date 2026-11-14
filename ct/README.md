@@ -112,7 +112,7 @@ struct Holder { Map<char *, struct Item> items; };
 
 ```bash
 ctc /tmp/ctprobe/mapstruct.ct -o /tmp/ctprobe/mapstruct.c   # rc=0
-cc -std=c99 /tmp/ctprobe/mapstruct.c -o /tmp/ctprobe/mapstruct
+cc -std=c99 /tmp/ctprobe/mapstruct.c -o /tmp/ctprobe/mapstruct   # rc=1
 # error: unknown type name 'Map'
 # error: expected member name or ';' after declaration specifiers
 ```
@@ -133,7 +133,7 @@ p.set(7);
 
 ```bash
 ctc /tmp/ctprobe/ptrrecv2.ct -o /tmp/ctprobe/ptrrecv2.c   # rc=0
-cc -std=c99 /tmp/ctprobe/ptrrecv2.c -o /tmp/ctprobe/ptrrecv2
+cc -std=c99 /tmp/ctprobe/ptrrecv2.c -o /tmp/ctprobe/ptrrecv2   # rc=1
 # error: member reference type 'struct S *' is a pointer; did you mean to use '->'?
 # error: no member named 'set' in 'struct S'
 ```
