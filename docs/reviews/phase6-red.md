@@ -57,4 +57,19 @@ AttributeError: module 'rill.result' has no attribute 'field'
 - green: `python3 tests/phase6/test_truthy.py` → `rc=0`，
   `PASS truthy: 6 个 falsy、9 个真值、$ 基准与 .字段`。
 
+## PH-6-T4
+
+- baseline: `1fde2fe`
+- 命令: `python3 tests/phase6/test_verbs.py`
+- 退出码: `1`
+- 原始输出:
+
+```text
+Traceback (most recent call last):
+  File "/Users/samxx/trae-ws/rill-dsl/tests/phase6/test_verbs.py", line 12, in <module>
+    from rill import result, verbs
+ImportError: cannot import name 'verbs' from 'rill' (/Users/samxx/trae-ws/rill-dsl/tests/phase6/../../src/rill/__init__.py)
+```
+
+
 
