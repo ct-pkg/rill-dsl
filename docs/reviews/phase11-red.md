@@ -84,3 +84,17 @@ exit=1
   `[0, 0, 0.02]`。实现按“每次调用前检查墙钟”计时，原来的第三个数
   只到 1ms，不足以越过 10ms 上限；用 20ms 让第三次调用稳定变红。
   红证仍以 ImportError 为准。
+
+## PH-11-T4 Agent fixture
+
+- 红提交：`test(host): PH-11-T4 红`（baseline `b9d5424`）
+- 红命令：`python3 tests/phase11/test_agent_fixtures.py`
+- 红输出：
+
+```text
+Traceback (most recent call last):
+  File ".../tests/phase11/test_agent_fixtures.py", line 37, in fixture_dirs
+    assert os.path.isdir(HOST_ROOT), "缺少 agent fixture 目录：%s" % HOST_ROOT
+AssertionError: 缺少 agent fixture 目录：.../testdata/0.1.0/host/agent
+exit=1
+```
