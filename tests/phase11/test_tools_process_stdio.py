@@ -142,8 +142,11 @@ def case_cli_agent_host_is_available():
         assert result.returncode == 0, (result.returncode, result.stdout, result.stderr)
         payload = payload_of(result)
         assert payload["ok"] is False, payload
-        assert "E-HOST-TOOL-UNREGISTERED" in payload["error"], payload
-        assert "E-RUN-HOST-UNAVAILABLE" not in payload["error"], payload
+        # §4.10 的隐式 [error] 把顶层错误串统一成 RILL DSL ERROR；
+        # 结构化原因走 host_meta（E-3）。
+        assert payload["error"] == "RILL DSL ERROR", payload
+        meta = payload["host_meta"]["tool_meta"]["tool"]
+        assert meta["code"] == "E-HOST-TOOL-UNREGISTERED", payload
 
 
 def case_cli_agent_tool_value():

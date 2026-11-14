@@ -44,6 +44,7 @@ exit=1
 - 红后修正（断言）：顶层未处理失败按 §4.10 统一成 `RILL DSL ERROR`，
   工具错误串不会出现在 payload.error；红阶段的两条 CLI 断言改为读
   `host_meta`，工具错误串本身仍由 `test_tool_failure_is_string` 直接断言。
+  该断言修正单独提交为 `test(host): PH-11-T1 红后断言修正`，不改变实现。
 
 ## PH-11-T2 工具文件与环境
 
