@@ -101,9 +101,14 @@ class Interpreter(object):
             return self.eval_prep_block(statement, scope, dollar)
         if kind == "BreakStmt":
             raise BreakSignal(self._break_value(statement["value"], scope, dollar), statement["target"])
+        if kind == "IfStmt":
+            # 控制流只有一份实现；管道与块语义仍回落到本模块。
+            from . import eval_control
+
+            return eval_control.eval_if(self, statement, scope, dollar)
         raise EvalError(
             "E-RUN-UNSUPPORTED",
-            "%s 不在 PH-7 的执行范围（PH-8/PH-9）" % kind,
+            "%s 不在 PH-8 的执行范围（each 见 T2，parallel/@ 见 PH-9）" % kind,
             statement["span"]["line"],
             statement["span"]["col"],
         )
