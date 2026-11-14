@@ -38,3 +38,20 @@ ImportError: cannot import name 'result' from 'rill' (/Users/samxx/trae-ws/rill-
 - green: `python3 tests/phase6/test_result.py` → `rc=0`，
   `PASS result: ok 只看 ok、默认错误、$ 投影、exit_code 钩子、顶层中断`。
 
+## PH-6-T3
+
+- baseline: `1fde2fe`
+- 命令: `python3 tests/phase6/test_truthy.py`
+- 退出码: `1`
+- 原始输出:
+
+```text
+Traceback (most recent call last):
+  File "/Users/samxx/trae-ws/rill-dsl/tests/phase6/test_truthy.py", line 64, in <module>
+    main()
+  File "/Users/samxx/trae-ws/rill-dsl/tests/phase6/test_truthy.py", line 43, in main
+    assert result.field(obj, "a") == 1
+AttributeError: module 'rill.result' has no attribute 'field'
+```
+
+
