@@ -16,6 +16,7 @@ import os
 import shlex
 import subprocess
 
+from .. import result
 from ..value import Bytes
 
 DENIED_CODE = "E-HOST-CAPABILITY-DENIED"
@@ -244,15 +245,20 @@ class ProcessCapability(object):
 
 
 class FsCapability(object):
-    """文件能力：只做 read/write；不把 workspace root 强加给客户端。"""
+    """文件能力：只做 read/write；相对路径按宿主 cwd 解析，不额外强加 root。"""
 
-    def __init__(self, policy):
+    def __init__(self, policy, cwd=None):
         self.policy = policy
+        self.cwd = cwd or os.getcwd()
+
+    def _resolve(self, path):
+        return path if os.path.isabs(path) else os.path.join(self.cwd, path)
 
     def read(self, path):
         self.policy.require("fs", "read")
+        target = self._resolve(path)
         try:
-            with open(path, "rb") as handle:
+            with open(target, "rb") as handle:
                 raw = handle.read()
         except OSError as exc:
             raise HostError("E-HOST-FS-READ", "%s（%s）" % (path, exc))
@@ -266,8 +272,9 @@ class FsCapability(object):
             raw = content.encode("utf-8")
         else:
             raise TypeError("写文件内容只接受文本或 Bytes，实际 %r" % type(content))
+        target = self._resolve(path)
         try:
-            with open(path, "wb") as handle:
+            with open(target, "wb") as handle:
                 handle.write(raw)
         except OSError as exc:
             raise HostError("E-HOST-FS-WRITE", "%s（%s）" % (path, exc))
@@ -286,3 +293,96 @@ class EnvCapability(object):
         if name not in self._env:
             raise HostError("E-HOST-ENV-MISSING", "环境变量 %r 未定义" % name)
         return self._env[name]
+
+
+class ShellHost(object):
+    """一次 ``rill run`` 的宿主句柄；能力对象共享同一份 policy。"""
+
+    def __init__(self, policy, cwd=None, env=None, stdin=None, stdout=None, stderr=None):
+        self.policy = policy
+        self.cwd = cwd
+        self.process = ProcessCapability(policy, cwd=cwd)
+        self.fs = FsCapability(policy, cwd=cwd)
+        self.env = EnvCapability(policy, env=env)
+        self.stdio = None
+        self.exit = None
+
+
+def _require_text(value, message):
+    if not isinstance(value, str) or value == "":
+        raise HostError("E-HOST-VERB-ARGS", message)
+    return value
+
+
+class ShellVerbRegistry(object):
+    """真实宿主动词表；没有映射的动词直接抛 KeyError，由解释器转成
+    ``E-RUN-VERB-UNREGISTERED``，不静默当作空操作。
+    """
+
+    VERB_MAP = {
+        "read": ("fs", "read"),
+        "write": ("fs", "write"),
+        "run": ("process", "run"),
+        "env": ("env", "get"),
+    }
+
+    def __init__(self, host):
+        self.host = host
+
+    def call(self, name, entry):
+        if name not in self.VERB_MAP:
+            raise KeyError(
+                "E-RUN-VERB-UNREGISTERED: 动词 %r 没有真实宿主映射；已映射：%s"
+                % (name, ", ".join(sorted(self.VERB_MAP)))
+            )
+        try:
+            return self._dispatch(name, entry)
+        except CapabilityDenied as exc:
+            return result.ExecOutcome.failure(
+                str(exc),
+                host_meta={
+                    "denied": {
+                        "code": exc.code,
+                        "slot": exc.slot,
+                        "operation": exc.operation,
+                    }
+                },
+            )
+        except HostError as exc:
+            return result.ExecOutcome.failure(
+                str(exc), host_meta={"host_error": {"code": exc.code}}
+            )
+
+    def _dispatch(self, name, entry):
+        if name == "read":
+            path = _require_text(entry["object"], "read 需要一个文件路径")
+            return result.ExecOutcome.success(self.host.fs.read(path))
+
+        if name == "write":
+            path = _require_text(entry["object"], "write 需要一个文件路径")
+            content = entry["subject"] if entry["subject"] is not None else entry["input"]
+            if not isinstance(content, (str, Bytes)):
+                raise HostError(
+                    "E-HOST-VERB-ARGS", "write 的内容只接受文本或 Bytes"
+                )
+            return result.ExecOutcome.success(
+                self.host.fs.write(path, content), host_meta={"fs": {"path": path}}
+            )
+
+        if name == "run":
+            command = _require_text(entry["object"], "run 需要一个命令字符串")
+            stdin = entry["input"]
+            if stdin is not None and not isinstance(stdin, (str, Bytes)):
+                raise HostError("E-HOST-VERB-ARGS", "run 的 stdin 只接受文本或 Bytes")
+            proc = self.host.process.run(command, stdin=stdin)
+            meta = {"process": proc.as_meta()}
+            if proc.ok:
+                return result.ExecOutcome.success(proc.value, host_meta=meta)
+            return result.ExecOutcome.failure(proc.error(), host_meta=meta)
+
+        if name == "env":
+            return result.ExecOutcome.success(
+                self.host.env.get(_require_text(entry["object"], "env 需要一个变量名"))
+            )
+
+        raise KeyError("E-RUN-VERB-UNREGISTERED: 动词 %r 没有真实宿主映射" % name)

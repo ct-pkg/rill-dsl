@@ -25,6 +25,10 @@ DEFAULT_VERBS = (
     "review",
 )
 
+# PH-10：shell profile 额外有声明的宿主动词（进程与环境变量）；agent profile 不扩，
+# 免得把“能力差异”写进语法。规范缺口见 PH-10 卡 §8 #2。
+SHELL_VERBS = DEFAULT_VERBS + ("env", "run")
+
 
 class LoadTables(object):
     """加载期建好的表；只读消费，不在本模块执行任何东西。"""
@@ -50,7 +54,7 @@ def check_program(program, profile="shell"):
     maps = _collect_maps(program)
     functions = _collect_functions(program)
     _check_fn_defaults(functions)
-    verbs = set(DEFAULT_VERBS)
+    verbs = set(SHELL_VERBS if profile == "shell" else DEFAULT_VERBS)
     _check_nodes(program, functions, verbs)
     return LoadTables(maps=maps, functions=functions, verbs=verbs, profile=host)
 

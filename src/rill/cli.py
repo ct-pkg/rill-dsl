@@ -7,12 +7,19 @@ SUT 协议见 ``tools/rill_harness/sut.py``：
 """
 
 import json
+import os
 import sys
 
 from . import fakes as fakes_mod
 from . import loader
 from .errors import LexError, LoadError, ParseError
 from .eval_simple import EvalError, Interpreter
+from .host.shell import (
+    ShellHost,
+    ShellVerbRegistry,
+    default_shell_policy,
+    load_shell_profile,
+)
 from .lexer import tokenize
 from .parser import parse, parse_with_warnings
 from .verbs import FakeVerbRegistry
@@ -33,6 +40,21 @@ def _usage(message):
             "error": {
                 "stage": "cli",
                 "code": "E_USAGE",
+                "line": 0,
+                "col": 0,
+                "message": message,
+            }
+        },
+        EXIT_DIAGNOSTIC,
+    )
+
+
+def _diagnostic(code, message):
+    return _emit(
+        {
+            "error": {
+                "stage": "run",
+                "code": code,
                 "line": 0,
                 "col": 0,
                 "message": message,
@@ -151,9 +173,29 @@ def cmd_check(args):
     return _emit({"warnings": warnings}, EXIT_OK)
 
 
+def _run_verbs(profile, fakes_path, host_profile_path):
+    """返回 ``(verbs, policy)``；``policy`` 只在真实宿主模式出现。
+
+    有 ``--fakes`` 时 fake 优先，能力清单不参与：这条顺序就是 PH-10-T3 的契约。
+    """
+    if fakes_path:
+        return fakes_mod.load_tools(fakes_path), None
+    if profile == "agent":
+        return None, "agent profile 没有真实宿主；请加 --fakes，真实 Agent 能力留到 PH-11"
+    if host_profile_path:
+        try:
+            policy = load_shell_profile(host_profile_path)
+        except ValueError as exc:
+            return None, ("profile", "E-RUN-HOST-PROFILE", str(exc))
+    else:
+        policy = default_shell_policy()
+    return ShellVerbRegistry(ShellHost(policy, cwd=os.getcwd())), policy
+
+
 def cmd_run(args):
     profile = "shell"
     fakes_path = ""
+    host_profile_path = ""
     paths = []
     index = 0
     while index < len(args):
@@ -172,6 +214,13 @@ def cmd_run(args):
             fakes_path = args[index]
         elif arg.startswith("--fakes="):
             fakes_path = arg.split("=", 1)[1]
+        elif arg == "--host-profile":
+            index += 1
+            if index >= len(args):
+                return _usage("--host-profile 缺参数")
+            host_profile_path = args[index]
+        elif arg.startswith("--host-profile="):
+            host_profile_path = arg.split("=", 1)[1]
         elif arg.startswith("-"):
             return _usage("run 不认识的参数 %r" % arg)
         else:
@@ -187,10 +236,19 @@ def cmd_run(args):
             source = handle.read()
     except OSError as exc:
         return _usage("无法读取 %s：%s" % (path, exc))
+
+    try:
+        verbs, policy = _run_verbs(profile, fakes_path, host_profile_path)
+    except (OSError, ValueError) as exc:
+        return _diagnostic("E-RUN-FAKES", "fakes 无法加载：%s" % exc)
+    if isinstance(policy, tuple):
+        return _diagnostic(policy[1], policy[2])
+    if verbs is None:
+        return _diagnostic("E-RUN-HOST-UNAVAILABLE", policy)
+
     try:
         tree = parse(tokenize(source))
         tables = loader.check_program(tree, profile)
-        verbs = fakes_mod.load_tools(fakes_path) if fakes_path else FakeVerbRegistry()
         outcome = Interpreter(verbs, functions=tables.functions).eval_program(tree)
     except LexError as exc:
         return _emit({"error": exc.as_dict()}, EXIT_DIAGNOSTIC)
@@ -200,19 +258,6 @@ def cmd_run(args):
         return _emit({"error": exc.as_dict()}, EXIT_DIAGNOSTIC)
     except EvalError as exc:
         return _emit({"error": exc.as_dict()}, EXIT_DIAGNOSTIC)
-    except (OSError, ValueError) as exc:
-        return _emit(
-            {
-                "error": {
-                    "stage": "run",
-                    "code": "E-RUN-FAKES",
-                    "line": 0,
-                    "col": 0,
-                    "message": "fakes 无法加载：%s" % exc,
-                }
-            },
-            EXIT_DIAGNOSTIC,
-        )
     return _emit(
         {
             "ok": outcome.ok,
@@ -243,7 +288,8 @@ def main(argv=None):
         sys.stdout.write(
             "usage: rill tokenize <file> | rill parse --dump-ast <file> [--profile shell|agent]"
             " | rill check <file> [--profile shell|agent]"
-            " | rill run <file> [--profile shell|agent] [--fakes <path>]\n"
+            " | rill run <file> [--profile shell|agent] [--fakes <path>]"
+            " [--host-profile <path>]\n"
         )
         return EXIT_OK
     return _usage("未知子命令 %r" % command)

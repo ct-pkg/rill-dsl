@@ -174,14 +174,15 @@ def case_cli_fakes_win_over_real_host():
         assert payload["value"] == "FAKE", payload
 
         # fake 连能力声明都不需要：默认 shell profile 拒绝 fs.write，fake write 仍成功。
-        write_script(
-            tmp, "write.rill", '<write> out.txt "x"\n'
-        )
+        write_script(tmp, "write.rill", "<read> in.txt |> <write> out.txt\n")
         with open(fakes, "w", encoding="utf-8") as handle:
             json.dump(
                 {
                     "schema": "rill-fakes-tools/0",
-                    "tools": {"write": {"queue": [{"ok": True, "value": "fake"}]}},
+                    "tools": {
+                        "read": {"queue": [{"ok": True, "value": "x"}]},
+                        "write": {"queue": [{"ok": True, "value": "fake"}]},
+                    },
                 },
                 handle,
             )
