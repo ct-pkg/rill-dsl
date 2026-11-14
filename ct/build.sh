@@ -5,11 +5,11 @@
 #
 # Requires: a `ctc` binary (CT source-to-source compiler) and a C compiler.
 # Lookup order for ctc: $CTC, ../ct-lang/ctc (sibling checkout), then PATH.
-# Output: ct/bin/rill-ct
+# Output: ct/bin/rill_ct
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-OUT="$ROOT/ct/bin/rill-ct"
+OUT="$ROOT/ct/bin/rill_ct"
 
 if [ -z "${CTC:-}" ]; then
     for candidate in "$ROOT/../ct-lang/ctc" "$(command -v ctc 2>/dev/null || true)"; do
