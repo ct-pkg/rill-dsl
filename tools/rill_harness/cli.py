@@ -42,6 +42,11 @@ def parse_args(argv):
                         help="只跑指定用例，可重复；按相对 id 或唯一后缀匹配")
     parser.add_argument("--sut", default="", help="覆盖被测命令，如 'python3 tools/rill_stub/rill.py'")
     parser.add_argument("--json", action="store_true", help="以 JSON 输出结果")
+    parser.add_argument(
+        "--all",
+        action="store_true",
+        help="全样例门禁：所有桶必须执行、pending 必须为 0、任何非 PASS 都失败",
+    )
     group = parser.add_mutually_exclusive_group()
     group.add_argument("--list", action="store_true", help="列出用例与资产，不执行")
     group.add_argument("--check-fakes", action="store_true", help="只校验 profile 与 fake 资产")
@@ -258,6 +263,36 @@ def run_cases(selected, sut, root, repo_root):
     return outcomes
 
 
+def _retired_pending(root):
+    """统计 pending/ 下 ``retired: true`` 的痕迹目录；不参与发现与执行。"""
+    count = 0
+    pending_root = os.path.join(root, "pending")
+    for dirpath, _, file_names in os.walk(pending_root):
+        if case_mod.CASE_FILE not in file_names:
+            continue
+        try:
+            with open(os.path.join(dirpath, case_mod.CASE_FILE), encoding="utf-8") as handle:
+                doc = json.load(handle)
+        except (OSError, ValueError):
+            continue
+        if isinstance(doc, dict) and doc.get("retired") is True:
+            count += 1
+    return count
+
+
+def gate_problems(selected, summary, root):
+    """``--all`` 的额外判据：见过的桶齐全 + pending 为 0。"""
+    problems = []
+    counts = case_mod.bucket_counts(selected)
+    for bucket in ("positive", "negative", "host"):
+        if not counts.get(bucket):
+            problems.append("桶 %s 没有用例" % bucket)
+    pending = sum(summary["pending"].values())
+    if pending:
+        problems.append("pending=%d（要求 0）" % pending)
+    return problems
+
+
 def summarize(outcomes):
     summary = {
         "compliance": {status: 0 for status in (runner_mod.PASS, runner_mod.FAIL, runner_mod.BLOCK, runner_mod.DRAFT)},
@@ -295,11 +330,22 @@ def verdict(code):
     }.get(code, "FAIL")
 
 
-def print_human(selected, sut, root, repo_root, profiles, outcomes, summary, code, filters):
+def print_human(
+    selected, sut, root, repo_root, profiles, outcomes, summary, code, filters, gate=None
+):
     counts = case_mod.bucket_counts(selected)
     print("RILL 0.1.0 harness")
     print("root     : %s" % _rel(root, repo_root))
     print("sut      : %s" % sut.display)
+    if gate is not None:
+        print(
+            "gate     : all buckets; pending=%d, retired=%d, problems=%s"
+            % (
+                gate["pending"],
+                gate["retired"],
+                "; ".join(gate["problems"]) if gate["problems"] else "无",
+            )
+        )
     overrides = sorted(
         {
             " ".join(shlex.split(outcome.case.sut))
@@ -351,6 +397,18 @@ def print_human(selected, sut, root, repo_root, profiles, outcomes, summary, cod
 
 def main(argv=None):
     args = parse_args(sys.argv[1:] if argv is None else argv)
+    if args.all and (
+        args.phase
+        or args.kind
+        or args.bucket
+        or args.case
+        or args.sut
+        or args.list
+        or args.check_fakes
+        or args.show
+    ):
+        print("FAIL  --all 不能与筛选、--sut 或查看选项同用")
+        return EXIT_FAIL
     repo_root = os.path.abspath(args.repo_root)
     root = os.path.abspath(args.root) if args.root else os.path.join(repo_root, "testdata", "0.1.0")
 
@@ -410,6 +468,16 @@ def main(argv=None):
     outcomes = run_cases(selected, sut, root, repo_root)
     summary = summarize(outcomes)
     code = exit_code(summary)
+    gate = None
+    if args.all:
+        problems = gate_problems(selected, summary, root)
+        if problems:
+            code = EXIT_FAIL
+        gate = {
+            "pending": sum(summary["pending"].values()),
+            "retired": _retired_pending(root),
+            "problems": problems,
+        }
 
     if args.json:
         payload = {
@@ -417,6 +485,7 @@ def main(argv=None):
             "sut": sut.display,
             "placeholder": sut.placeholder,
             "filters": filters,
+            "gate": gate,
             "cases": [
                 {
                     "rel": outcome.case.rel,
@@ -433,7 +502,18 @@ def main(argv=None):
         }
         print(json.dumps(payload, indent=2, ensure_ascii=False, sort_keys=True))
     else:
-        print_human(selected, sut, root, repo_root, profiles, outcomes, summary, code, filters)
+        print_human(
+            selected,
+            sut,
+            root,
+            repo_root,
+            profiles,
+            outcomes,
+            summary,
+            code,
+            filters,
+            gate,
+        )
     return code
 
 

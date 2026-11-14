@@ -50,3 +50,11 @@ exit=1
 - 直接复现：`bash tools/check-0.1.0.sh --all` →
   `check-0.1.0.sh: error: unrecognized arguments: --all`（exit 2）
 - 绿提交：`feat(cli): PH-12-T2 全样例门禁`
+- 绿命令与输出：`python3 tests/phase12/test_all_gate.py` →
+  `PASS phase12 all: --all 全桶绿 + pending 0`（exit 0）；
+  `bash tools/check-0.1.0.sh --all` 头部为
+  `gate     : all buckets; pending=0, retired=4, problems=无`，
+  尾部为 `compliance: 83 passed ... / smoke: 2 passed ... / pending: 0 not run`
+  （exit 0）。
+- 说明：`retired=4` 是 `pending/` 下 4 个 `retired: true` 的转正痕迹目录，
+  harness 不发现、不执行；E-2 以 `pending: 0 not run` 为准（卡 §7 #6）。
