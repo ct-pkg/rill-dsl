@@ -11,6 +11,7 @@
 
 import json
 import os
+import time
 
 from .. import fakes as fakes_mod
 from .. import result
@@ -51,6 +52,11 @@ TOOL_ARGS = "E-HOST-TOOL-ARGS"
 ENV_MISSING = "E-HOST-ENV-MISSING"
 FS_OUTSIDE = "E-HOST-FS-OUTSIDE"
 FS_TYPE = "E-HOST-FS-TYPE"
+ROLE_UNKNOWN = "E-HOST-ROLE-UNKNOWN"
+ROLE_DENIED = "E-HOST-ROLE-DENIED"
+LIMIT_STEPS = "E-HOST-LIMIT-STEPS"
+LIMIT_TIME = "E-HOST-LIMIT-TIME"
+LIMIT_BYTES = "E-HOST-LIMIT-BYTES"
 
 
 class AgentHostError(Exception):
@@ -62,6 +68,10 @@ class AgentHostError(Exception):
         Exception.__init__(self, "%s: %s" % (code, message))
 
 
+class AgentRoleError(AgentHostError):
+    """角色表校验失败；加载期语义，由 CLI 转成 run 诊断。"""
+
+
 class ToolFailure(Exception):
     """工具调用失败；转成 ``ok=false`` 的错误串，不冒充 DSL 诊断。"""
 
@@ -70,6 +80,108 @@ class ToolFailure(Exception):
         self.message = message
         self.meta = meta or {}
         Exception.__init__(self, "%s: %s" % (code, message))
+
+
+class RoleTable(object):
+    """角色 → 允许动词；``roles`` 的取值是 ``{"verbs": [...]}``。"""
+
+    def __init__(self, roles, default):
+        self.roles = {
+            name: set(item["verbs"]) for name, item in (roles or {}).items()
+        }
+        self.default = default
+
+    def role_for(self, subject):
+        """字面量主语是角色；省略或动态主语（``$x``）用默认角色。"""
+        if not isinstance(subject, dict):
+            return self.default
+        kind = subject.get("kind")
+        if kind == "String":
+            return subject["value"]
+        if kind == "Bare":
+            return subject["text"]
+        return self.default
+
+    def require(self, role, verb):
+        if role not in self.roles:
+            raise AgentRoleError(
+                ROLE_UNKNOWN,
+                "角色 %r 不在 roles 表；已知角色：%s"
+                % (role, ", ".join(sorted(self.roles)) or "无"),
+            )
+        if verb not in self.roles[role]:
+            raise AgentRoleError(
+                ROLE_DENIED,
+                "角色 %r 无权限调用动词 %r；允许：%s"
+                % (role, verb, ", ".join(sorted(self.roles[role])) or "无"),
+            )
+
+
+class ExecLimits(object):
+    """执行上限：steps 数工具调用，time_ms 墙钟，bytes 是结果 JSON 的 UTF-8 字节。"""
+
+    def __init__(self, limits=None, clock=None):
+        merged = dict(DEFAULT_LIMITS)
+        merged.update(limits or {})
+        self.limits = merged
+        self.clock = clock
+        self.started = None
+        self.used = 0
+
+    def _now(self):
+        return (self.clock or time.monotonic)()
+
+    def before_call(self):
+        now = self._now()
+        if self.started is None:
+            self.started = now
+        elapsed = (now - self.started) * 1000
+        if elapsed > self.limits["time_ms"]:
+            raise ToolFailure(
+                LIMIT_TIME,
+                "agent 执行超时：%.3fms > %dms" % (elapsed, self.limits["time_ms"]),
+                {
+                    "limits": {
+                        "kind": "time_ms",
+                        "limit": self.limits["time_ms"],
+                        "observed": round(elapsed, 3),
+                    }
+                },
+            )
+        self.used += 1
+        if self.used > self.limits["steps"]:
+            raise ToolFailure(
+                LIMIT_STEPS,
+                "agent 工具调用次数超限：%d > %d"
+                % (self.used, self.limits["steps"]),
+                {
+                    "limits": {
+                        "kind": "steps",
+                        "limit": self.limits["steps"],
+                        "used": self.used,
+                    }
+                },
+            )
+
+    def after_call(self, value):
+        observed = 0
+        if value is not None:
+            observed = len(
+                json.dumps(value, ensure_ascii=False, default=str).encode("utf-8")
+            )
+        if observed > self.limits["bytes"]:
+            raise ToolFailure(
+                LIMIT_BYTES,
+                "agent 工具结果超限：%d bytes > %d bytes"
+                % (observed, self.limits["bytes"]),
+                {
+                    "limits": {
+                        "kind": "bytes",
+                        "limit": self.limits["bytes"],
+                        "observed": observed,
+                    }
+                },
+            )
 
 
 class ToolRegistry(object):
@@ -260,7 +372,7 @@ def load_agent_profile(path, cwd=None):
         doc["name"],
         workspace,
         role,
-        roles,
+        RoleTable(roles, role),
         types,
         context,
         limits,
@@ -277,7 +389,7 @@ def default_agent_policy(cwd=None):
         "builtin-agent",
         cwd or os.getcwd(),
         "default",
-        roles,
+        RoleTable(roles, "default"),
         {"file": "path"},
         {},
         dict(DEFAULT_LIMITS),
@@ -454,10 +566,26 @@ class AgentHost(object):
         self.stdio = AgentStdioCapability(self)
         self.fs = AgentFsCapability(self)
         self.env = AgentEnvCapability(self)
+        self.limits = ExecLimits(policy.limits, clock=clock)
 
     def validate_program(self, program):
-        """PH-11-T3 接入角色表；T1 只保留钩子。"""
-        return None
+        """在 exec 之前按角色表校验每个 VerbCall；字面量主语才是角色。"""
+        self._walk_roles(program)
+
+    def _walk_roles(self, node):
+        if isinstance(node, list):
+            for item in node:
+                self._walk_roles(item)
+            return
+        if not isinstance(node, dict):
+            return
+        if node.get("kind") == "VerbCall":
+            role = self.policy.roles.role_for(node.get("subject"))
+            self.policy.roles.require(role, node["verb"])
+        for key, value in node.items():
+            if key in ("kind", "span"):
+                continue
+            self._walk_roles(value)
 
 
 def _require_text(value, message):
@@ -492,7 +620,10 @@ class AgentVerbRegistry(object):
                 % (name, ", ".join(sorted(self.VERB_MAP)))
             )
         try:
-            return self._dispatch(name, entry)
+            self.host.limits.before_call()
+            outcome = self._dispatch(name, entry)
+            self.host.limits.after_call(outcome.value)
+            return outcome
         except ToolFailure as exc:
             return result.ExecOutcome.failure(str(exc), host_meta=exc.meta)
 

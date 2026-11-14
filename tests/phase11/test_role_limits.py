@@ -183,7 +183,7 @@ def case_bytes_limit():
 def case_time_limit():
     with tempfile.TemporaryDirectory() as tmp:
         tools = RecordingTools({"read": ExecOutcome.success("ok")})
-        clock = Clock([0.0, 0.0, 0.001, 0.02])
+        clock = Clock([0.0, 0.0, 0.02])
         host, registry = build(
             tmp, tools=tools, clock=clock, limits={"time_ms": 10}
         )

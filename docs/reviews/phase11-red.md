@@ -76,3 +76,11 @@ Traceback (most recent call last):
 ImportError: cannot import name 'AgentRoleError' from 'rill.host.agent'
 exit=1
 ```
+
+- 绿提交：`feat(host): PH-11-T3 角色与 limits`
+- 绿命令与输出：`python3 tests/phase11/test_role_limits.py` →
+  `PASS phase11 role/limits: 角色诊断、steps/time/bytes 超限`（exit 0）
+- 红后修正：time 用例的假时钟初值从 `[0, 0, 0.001, 0.02]` 改为
+  `[0, 0, 0.02]`。实现按“每次调用前检查墙钟”计时，原来的第三个数
+  只到 1ms，不足以越过 10ms 上限；用 20ms 让第三次调用稳定变红。
+  红证仍以 ImportError 为准。
