@@ -1,0 +1,13 @@
+{
+  "capability": "fs",
+  "outcome": "failure",
+  "tools": {
+    "read": {"queue": [{"ok": true, "value": "secret"}]}
+  },
+  "expect": {
+    "exit": 0,
+    "ok": false,
+    "error": "RILL DSL ERROR",
+    "host_meta": {"fs": {"code": "E-HOST-FS-OUTSIDE"}}
+  }
+}

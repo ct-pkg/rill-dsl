@@ -1,0 +1,17 @@
+{
+  "schema": "rill.agent-profile/0",
+  "name": "agent",
+  "description": "canonical agent manifest：工程师角色、workspace 约束、context 注入与默认 limits。",
+  "role": "engineer",
+  "roles": {
+    "engineer": {
+      "verbs": ["read", "write", "parse", "send", "search", "replace", "contains", "review", "env", "run"]
+    },
+    "auditor": {"verbs": ["read", "review"]}
+  },
+  "types": {"file": "path", "net": "text"},
+  "workspace": ".",
+  "tools": "tools.json",
+  "context": {},
+  "limits": {"steps": 32, "time_ms": 2000, "bytes": 65536}
+}

@@ -1,0 +1,15 @@
+{
+  "capability": "fs",
+  "outcome": "success",
+  "tools": {
+    "read": {"queue": [{"ok": true, "value": "host: a\n"}]},
+    "write": {"queue": [{"ok": true, "value": null}]}
+  },
+  "expect": {
+    "exit": 0,
+    "ok": true,
+    "value": "out.txt",
+    "host_meta": {"fs": {"tool": "write", "path": "out.txt"}}
+  },
+  "files_absent": ["out.txt"]
+}

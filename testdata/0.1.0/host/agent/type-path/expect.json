@@ -1,0 +1,13 @@
+{
+  "capability": "fs",
+  "outcome": "success",
+  "tools": {
+    "read": {"queue": [{"ok": true, "value": "host: a\n"}]}
+  },
+  "expect": {
+    "exit": 0,
+    "ok": true,
+    "value": "host: a\n",
+    "host_meta": {"fs": {"tool": "read", "path": "config.txt", "type": "file"}}
+  }
+}

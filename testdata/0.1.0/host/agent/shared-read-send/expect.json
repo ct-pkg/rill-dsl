@@ -1,0 +1,15 @@
+{
+  "capability": "stdio",
+  "outcome": "success",
+  "tools": {
+    "read": {"queue": [{"ok": true, "value": "host: a\n"}]},
+    "send": {"queue": [{"ok": true, "value": null}]}
+  },
+  "expect": {
+    "exit": 0,
+    "ok": true,
+    "value": "ok",
+    "stderr": "",
+    "host_meta": {"stdio": {"tool": "send", "channel": "tool"}}
+  }
+}

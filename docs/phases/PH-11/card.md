@@ -102,3 +102,4 @@ fixture 不叫 `source.rill` / `case.json`，避免被 harness 当成 `--fakes` 
 | 7 | §4.2 / §4.16 | agent 的 `send` 落点未定义 | **裁定：调用 `send`/`emit` 工具**；没有 OS stdout/stderr；工具返回值即段值，`host_meta.stdio.channel = "tool"` |
 | 8 | §6.6 T-7 | 本卡原 §3 的 verify 是 `--show` / `--kind` / `--check-fakes` / `--bucket`，只能打印或校验资产，无法产出“实现前真实失败”的红证 | **复核时改为 `tests/phase11/test_*.py` 可失败单测**（见 §3）；这是流程口径冲突，不是语言规范缺口。§4 的退出判据仍保留原命令作为补充证据 |
 | 9 | §4.16 | agent 的 stdin 形态未定义 | **裁定：`run` 工具的 stdin 来自 `$`/管道输入，按文本传递**；没有 OS stdin，二进制不作为本 phase 的 agent 契约 |
+| 10 | §4.1 / §4.2 | agent 下 `send` 的文本槽与 `write` 的内容槽怎么取未定义 | **裁定：`send` 优先取 object（主语是角色），object 缺省才取 subject/input；`write` 的内容只取管道输入，subject 不是角色时才作为兼容内容**。fixture 里 `engineer <send> "ok"` 的输出是 `"ok"`，不是 `"engineer"` |

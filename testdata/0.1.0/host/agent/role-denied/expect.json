@@ -1,0 +1,17 @@
+{
+  "capability": "role",
+  "outcome": "failure",
+  "manifest": {
+    "roles": {
+      "engineer": {"verbs": ["read", "write", "run", "env", "send"]},
+      "auditor": {"verbs": ["read", "review"]}
+    }
+  },
+  "tools": {
+    "write": {"queue": [{"ok": true, "value": null}]}
+  },
+  "expect": {
+    "exit": 2,
+    "diagnostic": {"code": "E-HOST-ROLE-DENIED", "message_contains": "auditor"}
+  }
+}

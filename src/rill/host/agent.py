@@ -632,7 +632,13 @@ class AgentVerbRegistry(object):
             return self.host.fs.read(entry["object"])
 
         if name == "write":
-            content = entry["subject"] if entry["subject"] is not None else entry["input"]
+            content = entry["input"]
+            if (
+                content is None
+                and entry["subject"] is not None
+                and entry["subject"] not in self.host.policy.roles.roles
+            ):
+                content = entry["subject"]
             return self.host.fs.write(entry["object"], content)
 
         if name == "run":
@@ -643,9 +649,9 @@ class AgentVerbRegistry(object):
             return self.host.env.get(entry["object"])
 
         if name == "send":
-            text = entry["subject"]
+            text = entry["object"]
             if text is None:
-                text = entry["object"]
+                text = entry["subject"]
             if text is None:
                 text = entry["input"]
             if text is None:

@@ -1,0 +1,1 @@
+<read> in.txt |> <write> out.txt

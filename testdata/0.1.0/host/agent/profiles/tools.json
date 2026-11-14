@@ -1,0 +1,22 @@
+{
+  "schema": "rill-fakes-tools/0",
+  "description": "canonical agent 工具注册表：只返回可编程的 {value, ok}，不接真实文件/进程。",
+  "tools": {
+    "read": {
+      "queue": [{"ok": true, "value": "host: a\n"}],
+      "default": {"ok": true, "value": "host: a\n"}
+    },
+    "run": {
+      "queue": [{"ok": true, "value": {"code": 0, "stdout": "deployed\n", "stderr": ""}}],
+      "default": {"ok": false, "error": "E_TOOL_DEPLOY"}
+    },
+    "send": {
+      "queue": [{"ok": true, "value": null}],
+      "default": {"ok": true, "value": null}
+    },
+    "write": {
+      "queue": [{"ok": true, "value": null}],
+      "default": {"ok": true, "value": null}
+    }
+  }
+}

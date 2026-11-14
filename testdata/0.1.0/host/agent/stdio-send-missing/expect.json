@@ -1,0 +1,11 @@
+{
+  "capability": "stdio",
+  "outcome": "failure",
+  "tools": {},
+  "expect": {
+    "exit": 0,
+    "ok": false,
+    "error": "RILL DSL ERROR",
+    "host_meta": {"tool_meta": {"tool": {"code": "E-HOST-TOOL-UNREGISTERED"}}}
+  }
+}

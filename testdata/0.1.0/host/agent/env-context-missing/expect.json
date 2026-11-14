@@ -1,0 +1,11 @@
+{
+  "capability": "env",
+  "outcome": "failure",
+  "tools": {},
+  "expect": {
+    "exit": 0,
+    "ok": false,
+    "error": "RILL DSL ERROR",
+    "host_meta": {"env": {"code": "E-HOST-ENV-MISSING", "source": "context"}}
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "capability": "process",
+  "outcome": "failure",
+  "tools": {
+    "run": {"queue": [{"ok": false, "error": "E_TOOL_DEPLOY"}]},
+    "send": {"queue": [{"ok": true, "value": null}]}
+  },
+  "expect": {
+    "exit": 0,
+    "ok": true,
+    "value": "E_TOOL_DEPLOY",
+    "host_meta": {"process": {"tool": "run"}}
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "capability": "process",
+  "outcome": "success",
+  "tools": {
+    "run": {
+      "queue": [{"ok": true, "value": {"code": 0, "stdout": "deployed\n", "stderr": ""}}]
+    }
+  },
+  "expect": {
+    "exit": 0,
+    "ok": true,
+    "value": {"code": 0, "stdout": "deployed\n", "stderr": ""},
+    "host_meta": {"process": {"tool": "run", "command": "deploy --now"}}
+  }
+}

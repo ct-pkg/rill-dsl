@@ -98,3 +98,12 @@ Traceback (most recent call last):
 AssertionError: 缺少 agent fixture 目录：.../testdata/0.1.0/host/agent
 exit=1
 ```
+
+- 绿提交：`feat(host): PH-11-T4 Agent fixture`
+- 绿命令与输出：`python3 tests/phase11/test_agent_fixtures.py` →
+  `PASS phase11 fixtures: agent 五类能力 + role/limits/type + AST 一致`（exit 0）
+- 红后修正（语义）：fixture 首次跑绿时暴露两处槽位取法，
+  `engineer <send> "ok"` 把主语当成了消息；按 PH-11 卡 §7 #10 改为
+  object 优先。`process-tool-fail` 的 `[error]` 块收口按 PH-7 规则
+  回退到失败段的 `host_meta`，所以断言改为 `process.tool` 而不是
+  `stdio.tool`。红证仍以 fixture 目录缺失为准。

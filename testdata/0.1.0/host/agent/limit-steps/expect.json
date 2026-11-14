@@ -1,0 +1,15 @@
+{
+  "capability": "limits",
+  "outcome": "failure",
+  "manifest": {
+    "context": {"RILL_TEST_PORT": "8080", "RILL_TEST_REGION": "cn"},
+    "limits": {"steps": 1, "time_ms": 2000, "bytes": 65536}
+  },
+  "tools": {},
+  "expect": {
+    "exit": 0,
+    "ok": false,
+    "error": "RILL DSL ERROR",
+    "host_meta": {"limits": {"kind": "steps", "limit": 1}}
+  }
+}

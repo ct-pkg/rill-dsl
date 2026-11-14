@@ -1,0 +1,12 @@
+{
+  "capability": "env",
+  "outcome": "success",
+  "manifest": {"context": {"RILL_TEST_PORT": "8080"}},
+  "tools": {},
+  "expect": {
+    "exit": 0,
+    "ok": true,
+    "value": "8080",
+    "host_meta": {"env": {"name": "RILL_TEST_PORT", "source": "context"}}
+  }
+}
