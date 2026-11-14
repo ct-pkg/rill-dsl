@@ -3,6 +3,7 @@
 #
 # 用法：
 #   tools/check-0.1.0.sh                # 跑全部可运行用例
+#   tools/check-0.1.0.sh --all          # 全样例门禁：pending=0 且任何非 PASS 都失败
 #   tools/check-0.1.0.sh --list         # 列出用例与资产
 #   tools/check-0.1.0.sh --check-fakes  # 校验 profile 与 fake 资产
 #   tools/check-0.1.0.sh --show <case>  # 查看某个用例的被测输出
