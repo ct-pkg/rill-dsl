@@ -64,4 +64,22 @@ AssertionError
 
 原因：`eval_simple` 还没有消费 `SimpleStmt.pipe`，`<read> |> <write>` 只执行了第一段。
 
+## T4 `rill run` 入口
+
+- 命令：`python3 tests/phase7/test_run_cli.py`
+- 退出码：`1`
+- 原始输出：
+
+```text
+Traceback (most recent call last):
+  File "/Users/samxx/trae-ws/rill-dsl/tests/phase7/test_run_cli.py", line 83, in <module>
+    main()
+  File "/Users/samxx/trae-ws/rill-dsl/tests/phase7/test_run_cli.py", line 58, in main
+    assert result.returncode == 0, "%s: exit %d，stderr=%r" % (
+AssertionError: testdata/0.1.0/positive/run/into/failure-error: exit 3，stderr='not implemented: run'
+```
+
+原因：CLI 的 `run` / `fmt` 仍走 `_not_implemented`，退出码 3。
+
+
 
