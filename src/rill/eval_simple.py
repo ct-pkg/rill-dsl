@@ -1,0 +1,237 @@
+"""RILL 0.1.x 单语句执行（PH-7）。
+
+PH-7-T1 只落 trailing ``[into]``：按 AST 书写顺序执行，块内 ``$`` 是进入
+into 的对象，某个 ``[into]`` 失败即段失败；未写 ``[error]`` 时按 §4.10
+默认 ``break "RILL DSL ERROR"``，后续 ``[into]`` 不执行。
+
+``[ok]/[error]``、段输出四态、``|>` 下游、独立 ``[into]`` 与 ``->$x``
+顺序分别在 T2–T5 补齐；规范缺口见 ``docs/phases/PH-7/card.md`` §8。
+"""
+
+from . import result
+
+DEFAULT_ERROR = result.DEFAULT_ERROR
+
+
+class EvalError(Exception):
+    """运行期错误；``code`` 供 CLI 输出诊断，不冒充规范错误码表。"""
+
+    def __init__(self, code, message, line=0, col=0):
+        Exception.__init__(self, message)
+        self.code = code
+        self.message = message
+        self.line = line
+        self.col = col
+
+    def as_dict(self):
+        return {
+            "stage": "run",
+            "code": self.code,
+            "line": self.line,
+            "col": self.col,
+            "message": self.message,
+        }
+
+
+class BreakSignal(Exception):
+    def __init__(self, value, target):
+        Exception.__init__(self, "break")
+        self.value = value
+        self.target = target
+
+
+class Scope(object):
+    """块级变量作用域；子块新建变量不外泄，外层已有变量直接读写。"""
+
+    def __init__(self, parent=None):
+        self.parent = parent
+        self.vars = {}
+
+    def get(self, name):
+        scope = self
+        while scope is not None:
+            if name in scope.vars:
+                return scope.vars[name]
+            scope = scope.parent
+        raise EvalError("E-RUN-UNDEFINED", "变量 $%s 未定义" % name)
+
+    def set(self, name, value):
+        scope = self
+        while scope is not None:
+            if name in scope.vars:
+                scope.vars[name] = value
+                return
+            scope = scope.parent
+        self.vars[name] = value
+
+
+class Interpreter(object):
+    """按 AST 执行语句；``verbs`` 只需提供 ``call(name, arg) -> ExecOutcome``。"""
+
+    def __init__(self, verbs, trace=None):
+        self.verbs = verbs
+        self.trace = trace if trace is not None else []
+        self.log = []
+
+    # ---- 程序 / 语句 ---------------------------------------------------
+
+    def eval_program(self, program, variables=None, input_value=None):
+        scope = Scope()
+        if variables:
+            scope.vars.update(variables)
+        last = input_value
+        try:
+            for statement in program["body"]:
+                outcome = self.eval_statement(statement, scope, input_value)
+                self._trace_segment(outcome)
+                if not outcome.ok:
+                    return outcome
+                last = outcome.value
+        except BreakSignal as signal:
+            if signal.target:
+                scope.set(signal.target, signal.value)
+            return result.ExecOutcome.success(signal.value)
+        return result.ExecOutcome.success(last)
+
+    def eval_statement(self, statement, scope, dollar):
+        kind = statement["kind"]
+        if kind == "SimpleStmt":
+            return self.eval_simple(statement, scope, dollar)
+        if kind == "BreakStmt":
+            raise BreakSignal(self._break_value(statement["value"], scope, dollar), statement["target"])
+        raise EvalError(
+            "E-RUN-UNSUPPORTED",
+            "%s 不在 PH-7 的执行范围（PH-8/PH-9）" % kind,
+            statement["span"]["line"],
+            statement["span"]["col"],
+        )
+
+    # ---- simple_stmt ---------------------------------------------------
+
+    def eval_simple(self, statement, scope, dollar):
+        outcome = self._call(statement["call"], scope, dollar)
+        cur = result.dollar(outcome)
+        if not outcome.ok:
+            return self._unhandled(outcome)
+
+        for item in statement["tail"]:
+            kind = item["kind"]
+            if kind == "IntoBlock":
+                block_outcome, block_dollar = self._run_block(item["body"], scope, cur)
+                self.trace.append(
+                    {
+                        "event": "into",
+                        "ok": block_outcome.ok,
+                        "value": block_dollar if block_outcome.ok else None,
+                        "error": block_outcome.error,
+                    }
+                )
+                if not block_outcome.ok:
+                    return self._unhandled(block_outcome)
+                cur = block_dollar
+                continue
+            if kind in ("OkBlock", "ErrorBlock"):
+                raise EvalError(
+                    "E-RUN-UNSUPPORTED",
+                    "[%s] 在 PH-7-T2 实现" % ("ok" if kind == "OkBlock" else "error"),
+                    item["span"]["line"],
+                    item["span"]["col"],
+                )
+            raise EvalError(
+                "E-RUN-UNSUPPORTED",
+                "%s 在 PH-7-T5 实现" % kind,
+                item["span"]["line"],
+                item["span"]["col"],
+            )
+        return result.ExecOutcome.success(cur)
+
+    def _run_block(self, block, scope, dollar):
+        block_scope = Scope(scope)
+        for statement in block["body"]:
+            outcome = self.eval_statement(statement, block_scope, dollar)
+            self._trace_segment(outcome)
+            if not outcome.ok:
+                return outcome, dollar
+        return result.ExecOutcome.success(dollar), dollar
+
+    def _unhandled(self, outcome):
+        """§4.10：未写 ``[error]`` 时失败默认 break 规范串。"""
+        return result.ExecOutcome.failure(DEFAULT_ERROR)
+
+    # ---- 调用 ----------------------------------------------------------
+
+    def _call(self, call, scope, dollar):
+        subject = (
+            self.eval_value(call["subject"], scope, dollar)
+            if call["subject"] is not None
+            else None
+        )
+        obj = self.eval_value(call["object"], scope, dollar)
+        post = [self.eval_value(item, scope, dollar) for item in call["post"]]
+        entry = {
+            "verb": call["verb"],
+            "subject": subject,
+            "object": obj,
+            "post": post,
+            "input": dollar,
+        }
+        outcome = self.verbs.call(call["verb"], entry)
+        entry["ok"] = outcome.ok
+        entry["value"] = outcome.value
+        entry["error"] = outcome.error
+        self.log.append(entry)
+        self.trace.append(
+            {
+                "event": "call",
+                "verb": call["verb"],
+                "ok": outcome.ok,
+                "value": outcome.value,
+                "error": outcome.error,
+            }
+        )
+        return outcome
+
+    # ---- 值 ------------------------------------------------------------
+
+    def eval_value(self, node, scope, dollar):
+        kind = node["kind"]
+        if kind == "String" or kind == "Number":
+            return node["value"]
+        if kind == "Bare":
+            return node["text"]
+        if kind == "Variable":
+            return scope.get(node["name"])
+        if kind == "Self":
+            return dollar
+        if kind == "Field":
+            return result.field(dollar, node["name"])
+        if kind == "Concat":
+            parts = [self.eval_value(part, scope, dollar) for part in node["parts"]]
+            if not all(isinstance(part, str) for part in parts):
+                raise EvalError("E-RUN-CONCAT", "拼接只能用于字符串")
+            return "".join(parts)
+        if kind == "Adverb":
+            return {
+                "adverb": [self.eval_value(item, scope, dollar) for item in node["items"]]
+            }
+        if kind == "PrepPhrase":
+            return {
+                "prep": node["prep"],
+                "object": self.eval_value(node["object"], scope, dollar),
+            }
+        raise EvalError("E-RUN-UNSUPPORTED", "值节点 %s 尚未实现" % kind)
+
+    def _break_value(self, node, scope, dollar):
+        if node is None:
+            return None
+        return self.eval_value(node, scope, dollar)
+
+    def _trace_segment(self, outcome):
+        self.trace.append(
+            {
+                "event": "segment",
+                "ok": outcome.ok,
+                "value": outcome.value,
+                "error": outcome.error,
+            }
+        )
