@@ -75,3 +75,23 @@ AssertionError: break 不应中断 program
 
 原因：块内 `break` 一路穿到 `eval_program` 的总捕获，管道没有自己的场域；
 `break` 之后的下一条语句不会执行，each 也不会在循环层截住 break。
+
+## T4 run 用例与轨迹 golden
+
+- 命令：`python3 tests/phase8/test_cases.py`
+- 退出码：`1`
+- 原始输出：
+
+```text
+Traceback (most recent call last):
+  File "/Users/samxx/trae-ws/rill-dsl/tests/phase8/test_cases.py", line 119, in <module>
+    main()
+  File "/Users/samxx/trae-ws/rill-dsl/tests/phase8/test_cases.py", line 113, in main
+    case_run_cases_exist_and_pass()
+  File "/Users/samxx/trae-ws/rill-dsl/tests/phase8/test_cases.py", line 77, in case_run_cases_exist_and_pass
+    assert os.path.isdir(directory), "缺少用例：positive/run/control/%s" % name
+AssertionError: 缺少用例：positive/run/control/if-subject
+```
+
+原因：`control/` 下的 run 用例与 `expected/run/control-*.json` 尚未落盘；
+T4 的交付物就是这批可独立验收的用例与轨迹。
