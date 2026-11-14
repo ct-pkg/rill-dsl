@@ -1,0 +1,6 @@
+{
+  "kind": "error",
+  "phase": "p2",
+  "note": "分支内写 [results] 必须解析期报错（§4.14）",
+  "expect": {"stage": "parse", "command": "parse"}
+}

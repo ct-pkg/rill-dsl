@@ -1,0 +1,84 @@
+{
+  "schema": "rill-tokens-golden/0",
+  "case": "positive/tokens/space-header",
+  "tokens": [
+    {
+      "kind": "MAP_HEADER",
+      "text": "//map",
+      "line": 1,
+      "col": 1
+    },
+    {
+      "kind": "NEWLINE",
+      "text": "\n",
+      "line": 1,
+      "col": 9
+    },
+    {
+      "kind": "MAP_SHORT",
+      "text": "cfg",
+      "line": 2,
+      "col": 1
+    },
+    {
+      "kind": "MAP_MARK",
+      "text": "`",
+      "line": 2,
+      "col": 4
+    },
+    {
+      "kind": "MAP_LONG",
+      "text": "configuration",
+      "line": 2,
+      "col": 5
+    },
+    {
+      "kind": "NEWLINE",
+      "text": "\n",
+      "line": 2,
+      "col": 18
+    },
+    {
+      "kind": "RBRACE",
+      "text": "}",
+      "line": 3,
+      "col": 1
+    },
+    {
+      "kind": "NEWLINE",
+      "text": "\n",
+      "line": 3,
+      "col": 2
+    },
+    {
+      "kind": "VERB",
+      "text": "read",
+      "line": 4,
+      "col": 1
+    },
+    {
+      "kind": "MAP_REF",
+      "text": "cfg",
+      "line": 4,
+      "col": 8
+    },
+    {
+      "kind": "BARE",
+      "text": ".yml",
+      "line": 4,
+      "col": 13
+    },
+    {
+      "kind": "NEWLINE",
+      "text": "\n",
+      "line": 4,
+      "col": 17
+    },
+    {
+      "kind": "EOF",
+      "text": "",
+      "line": 5,
+      "col": 1
+    }
+  ]
+}

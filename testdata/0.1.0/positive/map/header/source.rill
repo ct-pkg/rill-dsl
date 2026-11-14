@@ -1,0 +1,4 @@
+//map{
+cfg`configuration
+}
+<read> `cfg`.yml |> <write> `cfg`.yml

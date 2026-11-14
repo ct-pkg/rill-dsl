@@ -1,0 +1,78 @@
+{
+  "schema": "rill-tokens-golden/0",
+  "case": "positive/tokens/map-refs",
+  "tokens": [
+    {
+      "kind": "VERB",
+      "text": "read",
+      "line": 1,
+      "col": 1
+    },
+    {
+      "kind": "MAP_REF",
+      "text": "cfg",
+      "line": 1,
+      "col": 7
+    },
+    {
+      "kind": "BARE",
+      "text": ".yml",
+      "line": 1,
+      "col": 12
+    },
+    {
+      "kind": "NEWLINE",
+      "text": "\n",
+      "line": 1,
+      "col": 16
+    },
+    {
+      "kind": "VERB",
+      "text": "read",
+      "line": 2,
+      "col": 1
+    },
+    {
+      "kind": "MAP_REF",
+      "text": "cfg",
+      "line": 2,
+      "col": 7
+    },
+    {
+      "kind": "BARE",
+      "text": "-prod",
+      "line": 2,
+      "col": 12
+    },
+    {
+      "kind": "NEWLINE",
+      "text": "\n",
+      "line": 2,
+      "col": 17
+    },
+    {
+      "kind": "VERB",
+      "text": "read",
+      "line": 3,
+      "col": 1
+    },
+    {
+      "kind": "MAP_REF",
+      "text": "cfg",
+      "line": 3,
+      "col": 7
+    },
+    {
+      "kind": "NEWLINE",
+      "text": "\n",
+      "line": 3,
+      "col": 12
+    },
+    {
+      "kind": "EOF",
+      "text": "",
+      "line": 4,
+      "col": 1
+    }
+  ]
+}

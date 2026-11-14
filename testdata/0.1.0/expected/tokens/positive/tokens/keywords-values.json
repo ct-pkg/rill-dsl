@@ -1,0 +1,366 @@
+{
+  "schema": "rill-tokens-golden/0",
+  "case": "positive/tokens/keywords-values",
+  "tokens": [
+    {
+      "kind": "KEYWORD",
+      "text": "if",
+      "line": 1,
+      "col": 1
+    },
+    {
+      "kind": "VARIABLE",
+      "text": "cfg",
+      "line": 1,
+      "col": 4
+    },
+    {
+      "kind": "VERB",
+      "text": "contains",
+      "line": 1,
+      "col": 9
+    },
+    {
+      "kind": "BARE",
+      "text": "debug=true",
+      "line": 1,
+      "col": 20
+    },
+    {
+      "kind": "LBRACE",
+      "text": "{",
+      "line": 1,
+      "col": 31
+    },
+    {
+      "kind": "NEWLINE",
+      "text": "\n",
+      "line": 1,
+      "col": 32
+    },
+    {
+      "kind": "KEYWORD",
+      "text": "break",
+      "line": 2,
+      "col": 5
+    },
+    {
+      "kind": "BARE",
+      "text": "done",
+      "line": 2,
+      "col": 11
+    },
+    {
+      "kind": "NEWLINE",
+      "text": "\n",
+      "line": 2,
+      "col": 15
+    },
+    {
+      "kind": "RBRACE",
+      "text": "}",
+      "line": 3,
+      "col": 1
+    },
+    {
+      "kind": "KEYWORD",
+      "text": "else-if",
+      "line": 3,
+      "col": 3
+    },
+    {
+      "kind": "VARIABLE",
+      "text": "cfg",
+      "line": 3,
+      "col": 11
+    },
+    {
+      "kind": "VERB",
+      "text": "contains",
+      "line": 3,
+      "col": 16
+    },
+    {
+      "kind": "BARE",
+      "text": "release=true",
+      "line": 3,
+      "col": 27
+    },
+    {
+      "kind": "LBRACE",
+      "text": "{",
+      "line": 3,
+      "col": 40
+    },
+    {
+      "kind": "NEWLINE",
+      "text": "\n",
+      "line": 3,
+      "col": 41
+    },
+    {
+      "kind": "KEYWORD",
+      "text": "break",
+      "line": 4,
+      "col": 5
+    },
+    {
+      "kind": "BARE",
+      "text": "done",
+      "line": 4,
+      "col": 11
+    },
+    {
+      "kind": "NEWLINE",
+      "text": "\n",
+      "line": 4,
+      "col": 15
+    },
+    {
+      "kind": "RBRACE",
+      "text": "}",
+      "line": 5,
+      "col": 1
+    },
+    {
+      "kind": "KEYWORD",
+      "text": "else",
+      "line": 5,
+      "col": 3
+    },
+    {
+      "kind": "LBRACE",
+      "text": "{",
+      "line": 5,
+      "col": 8
+    },
+    {
+      "kind": "NEWLINE",
+      "text": "\n",
+      "line": 5,
+      "col": 9
+    },
+    {
+      "kind": "KEYWORD",
+      "text": "break",
+      "line": 6,
+      "col": 5
+    },
+    {
+      "kind": "BARE",
+      "text": "done",
+      "line": 6,
+      "col": 11
+    },
+    {
+      "kind": "NEWLINE",
+      "text": "\n",
+      "line": 6,
+      "col": 15
+    },
+    {
+      "kind": "RBRACE",
+      "text": "}",
+      "line": 7,
+      "col": 1
+    },
+    {
+      "kind": "NEWLINE",
+      "text": "\n",
+      "line": 7,
+      "col": 2
+    },
+    {
+      "kind": "KEYWORD",
+      "text": "each",
+      "line": 8,
+      "col": 1
+    },
+    {
+      "kind": "VARIABLE",
+      "text": "f",
+      "line": 8,
+      "col": 6
+    },
+    {
+      "kind": "LBRACKET",
+      "text": "[",
+      "line": 8,
+      "col": 9
+    },
+    {
+      "kind": "BARE",
+      "text": "in",
+      "line": 8,
+      "col": 10
+    },
+    {
+      "kind": "RBRACKET",
+      "text": "]",
+      "line": 8,
+      "col": 12
+    },
+    {
+      "kind": "BARE",
+      "text": "xs",
+      "line": 8,
+      "col": 14
+    },
+    {
+      "kind": "LBRACE",
+      "text": "{",
+      "line": 8,
+      "col": 17
+    },
+    {
+      "kind": "NEWLINE",
+      "text": "\n",
+      "line": 8,
+      "col": 18
+    },
+    {
+      "kind": "VERB",
+      "text": "read",
+      "line": 9,
+      "col": 5
+    },
+    {
+      "kind": "VARIABLE",
+      "text": "f",
+      "line": 9,
+      "col": 12
+    },
+    {
+      "kind": "NEWLINE",
+      "text": "\n",
+      "line": 9,
+      "col": 14
+    },
+    {
+      "kind": "RBRACE",
+      "text": "}",
+      "line": 10,
+      "col": 1
+    },
+    {
+      "kind": "NEWLINE",
+      "text": "\n",
+      "line": 10,
+      "col": 2
+    },
+    {
+      "kind": "AT",
+      "text": "@",
+      "line": 11,
+      "col": 1
+    },
+    {
+      "kind": "STRING",
+      "text": "f",
+      "line": 11,
+      "col": 3
+    },
+    {
+      "kind": "NUMBER",
+      "text": "42",
+      "line": 11,
+      "col": 7
+    },
+    {
+      "kind": "VARIABLE",
+      "text": "x",
+      "line": 11,
+      "col": 10
+    },
+    {
+      "kind": "FIELD",
+      "text": "host",
+      "line": 11,
+      "col": 13
+    },
+    {
+      "kind": "NEWLINE",
+      "text": "\n",
+      "line": 11,
+      "col": 18
+    },
+    {
+      "kind": "VARIABLE",
+      "text": "x",
+      "line": 12,
+      "col": 1
+    },
+    {
+      "kind": "PIPE",
+      "text": "|>",
+      "line": 12,
+      "col": 4
+    },
+    {
+      "kind": "VERB",
+      "text": "write",
+      "line": 12,
+      "col": 7
+    },
+    {
+      "kind": "BARE",
+      "text": "b.yml",
+      "line": 12,
+      "col": 15
+    },
+    {
+      "kind": "NEWLINE",
+      "text": "\n",
+      "line": 12,
+      "col": 20
+    },
+    {
+      "kind": "VERB",
+      "text": "send",
+      "line": 13,
+      "col": 1
+    },
+    {
+      "kind": "DOLLAR",
+      "text": "$",
+      "line": 13,
+      "col": 8
+    },
+    {
+      "kind": "LBRACKET",
+      "text": "[",
+      "line": 13,
+      "col": 10
+    },
+    {
+      "kind": "BARE",
+      "text": "to",
+      "line": 13,
+      "col": 11
+    },
+    {
+      "kind": "RBRACKET",
+      "text": "]",
+      "line": 13,
+      "col": 13
+    },
+    {
+      "kind": "BARE",
+      "text": "user",
+      "line": 13,
+      "col": 15
+    },
+    {
+      "kind": "NEWLINE",
+      "text": "\n",
+      "line": 13,
+      "col": 19
+    },
+    {
+      "kind": "EOF",
+      "text": "",
+      "line": 14,
+      "col": 1
+    }
+  ]
+}

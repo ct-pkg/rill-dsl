@@ -1,0 +1,15 @@
+{
+  "kind": "ast",
+  "phase": "p0",
+  "stub_only": true,
+  "sut": ["python3", "tools/rill_stub/rill.py"],
+  "sut_env": {"RILL_STUB_MODE": "echo"},
+  "note": "占位链路自证：只验证 harness 调用、JSON 比对与 golden 归一化；P1 后删除",
+  "expect": {
+    "ast": {
+      "kind": "StubProgram",
+      "placeholder": true,
+      "source": "<read>a.yml\n"
+    }
+  }
+}

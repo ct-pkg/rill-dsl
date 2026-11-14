@@ -1,0 +1,7 @@
+if $cfg <contains> debug=true {
+    <send> "on" [to] user
+} else-if $cfg <contains> release=true {
+    <send> "release" [to] user
+} else {
+    <send> "off" [to] user
+}

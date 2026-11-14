@@ -1,0 +1,6 @@
+{
+  "kind": "error",
+  "phase": "p2",
+  "note": "if 后缺 body 块：解析期报错",
+  "expect": {"stage": "parse", "command": "parse"}
+}

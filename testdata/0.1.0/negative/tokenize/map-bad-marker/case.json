@@ -1,0 +1,6 @@
+{
+  "kind": "error",
+  "phase": "p1",
+  "note": "短词后第一个非短词字符不是 ' / ` / <：E-01（§3.2、§4.20）",
+  "expect": {"stage": "tokenize", "command": "tokenize", "code": "E-01", "line": 2, "col": 4, "message_contains": "map_entry 标记符非法"}
+}

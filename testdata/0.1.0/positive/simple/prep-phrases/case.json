@@ -1,0 +1,6 @@
+{
+  "kind": "ast",
+  "phase": "p2",
+  "note": "多个介宾短语按书写顺序保留（评审 R-01）",
+  "expect": {"profiles": ["shell"]}
+}

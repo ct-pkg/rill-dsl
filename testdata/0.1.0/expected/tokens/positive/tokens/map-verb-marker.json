@@ -1,0 +1,78 @@
+{
+  "schema": "rill-tokens-golden/0",
+  "case": "positive/tokens/map-verb-marker",
+  "tokens": [
+    {
+      "kind": "MAP_HEADER",
+      "text": "//map",
+      "line": 1,
+      "col": 1
+    },
+    {
+      "kind": "NEWLINE",
+      "text": "\n",
+      "line": 1,
+      "col": 7
+    },
+    {
+      "kind": "MAP_SHORT",
+      "text": "r",
+      "line": 2,
+      "col": 1
+    },
+    {
+      "kind": "MAP_MARK",
+      "text": "<",
+      "line": 2,
+      "col": 2
+    },
+    {
+      "kind": "MAP_LONG",
+      "text": "read",
+      "line": 2,
+      "col": 3
+    },
+    {
+      "kind": "NEWLINE",
+      "text": "\n",
+      "line": 2,
+      "col": 7
+    },
+    {
+      "kind": "RBRACE",
+      "text": "}",
+      "line": 3,
+      "col": 1
+    },
+    {
+      "kind": "NEWLINE",
+      "text": "\n",
+      "line": 3,
+      "col": 2
+    },
+    {
+      "kind": "VERB",
+      "text": "r",
+      "line": 4,
+      "col": 1
+    },
+    {
+      "kind": "BARE",
+      "text": "a.yml",
+      "line": 4,
+      "col": 5
+    },
+    {
+      "kind": "NEWLINE",
+      "text": "\n",
+      "line": 4,
+      "col": 10
+    },
+    {
+      "kind": "EOF",
+      "text": "",
+      "line": 5,
+      "col": 1
+    }
+  ]
+}

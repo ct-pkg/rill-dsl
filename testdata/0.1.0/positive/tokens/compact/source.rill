@@ -1,0 +1,2 @@
+<read>`cfg`.yml->$c
+<replace>localhost[with]prod[in]$c

@@ -1,0 +1,6 @@
+parallel {
+    <read> a.yml [error] { <send> "a failed" [to] user }
+    <read> b.yml
+} [results] {
+    <send> "完成" [to] user
+} |> <write> out.yml

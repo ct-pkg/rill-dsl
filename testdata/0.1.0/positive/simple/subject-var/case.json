@@ -1,0 +1,6 @@
+{
+  "kind": "ast",
+  "phase": "p2",
+  "note": "主语槽为 $变量（接收者形态，§4.1）",
+  "expect": {"profiles": ["shell"]}
+}

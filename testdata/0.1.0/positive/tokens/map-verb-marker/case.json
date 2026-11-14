@@ -1,0 +1,6 @@
+{
+  "kind": "tokens",
+  "phase": "p1",
+  "note": "B1 裁定：//map 块内 < 是标记符，块外 <read> 仍是动词（§3.2、§4.20）",
+  "expect": {}
+}

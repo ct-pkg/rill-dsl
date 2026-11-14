@@ -1,0 +1,13 @@
+{
+  "schema": "rill.host-profile/0",
+  "name": "agent",
+  "kind": "agent",
+  "description": "Phase 0 形状骨架：与 shell 同槽位、同绑定形状，差异只允许出现在能力实现里。",
+  "capabilities": {
+    "process": {"provider": "stub", "ref": "fakes/host.json#process"},
+    "fs": {"provider": "stub", "ref": "fakes/host.json#fs"},
+    "env": {"provider": "stub", "ref": "fakes/host.json#env"},
+    "stdio": {"provider": "stub", "ref": "fakes/host.json#stdio"},
+    "exit": {"provider": "stub", "ref": "fakes/host.json#exit"}
+  }
+}

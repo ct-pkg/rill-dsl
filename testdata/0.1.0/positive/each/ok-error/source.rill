@@ -1,0 +1,7 @@
+each $file [in] <search> *.yml (recursive) {
+    <replace> localhost [with] prod [in] $file
+} [ok] {
+    <send> "全部完成" [to] user
+} [error] {
+    <send> "过程中出错" [to] user
+}

@@ -1,0 +1,150 @@
+{
+  "schema": "rill-tokens-golden/0",
+  "case": "positive/tokens/comments-and-headers",
+  "tokens": [
+    {
+      "kind": "NEWLINE",
+      "text": "\n",
+      "line": 1,
+      "col": 8
+    },
+    {
+      "kind": "NEWLINE",
+      "text": "\n",
+      "line": 2,
+      "col": 6
+    },
+    {
+      "kind": "MAP_HEADER",
+      "text": "//map",
+      "line": 3,
+      "col": 1
+    },
+    {
+      "kind": "NEWLINE",
+      "text": "\n",
+      "line": 3,
+      "col": 9
+    },
+    {
+      "kind": "MAP_SHORT",
+      "text": "cfg",
+      "line": 4,
+      "col": 1
+    },
+    {
+      "kind": "MAP_MARK",
+      "text": "`",
+      "line": 4,
+      "col": 4
+    },
+    {
+      "kind": "MAP_LONG",
+      "text": "configuration",
+      "line": 4,
+      "col": 5
+    },
+    {
+      "kind": "NEWLINE",
+      "text": "\n",
+      "line": 4,
+      "col": 18
+    },
+    {
+      "kind": "RBRACE",
+      "text": "}",
+      "line": 5,
+      "col": 1
+    },
+    {
+      "kind": "NEWLINE",
+      "text": "\n",
+      "line": 5,
+      "col": 2
+    },
+    {
+      "kind": "FN_HEADER",
+      "text": "//fn",
+      "line": 6,
+      "col": 1
+    },
+    {
+      "kind": "NEWLINE",
+      "text": "\n",
+      "line": 6,
+      "col": 7
+    },
+    {
+      "kind": "AT",
+      "text": "@",
+      "line": 7,
+      "col": 1
+    },
+    {
+      "kind": "STRING",
+      "text": "f",
+      "line": 7,
+      "col": 3
+    },
+    {
+      "kind": "VARIABLE",
+      "text": "x",
+      "line": 7,
+      "col": 7
+    },
+    {
+      "kind": "VERB",
+      "text": "read",
+      "line": 7,
+      "col": 10
+    },
+    {
+      "kind": "VARIABLE",
+      "text": "x",
+      "line": 7,
+      "col": 17
+    },
+    {
+      "kind": "LBRACE",
+      "text": "{",
+      "line": 7,
+      "col": 20
+    },
+    {
+      "kind": "NEWLINE",
+      "text": "\n",
+      "line": 7,
+      "col": 21
+    },
+    {
+      "kind": "RBRACE",
+      "text": "}",
+      "line": 8,
+      "col": 1
+    },
+    {
+      "kind": "NEWLINE",
+      "text": "\n",
+      "line": 8,
+      "col": 2
+    },
+    {
+      "kind": "RBRACE",
+      "text": "}",
+      "line": 9,
+      "col": 1
+    },
+    {
+      "kind": "NEWLINE",
+      "text": "\n",
+      "line": 9,
+      "col": 2
+    },
+    {
+      "kind": "EOF",
+      "text": "",
+      "line": 10,
+      "col": 1
+    }
+  ]
+}

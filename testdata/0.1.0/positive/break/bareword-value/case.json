@@ -1,0 +1,6 @@
+{
+  "kind": "ast",
+  "phase": "p2",
+  "note": "A2：break 的裸词 done 是 value，按 STRING \"done\" 处理（§4.15 / §4.20）",
+  "expect": {"profiles": ["shell"]}
+}

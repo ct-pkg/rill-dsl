@@ -1,0 +1,1 @@
+<read> a.yml [error] { <send> "a" [to] user } [error] { <send> "b" [to] user }

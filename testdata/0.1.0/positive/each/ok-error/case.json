@@ -1,0 +1,6 @@
+{
+  "kind": "ast",
+  "phase": "p2",
+  "note": "each 头 + 体 + 循环级 [ok]/[error]（§4.13）",
+  "expect": {"profiles": ["shell"]}
+}

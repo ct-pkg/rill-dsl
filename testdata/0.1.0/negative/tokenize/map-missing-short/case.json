@@ -1,0 +1,6 @@
+{
+  "kind": "error",
+  "phase": "p1",
+  "note": "map 行缺少短词：词法错误 E-LEX-MAP-ENTRY（§3.2）",
+  "expect": {"stage": "tokenize", "command": "tokenize", "code": "E-LEX-MAP-ENTRY", "line": 2, "col": 1}
+}

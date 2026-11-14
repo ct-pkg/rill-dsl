@@ -1,0 +1,3 @@
+<read> a.yml |> <write> b.yml [ok] {
+    break "done" -> $result
+}

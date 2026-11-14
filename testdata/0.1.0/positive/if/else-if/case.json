@@ -1,0 +1,6 @@
+{
+  "kind": "ast",
+  "phase": "p2",
+  "note": "if / else-if / else；条件位带可选主语（§4.12 / 评审 I-04）",
+  "expect": {"profiles": ["shell"]}
+}

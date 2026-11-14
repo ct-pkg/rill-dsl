@@ -1,0 +1,6 @@
+{
+  "kind": "ast",
+  "phase": "p2",
+  "note": "尾随块叠加：[into] → [ok]/[error] → |>（§4.11）",
+  "expect": {"profiles": ["shell"]}
+}

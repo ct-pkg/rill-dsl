@@ -1,0 +1,6 @@
+{
+  "retired": true,
+  "retired_by": "0.1.1 A2",
+  "superseded_by": "positive/call/bareword-arg",
+  "note": "A2 已裁定：裸词在 value 位按 STRING；本目录仅保留转正痕迹"
+}

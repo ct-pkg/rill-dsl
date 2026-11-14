@@ -1,0 +1,7 @@
+//fn{
+@ "notify" $msg <send> $msg [to] user {
+    <send> $msg [to] user
+}
+}
+
+@ "notify" foo

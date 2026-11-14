@@ -1,0 +1,6 @@
+{
+  "kind": "ast",
+  "phase": "p2",
+  "note": "独立形式 prep_block_stmt：[into] $cfg { ... }（§4.9 / 评审 R-03）",
+  "expect": {"profiles": ["shell"]}
+}

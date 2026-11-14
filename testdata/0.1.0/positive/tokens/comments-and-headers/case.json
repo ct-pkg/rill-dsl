@@ -1,0 +1,6 @@
+{
+  "kind": "tokens",
+  "phase": "p1",
+  "note": "//map 与 //fn 头、空格容忍、无 { 时为行注释（§3.1）",
+  "expect": {}
+}

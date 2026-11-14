@@ -1,0 +1,6 @@
+{
+  "kind": "error",
+  "phase": "p1",
+  "note": "< 未闭合：E-02，信息须提示映射定义只能在 //map{} 块内（§4.20）",
+  "expect": {"stage": "tokenize", "command": "tokenize", "code": "E-02", "line": 1, "col": 1, "message_contains": "映射定义必须在 `//map{}` 块内"}
+}

@@ -1,0 +1,6 @@
+{
+  "kind": "error",
+  "phase": "p2",
+  "note": "[error] 上限为 1（§4.10 / 评审 I-29）",
+  "expect": {"stage": "parse", "command": "parse"}
+}

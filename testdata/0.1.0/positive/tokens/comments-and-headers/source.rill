@@ -1,0 +1,9 @@
+// 普通注释
+//map
+// map {
+cfg`configuration
+}
+//fn {
+@ "f" $x <read> $x {
+}
+}

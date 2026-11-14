@@ -1,0 +1,9 @@
+{
+  "kind": "host-ast-equal",
+  "phase": "p0",
+  "stub_only": true,
+  "sut": ["python3", "tools/rill_stub/rill.py"],
+  "sut_env": {"RILL_STUB_MODE": "echo"},
+  "note": "占位链路自证：验证同一源码在 shell / agent 两次调用下比对的是 AST 而不是文本",
+  "expect": {"profiles": ["shell", "agent"]}
+}

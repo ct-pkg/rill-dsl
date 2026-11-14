@@ -1,0 +1,28 @@
+{
+  "schema": "rill-fakes-host/0",
+  "description": "外部能力桩：只提供确定性数据，内容词汇不是 HostCapabilities 契约；H1/H2 可整体替换。",
+  "process": {
+    "responses": [
+      {"argv": ["echo", "hi"], "code": 0, "stdout": "hi\n", "stderr": ""}
+    ]
+  },
+  "fs": {
+    "files": {
+      "/work/a.yml": "host: a\n",
+      "/work/b.yml": "host: b\n"
+    }
+  },
+  "env": {
+    "vars": {
+      "RILL_FAKE": "1"
+    }
+  },
+  "stdio": {
+    "stdin": "",
+    "stdout": [],
+    "stderr": []
+  },
+  "exit": {
+    "mapping": {}
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "kind": "tokens",
+  "phase": "p1",
+  "note": "NUMBER 与裸词的边界：整数成 NUMBER，词内数字/小数点/冒号留作裸词（§三 NUMBER）",
+  "expect": {}
+}

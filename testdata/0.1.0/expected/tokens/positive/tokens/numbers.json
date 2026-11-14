@@ -1,0 +1,102 @@
+{
+  "schema": "rill-tokens-golden/0",
+  "case": "positive/tokens/numbers",
+  "tokens": [
+    {
+      "kind": "VERB",
+      "text": "read",
+      "line": 1,
+      "col": 1
+    },
+    {
+      "kind": "NUMBER",
+      "text": "42",
+      "line": 1,
+      "col": 7
+    },
+    {
+      "kind": "NEWLINE",
+      "text": "\n",
+      "line": 1,
+      "col": 9
+    },
+    {
+      "kind": "VERB",
+      "text": "read",
+      "line": 2,
+      "col": 1
+    },
+    {
+      "kind": "NUMBER",
+      "text": "-5",
+      "line": 2,
+      "col": 7
+    },
+    {
+      "kind": "NEWLINE",
+      "text": "\n",
+      "line": 2,
+      "col": 9
+    },
+    {
+      "kind": "VERB",
+      "text": "read",
+      "line": 3,
+      "col": 1
+    },
+    {
+      "kind": "BARE",
+      "text": "42abc",
+      "line": 3,
+      "col": 7
+    },
+    {
+      "kind": "NEWLINE",
+      "text": "\n",
+      "line": 3,
+      "col": 12
+    },
+    {
+      "kind": "VERB",
+      "text": "read",
+      "line": 4,
+      "col": 1
+    },
+    {
+      "kind": "BARE",
+      "text": "1.5",
+      "line": 4,
+      "col": 7
+    },
+    {
+      "kind": "NEWLINE",
+      "text": "\n",
+      "line": 4,
+      "col": 10
+    },
+    {
+      "kind": "VERB",
+      "text": "read",
+      "line": 5,
+      "col": 1
+    },
+    {
+      "kind": "BARE",
+      "text": "prod-db:5432",
+      "line": 5,
+      "col": 7
+    },
+    {
+      "kind": "NEWLINE",
+      "text": "\n",
+      "line": 5,
+      "col": 19
+    },
+    {
+      "kind": "EOF",
+      "text": "",
+      "line": 6,
+      "col": 1
+    }
+  ]
+}

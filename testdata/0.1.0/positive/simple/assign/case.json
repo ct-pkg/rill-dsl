@@ -1,0 +1,6 @@
+{
+  "kind": "ast",
+  "phase": "p2",
+  "note": "-> $x 赋值（§4.7）",
+  "expect": {"profiles": ["shell"]}
+}

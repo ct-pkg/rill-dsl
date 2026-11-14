@@ -1,0 +1,3 @@
+[into] $cfg {
+    <send> "x" [to] user
+}

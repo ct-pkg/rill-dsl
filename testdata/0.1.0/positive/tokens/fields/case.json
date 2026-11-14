@@ -1,0 +1,6 @@
+{
+  "kind": "tokens",
+  "phase": "p1",
+  "note": ".字段 在 token 起始位置成 FIELD；紧邻前词的 . 归入裸词（§4.8）",
+  "expect": {}
+}

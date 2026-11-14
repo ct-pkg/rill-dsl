@@ -1,0 +1,3 @@
+parallel {
+    <read> a.yml [results] { <send> "x" [to] user }
+}

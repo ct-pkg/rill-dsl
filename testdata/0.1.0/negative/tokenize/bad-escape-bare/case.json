@@ -1,0 +1,6 @@
+{
+  "kind": "error",
+  "phase": "p1",
+  "note": "裸词只允许转义语义符号 \\[ \\] \\( \\) \\< \\> \\{ \\} \\$ \\\\，\\, 非法（§4.16）",
+  "expect": {"stage": "tokenize", "command": "tokenize", "code": "E-LEX-BARE-ESCAPE", "line": 1, "col": 9}
+}

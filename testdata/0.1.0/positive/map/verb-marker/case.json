@@ -1,0 +1,6 @@
+{
+  "kind": "ast",
+  "phase": "p2",
+  "note": "B1：//map{} 块内 < 是 MAP_MARK（r<read），块外 <r> 是动词定界；s'my application 是值映射（§3.2 / §4.17 / §4.20）",
+  "expect": {"profiles": ["shell"]}
+}

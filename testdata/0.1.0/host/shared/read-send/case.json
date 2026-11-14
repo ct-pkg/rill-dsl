@@ -1,0 +1,6 @@
+{
+  "kind": "host-ast-equal",
+  "phase": "p2",
+  "note": "同一份源码在 shell / agent 两个 profile 下 AST 必须相等（roadmap §3.3 / 阶段 0 退出判据）",
+  "expect": {"profiles": ["shell", "agent"]}
+}

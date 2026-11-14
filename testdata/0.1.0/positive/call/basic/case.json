@@ -1,0 +1,6 @@
+{
+  "kind": "ast",
+  "phase": "p2",
+  "note": "//fn{} 定义 + 正文 @ 调用 + 调用上的管道（§4.18）",
+  "expect": {"profiles": ["shell"]}
+}

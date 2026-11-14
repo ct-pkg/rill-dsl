@@ -1,0 +1,6 @@
+{
+  "kind": "error",
+  "phase": "p1",
+  "note": "//map 区块到 EOF 未闭合：E-LEX-MAP-UNCLOSED（§3.1、§4.17）",
+  "expect": {"stage": "tokenize", "command": "tokenize", "code": "E-LEX-MAP-UNCLOSED", "line": 1, "col": 1}
+}

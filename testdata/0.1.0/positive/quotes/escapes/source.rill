@@ -1,0 +1,3 @@
+<send> 'a [b] <c>' [to] user
+<send> "say \"hi\" and \\ done" [to] user
+<send> plain\[word\] [to] user

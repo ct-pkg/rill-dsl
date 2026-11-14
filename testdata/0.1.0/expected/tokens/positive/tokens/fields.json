@@ -1,0 +1,84 @@
+{
+  "schema": "rill-tokens-golden/0",
+  "case": "positive/tokens/fields",
+  "tokens": [
+    {
+      "kind": "VERB",
+      "text": "read",
+      "line": 1,
+      "col": 1
+    },
+    {
+      "kind": "FIELD",
+      "text": "host",
+      "line": 1,
+      "col": 7
+    },
+    {
+      "kind": "NEWLINE",
+      "text": "\n",
+      "line": 1,
+      "col": 12
+    },
+    {
+      "kind": "VERB",
+      "text": "read",
+      "line": 2,
+      "col": 1
+    },
+    {
+      "kind": "FIELD",
+      "text": "env",
+      "line": 2,
+      "col": 7
+    },
+    {
+      "kind": "NEWLINE",
+      "text": "\n",
+      "line": 2,
+      "col": 11
+    },
+    {
+      "kind": "LBRACE",
+      "text": "{",
+      "line": 3,
+      "col": 1
+    },
+    {
+      "kind": "FIELD",
+      "text": "host",
+      "line": 3,
+      "col": 2
+    },
+    {
+      "kind": "VERB",
+      "text": "read",
+      "line": 3,
+      "col": 7
+    },
+    {
+      "kind": "BARE",
+      "text": "x",
+      "line": 3,
+      "col": 13
+    },
+    {
+      "kind": "RBRACE",
+      "text": "}",
+      "line": 3,
+      "col": 14
+    },
+    {
+      "kind": "NEWLINE",
+      "text": "\n",
+      "line": 3,
+      "col": 15
+    },
+    {
+      "kind": "EOF",
+      "text": "",
+      "line": 4,
+      "col": 1
+    }
+  ]
+}

@@ -1,0 +1,6 @@
+{
+  "kind": "error",
+  "phase": "p3",
+  "note": "同块内重复短词报错（§4.17）",
+  "expect": {"stage": "load", "command": "check"}
+}

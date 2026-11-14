@@ -1,0 +1,3 @@
+<read>a.yml->$c|><write>b.yml
+<read>a.yml(utf-8,backup:daily,timeout:30)[with]prod[in]$c
+<read>a.yml?x

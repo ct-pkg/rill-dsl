@@ -1,0 +1,10 @@
+{
+  "kind": "warning",
+  "phase": "p3",
+  "note": "W-01：each [in] 裸词按字符串处理，check 只提示不阻断（0.1.1 §0.1.1 / §4.20）",
+  "expect": {
+    "command": "check",
+    "code": "W-01",
+    "message_contains": "按字符串处理"
+  }
+}

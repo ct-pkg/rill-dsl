@@ -1,0 +1,43 @@
+{
+  "schema": "rill-fakes-tools/0",
+  "description": "工具层 fake：只返回可编程的 {value, ok}，不接真实文件系统/网络/进程。队列耗尽后取 default，保证确定性。",
+  "tools": {
+    "read": {
+      "queue": [
+        {"ok": true, "value": "host: a\n"},
+        {"ok": false, "error": "E_NOT_FOUND"}
+      ],
+      "default": {"ok": false, "error": "E_SCRIPT_EXHAUSTED"}
+    },
+    "write": {
+      "queue": [
+        {"ok": true, "value": null}
+      ],
+      "default": {"ok": true, "value": null}
+    },
+    "search": {
+      "queue": [
+        {"ok": true, "value": ["a.yml", "b.yml"]}
+      ],
+      "default": {"ok": true, "value": []}
+    },
+    "parse": {
+      "queue": [
+        {"ok": true, "value": {"format": "yaml", "keys": ["host"]}}
+      ],
+      "default": {"ok": false, "error": "E_PARSE_FAILED"}
+    },
+    "send": {
+      "queue": [
+        {"ok": true, "value": null}
+      ],
+      "default": {"ok": true, "value": null}
+    },
+    "replace": {
+      "queue": [
+        {"ok": true, "value": "prod"}
+      ],
+      "default": {"ok": true, "value": "prod"}
+    }
+  }
+}

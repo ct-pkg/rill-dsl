@@ -1,0 +1,6 @@
+{
+  "kind": "ast",
+  "phase": "p2",
+  "note": "//map{} 头 + 值类标记 ` 展开为 STRING（§3.2 / §4.17）",
+  "expect": {"profiles": ["shell"]}
+}

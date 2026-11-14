@@ -1,0 +1,6 @@
+{
+  "kind": "error",
+  "phase": "p1",
+  "note": "双引号未闭合：词法错误，不得静默截断",
+  "expect": {"stage": "tokenize", "command": "tokenize", "code": "E-LEX-QUOTE", "line": 1, "col": 8}
+}

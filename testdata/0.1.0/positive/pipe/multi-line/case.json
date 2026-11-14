@@ -1,0 +1,6 @@
+{
+  "kind": "ast",
+  "phase": "p2",
+  "note": "跨行管道：|> 留在前段行尾（§4.6 / §4.19）",
+  "expect": {"profiles": ["shell"]}
+}

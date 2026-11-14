@@ -1,0 +1,13 @@
+if $cfg <contains> debug=true {
+    break done
+} else-if $cfg <contains> release=true {
+    break done
+} else {
+    break done
+}
+each $f [in] xs {
+    <read> $f
+}
+@ "f" 42 $x .host
+$x |> <write> b.yml
+<send> $ [to] user

@@ -1,0 +1,7 @@
+<read> /app/config.yml |> <parse> yaml [into] {
+    <send> "进入" [to] user
+} [ok] {
+    <send> "配置已更新" [to] user
+} [error] {
+    <send> "更新失败" [to] user
+} |> <write> /app/config.yml

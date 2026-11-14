@@ -1,0 +1,6 @@
+{
+  "kind": "error",
+  "phase": "p3",
+  "note": "未知动词在加载期报错（§五.8）",
+  "expect": {"stage": "load", "command": "check"}
+}

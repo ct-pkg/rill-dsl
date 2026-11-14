@@ -1,0 +1,6 @@
+{
+  "kind": "ast",
+  "phase": "p2",
+  "note": "parallel + 分支尾随 + [results] + 管道（§4.14 / 评审 R-02）",
+  "expect": {"profiles": ["shell"]}
+}

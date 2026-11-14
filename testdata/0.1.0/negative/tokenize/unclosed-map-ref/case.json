@@ -1,0 +1,6 @@
+{
+  "kind": "error",
+  "phase": "p1",
+  "note": "反引号引用未闭合：E-LEX-MAP-REF（§4.17）",
+  "expect": {"stage": "tokenize", "command": "tokenize", "code": "E-LEX-MAP-REF", "line": 1, "col": 8}
+}

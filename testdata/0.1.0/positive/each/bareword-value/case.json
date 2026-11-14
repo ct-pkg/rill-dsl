@@ -1,0 +1,6 @@
+{
+  "kind": "ast",
+  "phase": "p2",
+  "note": "A2：each [in] 的裸词 xs 是 value，按 STRING \"xs\" 处理、不查变量（§4.13 / §4.20）",
+  "expect": {"profiles": ["shell"]}
+}

@@ -1,0 +1,5 @@
+<read>42
+<read>-5
+<read>42abc
+<read>1.5
+<read>prod-db:5432

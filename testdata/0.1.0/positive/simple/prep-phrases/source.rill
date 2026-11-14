@@ -1,0 +1,1 @@
+<replace> localhost [with] prod (global) [in] $file

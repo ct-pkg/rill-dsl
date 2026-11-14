@@ -1,0 +1,6 @@
+{
+  "kind": "ast",
+  "phase": "p2",
+  "note": "break 字面量 + 外部变量捕捉（§4.15）",
+  "expect": {"profiles": ["shell"]}
+}

@@ -1,0 +1,6 @@
+{
+  "kind": "tokens",
+  "phase": "p1",
+  "note": "// +空格+ map +空格+ { 必须产生 MAP_HEADER（§3.1）",
+  "expect": {}
+}

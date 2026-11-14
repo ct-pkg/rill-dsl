@@ -1,0 +1,4 @@
+<send>'a [b]'[to]user
+<send>"a\"b"[to]user
+<read>caf\[e\].yml
+<read>a\$b

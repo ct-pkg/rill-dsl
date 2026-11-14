@@ -1,0 +1,6 @@
+{
+  "schema": "rill-sut/0",
+  "command": ["python3", "-m", "rill"],
+  "env": {"PYTHONPATH": "src"},
+  "timeout_seconds": 15
+}

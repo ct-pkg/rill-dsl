@@ -1,0 +1,6 @@
+{
+  "kind": "ast",
+  "phase": "p2",
+  "note": "主语 + 动词 + 宾语（§4.1–§4.3）",
+  "expect": {"profiles": ["shell"]}
+}

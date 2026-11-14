@@ -1,0 +1,3 @@
+<read>.host
+<read>.env
+{.host<read>x}

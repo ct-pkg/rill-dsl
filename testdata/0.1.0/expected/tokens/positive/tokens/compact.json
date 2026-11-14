@@ -1,0 +1,114 @@
+{
+  "schema": "rill-tokens-golden/0",
+  "case": "positive/tokens/compact",
+  "tokens": [
+    {
+      "kind": "VERB",
+      "text": "read",
+      "line": 1,
+      "col": 1
+    },
+    {
+      "kind": "MAP_REF",
+      "text": "cfg",
+      "line": 1,
+      "col": 7
+    },
+    {
+      "kind": "BARE",
+      "text": ".yml",
+      "line": 1,
+      "col": 12
+    },
+    {
+      "kind": "ARROW",
+      "text": "->",
+      "line": 1,
+      "col": 16
+    },
+    {
+      "kind": "VARIABLE",
+      "text": "c",
+      "line": 1,
+      "col": 18
+    },
+    {
+      "kind": "NEWLINE",
+      "text": "\n",
+      "line": 1,
+      "col": 20
+    },
+    {
+      "kind": "VERB",
+      "text": "replace",
+      "line": 2,
+      "col": 1
+    },
+    {
+      "kind": "BARE",
+      "text": "localhost",
+      "line": 2,
+      "col": 10
+    },
+    {
+      "kind": "LBRACKET",
+      "text": "[",
+      "line": 2,
+      "col": 19
+    },
+    {
+      "kind": "BARE",
+      "text": "with",
+      "line": 2,
+      "col": 20
+    },
+    {
+      "kind": "RBRACKET",
+      "text": "]",
+      "line": 2,
+      "col": 24
+    },
+    {
+      "kind": "BARE",
+      "text": "prod",
+      "line": 2,
+      "col": 25
+    },
+    {
+      "kind": "LBRACKET",
+      "text": "[",
+      "line": 2,
+      "col": 29
+    },
+    {
+      "kind": "BARE",
+      "text": "in",
+      "line": 2,
+      "col": 30
+    },
+    {
+      "kind": "RBRACKET",
+      "text": "]",
+      "line": 2,
+      "col": 32
+    },
+    {
+      "kind": "VARIABLE",
+      "text": "c",
+      "line": 2,
+      "col": 33
+    },
+    {
+      "kind": "NEWLINE",
+      "text": "\n",
+      "line": 2,
+      "col": 35
+    },
+    {
+      "kind": "EOF",
+      "text": "",
+      "line": 3,
+      "col": 1
+    }
+  ]
+}
