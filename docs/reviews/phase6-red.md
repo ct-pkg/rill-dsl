@@ -88,6 +88,9 @@ Traceback (most recent call last):
 ImportError: cannot import name 'pipe' from 'rill' (/Users/samxx/trae-ws/rill-dsl/tests/phase6/../../src/rill/__init__.py)
 ```
 
+- green: `python3 tests/phase6/test_pipe.py` → `rc=0`，
+  `PASS pipe: expr/stmt 分流、只传 value、失败短路、each 失败轮与恢复`。
+
 
 
 
