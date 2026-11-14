@@ -17,3 +17,7 @@ Traceback (most recent call last):
     from rill import value
 ImportError: cannot import name 'value' from 'rill' (/Users/samxx/trae-ws/rill-dsl/tests/phase6/../../src/rill/__init__.py)
 ```
+
+- green: `python3 tests/phase6/test_value.py` → `rc=0`，
+  `PASS value: 11 种值形态、Bytes/Opaque 只读与透传、真值判定`。
+
