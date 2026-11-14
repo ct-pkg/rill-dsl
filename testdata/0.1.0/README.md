@@ -199,6 +199,7 @@ harness 只认“命令 + 退出码 + stdout JSON”；产品 CLI 的最终形�
    ```bash
    bash tools/check-0.1.0.sh --list                    # 结构、命名、资产
    bash tools/check-0.1.0.sh --show <id>               # 看实际输出
+   bash tools/check-0.1.0.sh --case <id>               # 只跑一条（可重复），带断言与退出码
    bash tools/check-0.1.0.sh --kind ast --phase p2     # 只跑相关一组
    bash tools/check-0.1.0.sh                           # 全量
    ```

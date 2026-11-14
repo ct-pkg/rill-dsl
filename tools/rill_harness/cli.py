@@ -38,6 +38,8 @@ def parse_args(argv):
     parser.add_argument("--phase", default="", help="只跑某个阶段声明的用例，如 p1 / p2 / r3")
     parser.add_argument("--kind", default="", help="只跑某种期望，如 ast / tokens / error / run")
     parser.add_argument("--bucket", default="", help="只跑某个桶，如 positive / negative / pending")
+    parser.add_argument("--case", action="append", default=[], metavar="CASE",
+                        help="只跑指定用例，可重复；按相对 id 或唯一后缀匹配")
     parser.add_argument("--sut", default="", help="覆盖被测命令，如 'python3 tools/rill_stub/rill.py'")
     parser.add_argument("--json", action="store_true", help="以 JSON 输出结果")
     group = parser.add_mutually_exclusive_group()
@@ -95,7 +97,7 @@ def describe_assets(profiles, tools, stubs, repo_root):
     return lines
 
 
-def filter_cases(all_cases, args):
+def filter_cases(all_cases, args, wanted):
     selected = []
     for case in all_cases:
         if args.phase and case.phase != args.phase:
@@ -103,6 +105,8 @@ def filter_cases(all_cases, args):
         if args.kind and case.kind != args.kind:
             continue
         if args.bucket and case.bucket != args.bucket:
+            continue
+        if wanted and case.rel not in wanted:
             continue
         selected.append(case)
     return selected
@@ -357,13 +361,22 @@ def main(argv=None):
         print("fixtures 不合法，未执行任何用例。")
         return EXIT_FAIL
 
-    selected = filter_cases(all_cases, args)
+    wanted = []
+    for needle in args.case:
+        try:
+            wanted.append(case_mod.find_case(all_cases, needle).rel)
+        except KeyError as exc:
+            print("FAIL  %s" % exc)
+            return EXIT_FAIL
+
+    selected = filter_cases(all_cases, args, wanted)
     filters = " ".join(
         part
         for part in (
             "phase=%s" % args.phase if args.phase else "",
             "kind=%s" % args.kind if args.kind else "",
             "bucket=%s" % args.bucket if args.bucket else "",
+            "case=%s" % ",".join(wanted) if wanted else "",
         )
         if part
     )

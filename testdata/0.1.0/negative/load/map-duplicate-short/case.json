@@ -1,6 +1,12 @@
 {
   "kind": "error",
-  "phase": "p3",
+  "phase": "p4",
   "note": "同块内重复短词报错（§4.17）",
-  "expect": {"stage": "load", "command": "check"}
+  "expect": {
+    "stage": "load",
+    "command": "check",
+    "code": "E-LOAD-MAP-DUP-SHORT",
+    "line": 3,
+    "col": 1
+  }
 }
