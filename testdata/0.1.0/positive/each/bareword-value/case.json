@@ -1,6 +1,39 @@
 {
   "kind": "ast",
   "phase": "p2",
-  "note": "A2：each [in] 的裸词 xs 是 value，按 STRING \"xs\" 处理、不查变量（§4.13 / §4.20）",
-  "expect": {"profiles": ["shell"]}
+  "note": "A2：each [in] 的裸词 xs 是 value，按 STRING 处理、不查变量（§4.13 / §4.20）",
+  "expect": {
+    "profiles": ["shell"],
+    "ast": {
+      "kind": "Program",
+      "headers": [],
+      "body": [
+        {
+          "kind": "EachStmt",
+          "var": "f",
+          "source": {"kind": "String", "value": "xs"},
+          "body": {
+            "kind": "Block",
+            "body": [
+              {
+                "kind": "SimpleStmt",
+                "call": {
+                  "kind": "VerbCall",
+                  "subject": null,
+                  "verb": "send",
+                  "object": {"kind": "Variable", "name": "f"},
+                  "post": [
+                    {"kind": "PrepPhrase", "prep": "to", "object": {"kind": "Bare", "text": "user"}}
+                  ]
+                },
+                "tail": [],
+                "pipe": null
+              }
+            ]
+          },
+          "tail": []
+        }
+      ]
+    }
+  }
 }

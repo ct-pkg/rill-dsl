@@ -1,0 +1,5 @@
+break "s" -> $a
+break 42 -> $b
+break bare -> $c
+break $v -> $d
+break .field -> $e

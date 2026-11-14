@@ -59,3 +59,26 @@ VERDICT: FAIL (exit 1)
 ```
 
 - green: 待实现
+
+## PH-3-T4
+
+- baseline: `ff534e1`
+- 命令: `bash tools/check-0.1.0.sh --kind ast --bucket positive`
+- 退出码: `1`
+- 原始输出：
+
+```text
+FAIL    positive/block/into-independent (ast)  SUT 错误：独立介宾块在 PH-3-T4 加入
+FAIL    positive/block/trailing (ast)  SUT 错误：尾随块在 PH-3-T4 加入
+FAIL    positive/break/bareword-value (ast)  SUT 错误：关键字 'break' 的语句在 PH-3-T4 加入
+FAIL    positive/break/capture (ast)  SUT 错误：尾随块在 PH-3-T4 加入
+FAIL    positive/each/bareword-value (ast)  SUT 错误：关键字 'each' 的语句在 PH-3-T4 加入
+FAIL    positive/if/else-if (ast)  SUT 错误：关键字 'if' 的语句在 PH-3-T4 加入
+FAIL    positive/parallel/results (ast)  SUT 错误：关键字 'parallel' 的语句在 PH-3-T4 加入
+FAIL    positive/value/five-branches (ast)  SUT 错误：关键字 'break' 的语句在 PH-3-T4 加入
+summary
+  compliance: 12 passed, 8 failed, 0 blocked, 3 draft
+VERDICT: FAIL (exit 1)
+```
+
+- green: 待实现
