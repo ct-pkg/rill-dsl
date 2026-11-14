@@ -1,0 +1,9 @@
+{
+  "schema": "rill-fakes-tools/0",
+  "description": "函数尾部默认值：省略 $fmt 时 parse 收到 yaml。",
+  "tools": {
+    "read": {"queue": [], "default": {"ok": true, "value": "A"}},
+    "parse": {"queue": [], "default": {"ok": true, "value": "PARSED"}},
+    "send": {"queue": [], "default": {"ok": true, "value": null}}
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "kind": "run",
+  "phase": "r1",
+  "note": "分支三态：成功 / 未处理失败 / 已处理失败；整体取源序第一个错误串（E-1）",
+  "fakes": "fakes/parallel-three-state.json",
+  "expect": {
+    "profile": "shell",
+    "ok": false,
+    "value": ["A", null, null, "E_D"],
+    "error": "B_FAIL"
+  }
+}

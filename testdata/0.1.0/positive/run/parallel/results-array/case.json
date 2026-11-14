@@ -1,0 +1,11 @@
+{
+  "kind": "run",
+  "phase": "r1",
+  "note": "[results] 在全部完成后触发一次，$ 为按源序的结果数组（E-2）",
+  "fakes": "fakes/parallel-results.json",
+  "expect": {
+    "profile": "shell",
+    "ok": true,
+    "value": ["A", "B"]
+  }
+}

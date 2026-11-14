@@ -1,0 +1,115 @@
+{
+  "case": "positive/run/parallel/results-array",
+  "run": {
+    "ok": true,
+    "value": [
+      "A",
+      "B"
+    ],
+    "error": null
+  },
+  "trace": [
+    {
+      "event": "call",
+      "verb": "read",
+      "ok": true,
+      "value": "A",
+      "error": null
+    },
+    {
+      "event": "branch",
+      "index": 0,
+      "ok": true,
+      "value": "A",
+      "error": null
+    },
+    {
+      "event": "call",
+      "verb": "read",
+      "ok": true,
+      "value": "B",
+      "error": null
+    },
+    {
+      "event": "branch",
+      "index": 1,
+      "ok": true,
+      "value": "B",
+      "error": null
+    },
+    {
+      "event": "call",
+      "verb": "send",
+      "ok": true,
+      "value": null,
+      "error": null
+    },
+    {
+      "event": "segment",
+      "ok": true,
+      "value": null,
+      "error": null
+    },
+    {
+      "event": "results",
+      "ok": true,
+      "value": [
+        "A",
+        "B"
+      ],
+      "error": null
+    },
+    {
+      "event": "segment",
+      "ok": true,
+      "value": [
+        "A",
+        "B"
+      ],
+      "error": null
+    }
+  ],
+  "log": [
+    {
+      "verb": "read",
+      "subject": null,
+      "object": "a.yml",
+      "post": [],
+      "input": null,
+      "ok": true,
+      "value": "A",
+      "error": null
+    },
+    {
+      "verb": "read",
+      "subject": null,
+      "object": "b.yml",
+      "post": [],
+      "input": null,
+      "ok": true,
+      "value": "B",
+      "error": null
+    },
+    {
+      "verb": "send",
+      "subject": null,
+      "object": [
+        "A",
+        "B"
+      ],
+      "post": [
+        {
+          "prep": "to",
+          "object": "user"
+        }
+      ],
+      "input": [
+        "A",
+        "B"
+      ],
+      "ok": true,
+      "value": null,
+      "error": null
+    }
+  ]
+}

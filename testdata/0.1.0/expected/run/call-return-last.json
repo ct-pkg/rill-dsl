@@ -1,0 +1,104 @@
+{
+  "case": "positive/run/call/return-last",
+  "run": {
+    "ok": true,
+    "value": null,
+    "error": null
+  },
+  "trace": [
+    {
+      "event": "call",
+      "verb": "read",
+      "ok": true,
+      "value": "A",
+      "error": null
+    },
+    {
+      "event": "segment",
+      "ok": true,
+      "value": "A",
+      "error": null
+    },
+    {
+      "event": "call",
+      "verb": "parse",
+      "ok": true,
+      "value": "PARSED",
+      "error": null
+    },
+    {
+      "event": "segment",
+      "ok": true,
+      "value": "PARSED",
+      "error": null
+    },
+    {
+      "event": "fn",
+      "name": "last-word",
+      "ok": true,
+      "value": "PARSED",
+      "error": null
+    },
+    {
+      "event": "assign",
+      "target": "ret",
+      "value": "PARSED"
+    },
+    {
+      "event": "segment",
+      "ok": true,
+      "value": "PARSED",
+      "error": null
+    },
+    {
+      "event": "call",
+      "verb": "send",
+      "ok": true,
+      "value": null,
+      "error": null
+    },
+    {
+      "event": "segment",
+      "ok": true,
+      "value": null,
+      "error": null
+    }
+  ],
+  "log": [
+    {
+      "verb": "read",
+      "subject": null,
+      "object": "a.yml",
+      "post": [],
+      "input": null,
+      "ok": true,
+      "value": "A",
+      "error": null
+    },
+    {
+      "verb": "parse",
+      "subject": null,
+      "object": "yaml",
+      "post": [],
+      "input": null,
+      "ok": true,
+      "value": "PARSED",
+      "error": null
+    },
+    {
+      "verb": "send",
+      "subject": null,
+      "object": "PARSED",
+      "post": [
+        {
+          "prep": "to",
+          "object": "user"
+        }
+      ],
+      "input": null,
+      "ok": true,
+      "value": null,
+      "error": null
+    }
+  ]
+}

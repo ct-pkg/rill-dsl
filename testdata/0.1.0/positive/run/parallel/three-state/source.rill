@@ -1,0 +1,6 @@
+parallel {
+    <read> a.yml
+    <read> b.yml [error] { break "B_FAIL" }
+    <read> c.yml
+    <read> d.yml [error] { <send> "d failed" [to] user }
+}

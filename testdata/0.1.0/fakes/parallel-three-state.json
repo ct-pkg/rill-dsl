@@ -1,0 +1,16 @@
+{
+  "schema": "rill-fakes-tools/0",
+  "description": "parallel 三态：A 成功、B 分支内 break 失败、C 未处理失败、D [error] 处理后成功。",
+  "tools": {
+    "read": {
+      "queue": [
+        {"ok": true, "value": "A"},
+        {"ok": false, "error": "E_B"},
+        {"ok": false, "error": "E_C"},
+        {"ok": false, "error": "E_D"}
+      ],
+      "default": {"ok": false, "error": "E_SCRIPT_EXHAUSTED"}
+    },
+    "send": {"queue": [], "default": {"ok": true, "value": null}}
+  }
+}

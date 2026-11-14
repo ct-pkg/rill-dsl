@@ -1,0 +1,6 @@
+parallel {
+    <read> a.yml
+    <read> b.yml
+} [results] {
+    <send> $ [to] user
+}

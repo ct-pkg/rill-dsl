@@ -1,0 +1,11 @@
+{
+  "kind": "run",
+  "phase": "r1",
+  "note": "尾部默认值可省略：省略 $fmt 时 parse 收到 yaml（E-3/E-4）",
+  "fakes": "fakes/fn-defaults.json",
+  "expect": {
+    "profile": "shell",
+    "ok": true,
+    "value": null
+  }
+}

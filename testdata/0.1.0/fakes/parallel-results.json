@@ -1,0 +1,14 @@
+{
+  "schema": "rill-fakes-tools/0",
+  "description": "parallel 全成功：[results] 收到按源序的结果数组。",
+  "tools": {
+    "read": {
+      "queue": [
+        {"ok": true, "value": "A"},
+        {"ok": true, "value": "B"}
+      ],
+      "default": {"ok": false, "error": "E_SCRIPT_EXHAUSTED"}
+    },
+    "send": {"queue": [], "default": {"ok": true, "value": null}}
+  }
+}

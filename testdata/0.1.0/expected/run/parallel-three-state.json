@@ -1,0 +1,157 @@
+{
+  "case": "positive/run/parallel/three-state",
+  "run": {
+    "ok": false,
+    "value": [
+      "A",
+      null,
+      null,
+      "E_D"
+    ],
+    "error": "B_FAIL"
+  },
+  "trace": [
+    {
+      "event": "call",
+      "verb": "read",
+      "ok": true,
+      "value": "A",
+      "error": null
+    },
+    {
+      "event": "branch",
+      "index": 0,
+      "ok": true,
+      "value": "A",
+      "error": null
+    },
+    {
+      "event": "call",
+      "verb": "read",
+      "ok": false,
+      "value": null,
+      "error": "E_B"
+    },
+    {
+      "event": "branch",
+      "index": 1,
+      "ok": false,
+      "value": null,
+      "error": "B_FAIL"
+    },
+    {
+      "event": "call",
+      "verb": "read",
+      "ok": false,
+      "value": null,
+      "error": "E_C"
+    },
+    {
+      "event": "branch",
+      "index": 2,
+      "ok": false,
+      "value": null,
+      "error": "RILL DSL ERROR"
+    },
+    {
+      "event": "call",
+      "verb": "read",
+      "ok": false,
+      "value": null,
+      "error": "E_D"
+    },
+    {
+      "event": "call",
+      "verb": "send",
+      "ok": true,
+      "value": null,
+      "error": null
+    },
+    {
+      "event": "segment",
+      "ok": true,
+      "value": null,
+      "error": null
+    },
+    {
+      "event": "error",
+      "triggered": true,
+      "value": "E_D"
+    },
+    {
+      "event": "branch",
+      "index": 3,
+      "ok": true,
+      "value": "E_D",
+      "error": null
+    },
+    {
+      "event": "segment",
+      "ok": false,
+      "value": [
+        "A",
+        null,
+        null,
+        "E_D"
+      ],
+      "error": "B_FAIL"
+    }
+  ],
+  "log": [
+    {
+      "verb": "read",
+      "subject": null,
+      "object": "a.yml",
+      "post": [],
+      "input": null,
+      "ok": true,
+      "value": "A",
+      "error": null
+    },
+    {
+      "verb": "read",
+      "subject": null,
+      "object": "b.yml",
+      "post": [],
+      "input": null,
+      "ok": false,
+      "value": null,
+      "error": "E_B"
+    },
+    {
+      "verb": "read",
+      "subject": null,
+      "object": "c.yml",
+      "post": [],
+      "input": null,
+      "ok": false,
+      "value": null,
+      "error": "E_C"
+    },
+    {
+      "verb": "read",
+      "subject": null,
+      "object": "d.yml",
+      "post": [],
+      "input": null,
+      "ok": false,
+      "value": null,
+      "error": "E_D"
+    },
+    {
+      "verb": "send",
+      "subject": null,
+      "object": "d failed",
+      "post": [
+        {
+          "prep": "to",
+          "object": "user"
+        }
+      ],
+      "input": "E_D",
+      "ok": true,
+      "value": null,
+      "error": null
+    }
+  ]
+}

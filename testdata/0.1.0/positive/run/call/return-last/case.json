@@ -1,0 +1,11 @@
+{
+  "kind": "run",
+  "phase": "r1",
+  "note": "函数返回最后一条语句的段输出 PARSED，而不是首条 read 的 A（E-6）",
+  "fakes": "fakes/fn-call.json",
+  "expect": {
+    "profile": "shell",
+    "ok": true,
+    "value": null
+  }
+}

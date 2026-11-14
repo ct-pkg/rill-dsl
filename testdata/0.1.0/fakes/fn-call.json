@@ -1,0 +1,9 @@
+{
+  "schema": "rill-fakes-tools/0",
+  "description": "函数返回值：read 给 A，parse 给 PARSED；用于最后一条语句段输出。",
+  "tools": {
+    "read": {"queue": [], "default": {"ok": true, "value": "A"}},
+    "parse": {"queue": [], "default": {"ok": true, "value": "PARSED"}},
+    "send": {"queue": [], "default": {"ok": true, "value": null}}
+  }
+}
