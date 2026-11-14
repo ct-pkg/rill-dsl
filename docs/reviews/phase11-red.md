@@ -31,3 +31,16 @@ Traceback (most recent call last):
 rill.errors.LoadError: 未知动词 'run'；0.1.0 动词集见 PH-4 卡 §8
 exit=1
 ```
+
+- 绿提交：`feat(host): PH-11-T1 工具能力适配`
+- 绿命令与输出：`python3 tests/phase11/test_tools_process_stdio.py` →
+  `PASS phase11 tools: run/exec→工具、send→工具、工具错误只进字符串`（exit 0）；
+  `python3 tests/phase10/test_wiring.py` →
+  `PASS phase10 wiring: 映射边界/真实宿主/fakes 优先/未映射动词`（exit 0）
+- 红后修正（行为取代）：PH-10 的 `case_agent_without_host_is_diagnostic` 断言
+  agent 无宿主；PH-11 起 agent 有真实宿主，改为断言 `ok=false` 且
+  `host_meta.tool_meta.tool.code = E-HOST-TOOL-UNREGISTERED`。红阶段该用例
+  仍因旧实现通过，未进入红证；这是 PH-10 缺口 11 的正式接管。
+- 红后修正（断言）：顶层未处理失败按 §4.10 统一成 `RILL DSL ERROR`，
+  工具错误串不会出现在 payload.error；红阶段的两条 CLI 断言改为读
+  `host_meta`，工具错误串本身仍由 `test_tool_failure_is_string` 直接断言。

@@ -14,6 +14,7 @@ from . import fakes as fakes_mod
 from . import loader
 from .errors import LexError, LoadError, ParseError
 from .eval_simple import EvalError, Interpreter
+from .host import agent as agent_host
 from .host.shell import (
     CapabilityDenied,
     ShellHost,
@@ -183,7 +184,17 @@ def _run_verbs(profile, fakes_path, host_profile_path):
     if fakes_path:
         return fakes_mod.load_tools(fakes_path), None
     if profile == "agent":
-        return None, "agent profile 没有真实宿主；请加 --fakes，真实 Agent 能力留到 PH-11"
+        if host_profile_path:
+            try:
+                policy = agent_host.load_agent_profile(
+                    host_profile_path, cwd=os.getcwd()
+                )
+            except ValueError as exc:
+                return None, ("profile", "E-RUN-HOST-PROFILE", str(exc))
+        else:
+            policy = agent_host.default_agent_policy(cwd=os.getcwd())
+        host = agent_host.AgentHost(policy)
+        return agent_host.AgentVerbRegistry(host), policy
     if host_profile_path:
         try:
             policy = load_shell_profile(host_profile_path)
@@ -251,6 +262,8 @@ def cmd_run(args):
     try:
         tree = parse(tokenize(source))
         tables = loader.check_program(tree, profile)
+        if profile == "agent" and hasattr(verbs, "host"):
+            verbs.host.validate_program(tree)
         outcome = Interpreter(verbs, functions=tables.functions).eval_program(tree)
     except LexError as exc:
         return _emit({"error": exc.as_dict()}, EXIT_DIAGNOSTIC)
@@ -263,6 +276,9 @@ def cmd_run(args):
     except CapabilityDenied as exc:
         # §4.10 的隐式 [error] 会把失败改写成 "RILL DSL ERROR"；能力拒绝必须
         # 在诊断里保留 slot.operation，所以走 run 诊断而不是 ok=false。
+        return _diagnostic(exc.code, exc.message)
+    except agent_host.AgentHostError as exc:
+        # 角色表不合法或越权：加载期语义，但错误码属于宿主，走 run 诊断。
         return _diagnostic(exc.code, exc.message)
     code = EXIT_OK
     if policy is not None:

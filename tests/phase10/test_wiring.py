@@ -3,7 +3,7 @@
 用法：python3 tests/phase10/test_wiring.py（退出 0 = 通过）。
 覆盖 E-1（动词映射边界）与 E-4 的接线半边：真实 read/write/run/env、
 能力拒绝变成 ``ok=false``、未映射动词报 ``E-RUN-VERB-UNREGISTERED``、
-``--fakes`` 优先于真实宿主、agent 无真实宿主、shell 动词集只在 shell 生效。
+``--fakes`` 优先于真实宿主、两种宿主共用 run/env 动词集。
 """
 
 import json
@@ -197,13 +197,17 @@ def case_cli_fakes_win_over_real_host():
         assert not os.path.exists(os.path.join(tmp, "out.txt"))
 
 
-def case_agent_without_host_is_diagnostic():
+def case_agent_host_is_available():
+    # PH-11 起 agent 有真实宿主；没有工具时由工具注册表拒绝，不再报宿主不可用。
     with tempfile.TemporaryDirectory() as tmp:
         write_script(tmp, "script.rill", "<read> config.txt\n")
         result = run_cli(["run", "script.rill", "--profile", "agent"], cwd=tmp)
-        assert result.returncode == 2, (result.returncode, result.stdout, result.stderr)
+        assert result.returncode == 0, (result.returncode, result.stdout, result.stderr)
         payload = payload_of(result)
-        assert payload["error"]["code"] == "E-RUN-HOST-UNAVAILABLE", payload
+        assert payload["ok"] is False, payload
+        assert payload["error"] == "RILL DSL ERROR", payload
+        meta = payload["host_meta"]["tool_meta"]["tool"]
+        assert meta["code"] == "E-HOST-TOOL-UNREGISTERED", payload
 
 
 def case_unmapped_verb_via_cli():
@@ -242,7 +246,7 @@ def main():
     case_profile_loads_manifest()
     case_cli_real_read()
     case_cli_fakes_win_over_real_host()
-    case_agent_without_host_is_diagnostic()
+    case_agent_host_is_available()
     case_unmapped_verb_via_cli()
     case_missing_host_profile_is_diagnostic()
     case_shell_verbs_are_profile_scoped()
