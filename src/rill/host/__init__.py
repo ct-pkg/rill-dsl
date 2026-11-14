@@ -2,6 +2,9 @@
 
 from .shell import (  # noqa: F401
     CapabilityDenied,
+    EnvCapability,
+    FsCapability,
+    HostError,
     ProcessCapability,
     ProcessResult,
     ShellPolicy,

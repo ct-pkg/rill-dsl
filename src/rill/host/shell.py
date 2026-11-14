@@ -48,6 +48,15 @@ class CapabilityDenied(Exception):
         Exception.__init__(self, self.message)
 
 
+class HostError(Exception):
+    """宿主操作失败；``code`` 进入 ``ok=false`` 的错误串，不冒充 DSL 诊断。"""
+
+    def __init__(self, code, message):
+        self.code = code
+        self.message = message
+        Exception.__init__(self, "%s: %s" % (code, message))
+
+
 class ShellPolicy(object):
     """能力清单；缺省槽位表示没有任何授权。"""
 
@@ -232,3 +241,48 @@ class ProcessCapability(object):
             _decode_bytes(proc.stdout or b""),
             _decode_bytes(proc.stderr or b""),
         )
+
+
+class FsCapability(object):
+    """文件能力：只做 read/write；不把 workspace root 强加给客户端。"""
+
+    def __init__(self, policy):
+        self.policy = policy
+
+    def read(self, path):
+        self.policy.require("fs", "read")
+        try:
+            with open(path, "rb") as handle:
+                raw = handle.read()
+        except OSError as exc:
+            raise HostError("E-HOST-FS-READ", "%s（%s）" % (path, exc))
+        return _decode_bytes(raw)
+
+    def write(self, path, content):
+        self.policy.require("fs", "write")
+        if isinstance(content, Bytes):
+            raw = content.data
+        elif isinstance(content, str):
+            raw = content.encode("utf-8")
+        else:
+            raise TypeError("写文件内容只接受文本或 Bytes，实际 %r" % type(content))
+        try:
+            with open(path, "wb") as handle:
+                handle.write(raw)
+        except OSError as exc:
+            raise HostError("E-HOST-FS-WRITE", "%s（%s）" % (path, exc))
+        return path
+
+
+class EnvCapability(object):
+    """环境变量能力：进程级快照，不做全局可变环境。"""
+
+    def __init__(self, policy, env=None):
+        self.policy = policy
+        self._env = dict(os.environ if env is None else env)
+
+    def get(self, name):
+        self.policy.require("env", "get")
+        if name not in self._env:
+            raise HostError("E-HOST-ENV-MISSING", "环境变量 %r 未定义" % name)
+        return self._env[name]
