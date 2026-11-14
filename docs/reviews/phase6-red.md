@@ -54,4 +54,7 @@ Traceback (most recent call last):
 AttributeError: module 'rill.result' has no attribute 'field'
 ```
 
+- green: `python3 tests/phase6/test_truthy.py` → `rc=0`，
+  `PASS truthy: 6 个 falsy、9 个真值、$ 基准与 .字段`。
+
 

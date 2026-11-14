@@ -60,6 +60,13 @@ def dollar(outcome):
     return outcome.error
 
 
+def field(value, name):
+    """``.字段`` 只读对象现有键；缺失键抛 KeyError，不静默返回 null。"""
+    if not isinstance(value, dict):
+        raise TypeError("只能读取对象字段，实际 %r" % type(value))
+    return value[name]
+
+
 def run_top_level(steps):
     """按顺序执行步骤模型；未处理失败立即中断，返回已执行的结果。"""
     trace = []
