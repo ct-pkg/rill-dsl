@@ -1,0 +1,13 @@
+{
+  "kind": "error",
+  "phase": "p4",
+  "note": "默认值只允许尾部：$a 有默认值而后的 $b 没有，加载期报错（§4.18）",
+  "expect": {
+    "stage": "load",
+    "command": "check",
+    "code": "E-LOAD-FN-DEFAULT-NOT-TAIL",
+    "line": 2,
+    "col": 1,
+    "message_contains": "默认值"
+  }
+}

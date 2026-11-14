@@ -1,0 +1,13 @@
+{
+  "kind": "error",
+  "phase": "p4",
+  "note": "[results] 不得落进通用介词表；普通介宾位报 E-PARSE-RESULTS-CONTEXT（§4.5/§4.14）",
+  "expect": {
+    "stage": "parse",
+    "command": "parse",
+    "code": "E-PARSE-RESULTS-CONTEXT",
+    "line": 1,
+    "col": 14,
+    "message_contains": "parallel"
+  }
+}

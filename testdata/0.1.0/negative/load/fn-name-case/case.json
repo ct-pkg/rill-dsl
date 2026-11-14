@@ -1,0 +1,13 @@
+{
+  "kind": "error",
+  "phase": "p4",
+  "note": "函数名大小写精确匹配：声明的 Load 不能由 load 调用（§4.18）",
+  "expect": {
+    "stage": "load",
+    "command": "check",
+    "code": "E-LOAD-FN-UNDECLARED",
+    "line": 6,
+    "col": 1,
+    "message_contains": "load"
+  }
+}

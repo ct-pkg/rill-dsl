@@ -1,12 +1,13 @@
 {
   "kind": "error",
-  "phase": "p2",
-  "note": "分支内写 [results] 必须解析期报错（§4.14）",
+  "phase": "p4",
+  "note": "[results] 只能在 parallel 块级，不能写进分支（§4.14）",
   "expect": {
     "stage": "parse",
     "command": "parse",
     "code": "E-PARSE-RESULTS-CONTEXT",
     "line": 2,
-    "col": 18
+    "col": 18,
+    "message_contains": "parallel"
   }
 }

@@ -1,0 +1,6 @@
+//fn{
+@ "Load" $x <read> $x {
+    <read> $x
+}
+}
+@ "load" "a.yml"

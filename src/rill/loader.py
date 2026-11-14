@@ -143,6 +143,24 @@ def _check_fn_defaults(functions):
                 )
 
 
+def _check_arity(call, definition):
+    """§4.18：实参按位置绑定，数量不匹配直接报错，不补默认值。"""
+    names, defaults = template_params(definition)
+    given = len(call["args"])
+    missing = [
+        name for name in names[given:] if name not in defaults
+    ] if given < len(names) else []
+    if given > len(names) or missing:
+        span = call["span"]
+        raise LoadError(
+            "E-LOAD-FN-ARITY",
+            "函数 %r 需要 %d 个实参，实际 %d 个"
+            % (definition["name"], len(names), given),
+            span["line"],
+            span["col"],
+        )
+
+
 def _check_nodes(node, functions, verbs):
     """查 ``@ STRING`` 的名字与 ``VerbCall`` 的动词；不解绑实参。"""
     if isinstance(node, list):
@@ -151,14 +169,17 @@ def _check_nodes(node, functions, verbs):
         return
     if not isinstance(node, dict) or "kind" not in node:
         return
-    if node["kind"] == "CallStmt" and node["name"] not in functions:
+    if node["kind"] == "CallStmt":
         span = node["span"]
-        raise LoadError(
-            "E-LOAD-FN-UNDECLARED",
-            "未声明的函数 %r；只能调用 //fn{} 内定义的名字" % node["name"],
-            span["line"],
-            span["col"],
-        )
+        definition = functions.get(node["name"])
+        if definition is None:
+            raise LoadError(
+                "E-LOAD-FN-UNDECLARED",
+                "未声明的函数 %r；只能调用 //fn{} 内定义的名字" % node["name"],
+                span["line"],
+                span["col"],
+            )
+        _check_arity(node, definition)
     if node["kind"] == "VerbCall" and node["verb"] not in verbs:
         span = node["span"]
         raise LoadError(
