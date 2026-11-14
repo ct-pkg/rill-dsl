@@ -110,16 +110,22 @@ class Interpreter(object):
             from . import eval_control
 
             return eval_control.eval_each(self, statement, scope, dollar)
+        if kind == "ParallelStmt":
+            from . import eval_parallel
+
+            return eval_parallel.eval_parallel(self, statement, scope, dollar)
         raise EvalError(
             "E-RUN-UNSUPPORTED",
-            "%s 不在 PH-8 的执行范围（parallel/@ 见 PH-9）" % kind,
+            "%s 不在 PH-9 的执行范围" % kind,
             statement["span"]["line"],
             statement["span"]["col"],
         )
 
     def eval_statement_in_domain(self, statement, scope, dollar):
         """§4.15：带 ``|>`` 的语句自成一个管道场域，break 止于管道。"""
-        if statement["kind"] == "SimpleStmt" and statement["pipe"] is not None:
+        if statement["kind"] in ("SimpleStmt", "CallStmt", "ParallelStmt") and (
+            statement["pipe"] is not None
+        ):
             try:
                 return self.eval_statement(statement, scope, dollar)
             except BreakSignal as signal:

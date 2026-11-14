@@ -125,6 +125,19 @@ def case_pipe_receives_array_after_success():
     assert write[0]["input"] == ["A", "B"], "管道应收到结果数组：%r" % (write[0],)
 
 
+def case_pipe_skipped_after_failure():
+    source = "parallel {\n    <read> a.yml\n} |> <write> out.yml\n"
+    interp, out = run(
+        source,
+        {
+            "read": {"queue": [failure("E_A")], "default": failure()},
+            "write": {"queue": [], "default": success(None)},
+        },
+    )
+    assert out.ok is False, out
+    assert called(interp) == ["read"], "整体失败时管道下游不应执行"
+
+
 def main():
     case_three_state_array()
     case_all_success_keeps_source_order()
@@ -133,6 +146,7 @@ def main():
     case_branch_scope_does_not_leak()
     case_empty_parallel()
     case_pipe_receives_array_after_success()
+    case_pipe_skipped_after_failure()
     print("PASS phase9 parallel: 分支三态、源序、分支 `$` 与作用域")
 
 
