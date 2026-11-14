@@ -84,7 +84,7 @@ $ PYTHONPATH=src python3 -m rill run examples/quickstart/agent.rill \
 {"ok": true, "value": "region=cn\nenv=prod\n", "error": null,
  "host_meta": {"stdio": {"tool": "send", "channel": "tool", "text": "region=cn\nenv=prod\n"},
                "tool_meta": {"transport": {"kind": "process", "tool": "send",
-                                           "pid": 75609,
+                                           "pid": 85074,
                                            "argv": ["python3", "../../testdata/0.1.0/host/agent/tools/tool_server.py"],
                                            "code": 0}}},
  "host": {"profile": "agent", "principal": {"kind": "role", "name": "engineer"}}}
