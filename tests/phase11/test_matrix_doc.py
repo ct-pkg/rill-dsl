@@ -88,11 +88,37 @@ def case_differences_are_explained():
         assert len(body.strip()) >= 20, "%s 缺少文字差异说明" % capability
 
 
+def case_real_transport_documented():
+    """T6/T8：canonical Agent 工具必须是真实子进程，不能只写“不碰 OS”。"""
+    text = read_doc()
+    for needle in ("command 工具", "真实子进程", "JSON stdin/stdout", "pid"):
+        assert needle in text, "矩阵缺少真实传输说明 %r" % needle
+    assert "Agent 不创建进程" not in text, "矩阵仍在说 Agent 不创建进程"
+
+
+def case_ledger_closed():
+    """T7/T8：两个宿主的能力清单关系与两条陈账必须写清。"""
+    text = read_doc()
+    for needle in (
+        "E-RUN-HOST-UNAVAILABLE",
+        "退役",
+        "--fakes",
+        "退出 1",
+        "尾随块",
+        "同一套 HostCapabilities",
+        "operation grant",
+        "principal",
+    ):
+        assert needle in text, "矩阵缺少收口结论 %r" % needle
+
+
 def main():
     case_document_exists()
     case_five_capability_sections()
     case_differences_are_explained()
-    print("PASS phase11 matrix: 五类能力 Shell/Agent 两列 + 文字差异")
+    case_real_transport_documented()
+    case_ledger_closed()
+    print("PASS phase11 matrix: 五类能力 Shell/Agent 两列 + 文字差异 + 传输/陈账")
 
 
 if __name__ == "__main__":
