@@ -137,3 +137,17 @@ golden 格式沿用现有 AST JSON；新增键只允许 `shape_version`，且必
 | C-4 | 4 份 golden | 仅 `call/basic`、`call/bareword-arg`、`call/shape-adverb`、`call/shape-prep-order`；无冒号常量不重录 |
 | U-1 | P-029 调用侧版本握手 | 未决，不阻塞本卡；E-8 只保证调用侧不写版本 |
 | U-2 | D-022 的 P-025 条件句 | 过时表述不改；D-024 §判决 6 为现行口径 |
+
+## 10. C-8 证据归档（2026-11-16，用户裁定）
+
+> 背景：产品只保留 CT 实现、Python 参考实现退场（用户 2026-11-16 裁定）。
+> C-8 的原证据通道是 Python 专用，退场后不可复跑；本节只归档口径，移植另立
+> `issues/RILL-001.md`，不塞进本卡任务清单。
+
+| 项 | 内容 |
+| --- | --- |
+| 判定变更 | C-8 由“可复跑”改记为“**证据归档、不可复跑**”；归档不推翻 2026-11-15 的 GO 与 `v0.22.0`，只说明复跑条件已不成立 |
+| 归档位置 | 通道与夹具：`tests/opaque/support.py`、`tests/opaque/test_opaque_channel.py`、`tests/opaque/source.ri`、`tests/opaque/fakes-opaque.json`；评审：`docs/reviews/opaque-c8-evidence.md` §2–§4；判定：`docs/reviews/0.1.0-verdict.md` §2 C-8 行与 §3 |
+| 缺什么 | ①CT 无 `Opaque` 值种类（`ct/src/common/common.h.ct` 的 `enum JKind` 只有 NULL/BOOL/INT/FLOAT/STR/BYTES/ARR/OBJ）；②无同一性断言入口（Python 侧靠 `interp.log` 的 `is`）；③无 test-only fake 注入（`$test-opaque` 只在 Python `tests/opaque/support.py:20` 解码）；④无“边界不可 JSON 序列化”的 CT 表达 |
+| 复跑需要什么 | ①CT 值种类与 truthy/透传；②同一性断言入口（C 单测或 trace）；③测试专用注入通道，且生产 `--fakes` 对 `$test-opaque` 保持惰性；④一条可重复执行的命令，纳入门禁或独立脚本 |
+| 去向 | `issues/RILL-001.md`（`status: open`，owner `REV`）；完成后把本行判定改回“可复跑” |

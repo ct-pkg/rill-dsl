@@ -1,6 +1,6 @@
 # Issue 台账
 
-> 状态：目录与索引已建立，当前 **0 条 issue**（阶段 0 未立案）。
+> 状态：目录与索引已建立，当前 **1 条 issue**（`RILL-001` open）。
 > 状态词与分权见 `AGENTS.md` §5.4；台账闭合门禁 G6 在 Phase 1 后启用。
 
 ## 1. ID 前缀
@@ -52,3 +52,4 @@
 
 | id | 标题 | status | owner | 文件 |
 | --- | --- | --- | --- | --- |
+| RILL-001 | 移植 Opaque 测试通道到 CT fake 宿主以复跑 C-8 | open | REV | [RILL-001.md](RILL-001.md) |
