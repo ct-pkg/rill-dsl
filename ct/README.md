@@ -12,7 +12,7 @@ ct/
 ├── src/loader/          加载期校验（三遍）与源码读入
 ├── src/eval/            求值：核心 / 控制流 / 并行 / 函数（文件内分区）
 ├── src/cli/             tokenize/parse/check/run 四个子命令
-├── rill_ct.ct           单文件旧实现（PH-17 起不参与构建，保留作历史锚点，待授权删除）
+├── rill_ct.ct           单文件旧实现（冻结为参考实现，不参与构建，可作两条路的对照）
 ├── build.sh             从零构建出 ct/bin/rill_ct（ct build 多单元）
 ├── test.sh              跑本层覆盖的门禁用例
 └── README.md            本文件（构建、规则映射、CT 限制、验证记录）

@@ -93,9 +93,8 @@ fixture 只覆盖数组形态，另用探针补齐 null / 空数组 / 非数组�
 - `docs(diff): PH-17 差异报告`
 - `docs(review): PH-17 收口`
 
-单文件 `ct/rill_ct.ct` **未删除**：`git rm` 属于删源码的高风险动作，需要用户明确授权。
-它已不参与构建（`ct/build.sh` 只走 `ct/src/main.ct`），保留不影响任何门禁；
-迁移卡 M-5 记为「待授权」，不计为已完成。
+单文件 `ct/rill_ct.ct` **保留**（PH-18 决定）：冻结为参考实现，不参与构建，
+`ct/build.sh` 只走 `ct/src/main.ct`。迁移卡 M-5 已按此结论更新。
 
 门禁末行：
 
