@@ -2,8 +2,9 @@
 
 状态：Phase 0 基座。规范正文是 `docs/RILL-0.1.0.md`（0.1.1 定稿）；本目录只存验收输入，不改规范。
 
-`docs/examples/` 面向旧 `v0.1 rev.1`（`let` / `fn` / `|?` / `# allow:`），**不是** 0.1.0 的
-验收输入，也不得拿来当 golden。需要借用场景时，先按 0.1.0 语法重写并落到本目录。
+旧 `v0.1 rev.1` 样例（`let` / `fn` / `|?` / `# allow:`）已下线，**不是** 0.1.0 的
+验收输入，也不得拿来当 golden。可运行的正例见 `examples/tour/`；需要借用场景时，
+先按 0.1.0 语法重写并落到本目录。
 
 ## 1. 目录结构
 
@@ -187,8 +188,8 @@ harness 只认“命令 + 退出码 + stdout JSON”；产品 CLI 的最终形�
 
 1. **选桶与 id**：合法输入放 `positive/`，必须报错放 `negative/<阶段>/`，不阻断的警告也放
    `positive/`（`kind: warning`），双宿主同源放 `host/shared/`。目录名用小写 kebab。
-2. **写 `source.rill`**：只写 0.1.0 正文允许的语法；不要从 `docs/examples/` 复制旧语法。
-   压缩态与展示态都可以，但字节必须是你想测的那一版。
+2. **写 `source.rill`**：只写 0.1.0 正文允许的语法；不要从 `docs/spec/`、`docs/design/`
+   里的 v0.1 历史材料复制语法。压缩态与展示态都可以，但字节必须是你想测的那一版。
 3. **写 `case.json`**：按 §4 选 kind；`note` 写清守的是规范哪一节或哪条评审。
 4. **ast / tokens 补 golden**：
    - 先跑 `tools/check-0.1.0.sh --show <id>`，看被测命令的真实输出；
