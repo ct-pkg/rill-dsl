@@ -3,6 +3,7 @@
 
   python3 tools/diff/diff.py --layer token          # PH-13 验收口径
   python3 tools/diff/diff.py --layer ast            # PH-14 预演（忽略 span）
+  python3 tools/diff/diff.py --layer error          # PH-15 加载期（check）
   python3 tools/diff/diff.py --layer all --bucket negative
 
 两侧都是 ``testdata/0.1.0`` 的 SUT 协议（命令 + 退出码 + stdout JSON）：
@@ -12,6 +13,8 @@ Python 侧读 ``testdata/0.1.0/sut.json``，CT 侧读 ``tools/diff/sut.ct.json``
 比较项（逐层取最小可比较面）：
   token 层：成功比完整 ``{"tokens":[...]}`` 信封；诊断比 ``stage/code/line/col`` 与退出码。
   ast 层：成功比忽略 ``span`` 后的 AST；诊断比 ``stage/code/line/col`` 与退出码。
+  error 层：用 ``check`` 跑 ``negative/**``；诊断比 ``stage/code/line/col`` 与退出码。
+            加载期负例（``negative/load/**``）由此进入对拍；正例不在本层语料内。
 
 退出码：0 差异为 0；1 存在差异；2 用法或清单错误。
 """
@@ -106,6 +109,12 @@ def compare_ok(layer, py_payload, ct_payload):
         if "tokens" not in ct_payload:
             return "CT 输出缺少 tokens 字段"
         return "" if py_payload == ct_payload else "tokens 信封不一致"
+    if layer == "error":
+        if "warnings" not in py_payload:
+            return "Python 输出缺少 warnings 字段"
+        if "warnings" not in ct_payload:
+            return "CT 输出缺少 warnings 字段"
+        return "" if py_payload == ct_payload else "warnings 信封不一致"
     if "ast" not in py_payload:
         return "Python 输出缺少 ast 字段"
     if "ast" not in ct_payload:
@@ -133,6 +142,8 @@ def compare_error(py_payload, ct_payload):
 def args_for(layer, source):
     if layer == "token":
         return ["tokenize", source]
+    if layer == "error":
+        return ["check", source, "--profile", "shell"]
     return ["parse", "--dump-ast", source, "--profile", "shell"]
 
 
@@ -153,7 +164,7 @@ def compare_source(layer, py_sut, ct_sut, root, source):
 
 def main(argv):
     parser = argparse.ArgumentParser(description="Python 参考实现 vs CT 实现逐层对拍")
-    parser.add_argument("--layer", choices=("token", "ast", "all"), default="token")
+    parser.add_argument("--layer", choices=("token", "ast", "error", "all"), default="token")
     parser.add_argument("--bucket", choices=("positive", "negative", "all"), default="all")
     parser.add_argument("--python-sut", default="")
     parser.add_argument("--ct-sut", default="")
@@ -176,13 +187,20 @@ def main(argv):
     layers = ("token", "ast") if opts.layer == "all" else (opts.layer,)
     total_diffs = 0
     for layer in layers:
+        if layer == "error":
+            if opts.bucket == "positive":
+                print("diff.py: --layer error 只对拍负例（negative/**）", file=sys.stderr)
+                return 2
+            layer_sources = negative
+        else:
+            layer_sources = sources
         print("== layer=%s" % layer)
         print("   python: %s" % " ".join(py_sut["command"]))
         print("   ct    : %s" % " ".join(ct_sut["command"]))
         diffs = 0
         ok_compared = 0
         err_compared = 0
-        for source in sources:
+        for source in layer_sources:
             problem, status = compare_source(layer, py_sut, ct_sut, root, source)
             if problem:
                 diffs += 1
@@ -197,7 +215,7 @@ def main(argv):
         total_diffs += diffs
         print(
             "   sources=%d ok=%d diagnostics=%d diffs=%d"
-            % (len(sources), ok_compared, err_compared, diffs)
+            % (len(layer_sources), ok_compared, err_compared, diffs)
         )
         print("   RESULT: %s" % ("PASS" if diffs == 0 else "FAIL"))
     print("== total diffs: %d" % total_diffs)
