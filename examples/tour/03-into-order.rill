@@ -1,0 +1,7 @@
+// 两个 [into] 按书写顺序执行；它们看到的是同一个 $（语句段输出），
+// [into] 是副作用作用域，块的输出不会传给下一个块。
+<read> data/one.txt [into] {
+    <send> $ [to] user
+} [into] {
+    <read> data/two.txt |> <send> $ [to] user
+}

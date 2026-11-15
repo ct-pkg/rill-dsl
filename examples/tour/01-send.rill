@@ -1,0 +1,2 @@
+// 最小样例：一个动词 + 一个介宾短语。
+<send> 'hello, rill' [to] user

@@ -1,0 +1,2 @@
+// 管道：<read> 的段输出直接成为 <send> 的 $（self）。
+<read> data/greeting.txt |> <send> $ [to] user

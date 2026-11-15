@@ -1,0 +1,6 @@
+//map{
+cfg`data/config.txt
+r<read
+}
+// cfg 是值映射（展开成字符串），r 是动词映射（<r> 等价于 <read>）。
+<r> `cfg` |> <send> $ [to] user
