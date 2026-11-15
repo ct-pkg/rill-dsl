@@ -76,7 +76,7 @@
 
 ## 5. fixture 形态
 
-`testdata/0.1.0/host/shell/<name>/` 下是 `script.rill` + `expect.json`，
-故意不用 harness 的 `source.rill` / `case.json`：harness 的 run 用例总是注入
+`testdata/0.1.0/host/shell/<name>/` 下是 `script.ri` + `expect.json`，
+故意不用 harness 的 `source.ri` / `case.json`：harness 的 run 用例总是注入
 `--fakes`，无法覆盖真实宿主。fixture 由 `tests/phase10/test_host_fixtures.py`
 在临时 cwd 里执行，不污染工作树。

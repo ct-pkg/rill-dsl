@@ -74,7 +74,10 @@ for (const relative of Object.keys(oracle.files)) {
   const expected = oracle.files[relative];
   const text = read(relative);
   const actual = scan(text);
-  workspace.set(uriOf(relative), buildFileIndex(uriOf(relative), text));
+  // 插件只索引 .ri（旧扩展名已全部迁移）。
+  if (relative.endsWith('.ri')) {
+    workspace.set(uriOf(relative), buildFileIndex(uriOf(relative), text));
+  }
 
   if (expected.lex_error) {
     skippedLexError += 1;
@@ -103,12 +106,12 @@ for (const relative of Object.keys(oracle.files)) {
 }
 
 // ---- 2. 跨文件解析用例 ----------------------------------------------
-const demo = uriOf('examples/vscode/demo.rill');
+const demo = uriOf('editors/vscode/test/fixtures/demo.ri');
 const demoEntry = workspace.get(demo);
-ok(Boolean(demoEntry), '示例 examples/vscode/demo.rill 已被索引');
+ok(Boolean(demoEntry), 'fixture editors/vscode/test/fixtures/demo.ri 已被索引');
 if (demoEntry) {
   const call = demoEntry.calls.find((entry) => entry.name === 'greet-user');
-  ok(Boolean(call), 'demo.rill 中存在 @ "greet-user" 调用点');
+  ok(Boolean(call), 'demo.ri 中存在 @ "greet-user" 调用点');
   if (call) {
     const hit = findNameAt(demoEntry, {
       line: call.line,
@@ -123,13 +126,13 @@ if (demoEntry) {
   ok(sites.length === 1, '同文件调用点只有一个');
 }
 
-const crossMain = uriOf('examples/vscode/cross-file/main.rill');
-const crossShared = uriOf('examples/vscode/cross-file/shared.rill');
+const crossMain = uriOf('editors/vscode/test/fixtures/cross-file/main.ri');
+const crossShared = uriOf('editors/vscode/test/fixtures/cross-file/shared.ri');
 const crossTargets = resolveDefinitions(workspace, 'format-report', crossMain);
 ok(crossTargets.length === 1, '跨文件 format-report 定义只有一个候选');
 ok(
   crossTargets.length === 1 && crossTargets[0].uri === crossShared,
-  '跨文件调用解析到 shared.rill 定义',
+  '跨文件调用解析到 shared.ri 定义',
 );
 ok(
   resolveDefinitions(workspace, 'missing-function', crossMain).length === 0,
@@ -231,17 +234,17 @@ ok(packageJson.dependencies === undefined, '插件不依赖 npm 运行期包');
 
 const language = packageJson.contributes.languages[0];
 ok(language.id === 'rill', '语言 id 为 rill');
-ok(language.extensions.includes('.rill'), '语言扩展名为 .rill');
+ok(language.extensions.includes('.ri'), '语言扩展名为 .ri');
 ok(
   fs.existsSync(path.join(__dirname, '..', language.configuration)),
   'language-configuration.json 存在',
 );
 const grammarContribution = packageJson.contributes.grammars[0];
-ok(grammarContribution.scopeName === 'source.rill', '文法语名为 source.rill');
+ok(grammarContribution.scopeName === 'source.ri', '文法语名为 source.ri');
 const grammarPath = path.join(__dirname, '..', grammarContribution.path);
 ok(fs.existsSync(grammarPath), 'TextMate 语法文件存在');
 const grammar = JSON.parse(fs.readFileSync(grammarPath, 'utf8'));
-ok(grammar.fileTypes.includes('rill'), '语法声明 .rill 文件类型');
+ok(grammar.fileTypes.includes('ri'), '语法声明 .ri 文件类型');
 
 function walkGrammar(node, visit) {
   if (Array.isArray(node)) {
@@ -296,7 +299,7 @@ async function smokeExtension() {
   const document = {
     uri: {
       scheme: 'file',
-      toString: () => 'file:///tmp/rill-plugin-smoke.rill',
+      toString: () => 'file:///tmp/rill-plugin-smoke.ri',
     },
     languageId: 'rill',
     version: 1,

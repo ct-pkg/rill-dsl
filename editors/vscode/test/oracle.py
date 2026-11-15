@@ -1,5 +1,6 @@
 """用仓库内 RILL 实现为 VS Code 插件扫描器产出对照数据。
 
+- 扫描 ``.ri``（当前扩展名）与 ``.rill``（迁移期遗留文件）；
 - 符号位置来自 ``src/rill/lexer.py`` 的真实 token 流；
 - 函数定义/调用名再与 ``src/rill/parser.py`` 的 AST 交叉核对。
 """
@@ -10,6 +11,7 @@ import sys
 from collections import Counter
 
 EXCLUDE_DIRS = {".git", "node_modules", ".ctbuild", "dist", "out", "build", ".venv"}
+SOURCE_EXTENSIONS = (".ri", ".rill")
 
 
 def u16(text):
@@ -23,7 +25,7 @@ def collect_rill_files(root):
             name for name in dirnames if name not in EXCLUDE_DIRS
         )
         for name in sorted(filenames):
-            if name.endswith(".rill"):
+            if name.endswith(SOURCE_EXTENSIONS):
                 path = os.path.join(dirpath, name)
                 result.append(os.path.relpath(path, root).replace(os.sep, "/"))
     return result

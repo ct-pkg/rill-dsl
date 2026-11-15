@@ -14,7 +14,7 @@
 **运行**（在 `examples/tour/` 下）
 
 ```console
-$ ../../ct/bin/rill fmt --compress 14-fmt.rill
+$ ../../ct/bin/rill fmt --compress 14-fmt.ri
 ```
 
 **真实输出（压缩态）**
@@ -29,7 +29,7 @@ r<read
 ```
 
 ```console
-$ ../../ct/bin/rill fmt --display 14-fmt.rill
+$ ../../ct/bin/rill fmt --display 14-fmt.ri
 ```
 
 **真实输出（展示态）**
@@ -50,7 +50,7 @@ r<read
 这份脚本本身也能跑：
 
 ```console
-$ ../../ct/bin/rill run 14-fmt.rill
+$ ../../ct/bin/rill run 14-fmt.ri
 第一份文件
 
 {"ok":true,"value":"第一份文件\n","error":null,"host_meta":{"stdio":{"channel":"stderr","text":"第一份文件\n"}},"host":{"profile":"shell","principal":{"kind":"os-user","name":"samxx"}}}

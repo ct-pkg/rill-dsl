@@ -137,8 +137,8 @@ def case_unregistered_tool():
 
 def case_cli_agent_host_is_available():
     with tempfile.TemporaryDirectory() as tmp:
-        write_script(tmp, "script.rill", "<read> x\n")
-        result = run_cli(["run", "script.rill", "--profile", "agent"], cwd=tmp)
+        write_script(tmp, "script.ri", "<read> x\n")
+        result = run_cli(["run", "script.ri", "--profile", "agent"], cwd=tmp)
         assert result.returncode == 0, (result.returncode, result.stdout, result.stderr)
         payload = payload_of(result)
         assert payload["ok"] is False, payload
@@ -155,9 +155,9 @@ def case_cli_agent_tool_value():
             handle.write("REAL\n")
         write_tools(tmp, {"read": {"queue": [{"ok": True, "value": "FAKE"}]}})
         manifest = write_manifest(tmp)
-        write_script(tmp, "script.rill", "engineer <read> config.txt\n")
+        write_script(tmp, "script.ri", "engineer <read> config.txt\n")
         result = run_cli(
-            ["run", "script.rill", "--profile", "agent", "--host-profile", manifest],
+            ["run", "script.ri", "--profile", "agent", "--host-profile", manifest],
             cwd=tmp,
         )
         assert result.returncode == 0, (result.returncode, result.stdout, result.stderr)
@@ -178,11 +178,11 @@ def case_fakes_win_over_agent_host():
                 "tools": {"read": {"queue": [{"ok": True, "value": "FAKE"}]}},
             },
         )
-        write_script(tmp, "script.rill", "<read> config.txt\n")
+        write_script(tmp, "script.ri", "<read> config.txt\n")
         result = run_cli(
             [
                 "run",
-                "script.rill",
+                "script.ri",
                 "--profile",
                 "agent",
                 "--host-profile",

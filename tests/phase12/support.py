@@ -72,7 +72,7 @@ def fixture_sources(kinds=None):
         base = os.path.join(FIXTURE_ROOT, bucket)
         for dirpath, dir_names, file_names in os.walk(base):
             dir_names.sort()
-            if "source.rill" not in file_names:
+            if "source.ri" not in file_names:
                 continue
             case_path = os.path.join(dirpath, "case.json")
             if not os.path.isfile(case_path):
@@ -84,6 +84,6 @@ def fixture_sources(kinds=None):
             if kinds is not None and case.get("kind") not in kinds:
                 continue
             rel = os.path.relpath(dirpath, FIXTURE_ROOT).replace(os.sep, "/")
-            found.append((rel, os.path.join(dirpath, "source.rill"), case))
+            found.append((rel, os.path.join(dirpath, "source.ri"), case))
     found.sort()
     return found

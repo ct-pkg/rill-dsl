@@ -166,7 +166,7 @@ read "cfg.json" into {
 - **两边都失败**：中止当前块（R4），诊断同时列出两个调用点：
 
 ```
-script.rill:3:12: error: call failed and its fallback also failed
+script.ri:3:12: error: call failed and its fallback also failed
   left : read('primary') -> not found
   right: read('fallback') -> permission denied
   Hint: check both paths, or make the fallback a tool that cannot fail.
@@ -303,7 +303,7 @@ for n in nums {
 若 LLM 漏写 `mut`：
 
 ```
-script.rill:3:5: error: assignment to immutable 'total'
+script.ri:3:5: error: assignment to immutable 'total'
   Hint: declare it with 'let mut total = 0'.
 ```
 

@@ -12,7 +12,7 @@
 **运行**（在 `examples/tour/` 下）
 
 ```console
-$ ../../ct/bin/rill run 11-error-parse.rill
+$ ../../ct/bin/rill run 11-error-parse.ri
 ```
 
 **真实输出**

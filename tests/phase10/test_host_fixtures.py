@@ -21,7 +21,7 @@ SUT = []
 
 CAPABILITIES = ("process", "fs", "env", "stdio", "exit")
 PROFILES = {"min": "min.json", "full": "full.json", "no-stdio": "no-stdio.json"}
-E2E_SCRIPT = os.path.join(HOST_ROOT, "e2e", "script.rill")
+E2E_SCRIPT = os.path.join(HOST_ROOT, "e2e", "script.ri")
 
 
 def canonical(node):
@@ -69,7 +69,7 @@ def run_fixture(path):
     fixture = os.path.basename(path)
     with open(os.path.join(path, "expect.json"), encoding="utf-8") as handle:
         spec = json.load(handle)
-    script = os.path.join(path, "script.rill")
+    script = os.path.join(path, "script.ri")
 
     check_ast(fixture, script)
 

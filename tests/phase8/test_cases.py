@@ -52,7 +52,7 @@ def run_cli(name, spec):
             "-m",
             "rill",
             "run",
-            os.path.join(case_dir(name), "source.rill"),
+            os.path.join(case_dir(name), "source.ri"),
             "--profile",
             spec["expect"]["profile"],
             "--fakes",
@@ -99,7 +99,7 @@ def case_trace_golden():
             golden = json.load(handle)
         with open(os.path.join(case_dir(name), "case.json"), encoding="utf-8") as handle:
             spec = json.load(handle)
-        with open(os.path.join(case_dir(name), "source.rill"), encoding="utf-8") as handle:
+        with open(os.path.join(case_dir(name), "source.ri"), encoding="utf-8") as handle:
             source = handle.read()
         interp = Interpreter(fakes_mod.load_tools(fakes_path(spec)))
         outcome = interp.eval_program(parse_source(source))

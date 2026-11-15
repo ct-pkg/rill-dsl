@@ -85,8 +85,8 @@ def case_exit_capability_maps_table():
 
 def case_cli_send_ok():
     with tempfile.TemporaryDirectory() as tmp:
-        write_script(tmp, "script.rill", '<send> "hello" [to] user\n')
-        result = run_cli(["run", "script.rill", "--profile", "shell"], cwd=tmp)
+        write_script(tmp, "script.ri", '<send> "hello" [to] user\n')
+        result = run_cli(["run", "script.ri", "--profile", "shell"], cwd=tmp)
         assert result.returncode == 0, (result.returncode, result.stdout, result.stderr)
         payload = payload_of(result)
         assert payload["ok"] is True and payload["value"] == "hello", payload
@@ -95,8 +95,8 @@ def case_cli_send_ok():
 
 def case_cli_unhandled_failure_exits_nonzero():
     with tempfile.TemporaryDirectory() as tmp:
-        write_script(tmp, "script.rill", "<read> missing.txt\n")
-        result = run_cli(["run", "script.rill", "--profile", "shell"], cwd=tmp)
+        write_script(tmp, "script.ri", "<read> missing.txt\n")
+        result = run_cli(["run", "script.ri", "--profile", "shell"], cwd=tmp)
         assert result.returncode == 1, (result.returncode, result.stdout, result.stderr)
         payload = payload_of(result)
         assert payload["ok"] is False, payload
@@ -108,8 +108,8 @@ def case_cli_denial_is_diagnostic():
     with tempfile.TemporaryDirectory() as tmp:
         with open(os.path.join(tmp, "in.txt"), "w", encoding="utf-8") as handle:
             handle.write("x")
-        write_script(tmp, "script.rill", "<read> in.txt |> <write> out.txt\n")
-        result = run_cli(["run", "script.rill", "--profile", "shell"], cwd=tmp)
+        write_script(tmp, "script.ri", "<read> in.txt |> <write> out.txt\n")
+        result = run_cli(["run", "script.ri", "--profile", "shell"], cwd=tmp)
         assert result.returncode == 2, (result.returncode, result.stdout, result.stderr)
         error = payload_of(result)["error"]
         assert error["code"] == "E-HOST-CAPABILITY-DENIED", error
@@ -121,10 +121,10 @@ def case_cli_handled_failure_exits_zero():
     with tempfile.TemporaryDirectory() as tmp:
         write_script(
             tmp,
-            "script.rill",
+            "script.ri",
             '<read> missing.txt [error] { <send> "handled" [to] user }\n',
         )
-        result = run_cli(["run", "script.rill", "--profile", "shell"], cwd=tmp)
+        result = run_cli(["run", "script.ri", "--profile", "shell"], cwd=tmp)
         assert result.returncode == 0, (result.returncode, result.stdout, result.stderr)
         payload = payload_of(result)
         # [error] 块内没有改写 $，块输出仍是错误串（PH-7 的块输出规则）。
@@ -146,9 +146,9 @@ def case_cli_exit_codes_come_from_profile():
                 },
                 handle,
             )
-        write_script(tmp, "script.rill", "<read> missing.txt\n")
+        write_script(tmp, "script.ri", "<read> missing.txt\n")
         result = run_cli(
-            ["run", "script.rill", "--profile", "shell", "--host-profile", profile],
+            ["run", "script.ri", "--profile", "shell", "--host-profile", profile],
             cwd=tmp,
         )
         assert result.returncode == 7, (result.returncode, result.stdout, result.stderr)
@@ -175,9 +175,9 @@ def case_fakes_match_real_exit_codes():
                 },
                 handle,
             )
-        write_script(tmp, "fail.rill", "<read> missing.txt\n")
+        write_script(tmp, "fail.ri", "<read> missing.txt\n")
         result = run_cli(
-            ["run", "fail.rill", "--profile", "shell", "--fakes", fakes], cwd=tmp
+            ["run", "fail.ri", "--profile", "shell", "--fakes", fakes], cwd=tmp
         )
         assert result.returncode == 1, (result.returncode, result.stdout, result.stderr)
         payload = payload_of(result)
@@ -185,11 +185,11 @@ def case_fakes_match_real_exit_codes():
 
         write_script(
             tmp,
-            "handled.rill",
+            "handled.ri",
             "<read> missing.txt [error] { <send> $ [to] user }\n",
         )
         result = run_cli(
-            ["run", "handled.rill", "--profile", "shell", "--fakes", fakes], cwd=tmp
+            ["run", "handled.ri", "--profile", "shell", "--fakes", fakes], cwd=tmp
         )
         assert result.returncode == 0, (result.returncode, result.stdout, result.stderr)
         payload = payload_of(result)
@@ -201,8 +201,8 @@ def case_bytes_survive_json_output():
     with tempfile.TemporaryDirectory() as tmp:
         with open(os.path.join(tmp, "blob.bin"), "wb") as handle:
             handle.write(b"\x00\xff")
-        write_script(tmp, "script.rill", "<read> blob.bin\n")
-        result = run_cli(["run", "script.rill", "--profile", "shell"], cwd=tmp)
+        write_script(tmp, "script.ri", "<read> blob.bin\n")
+        result = run_cli(["run", "script.ri", "--profile", "shell"], cwd=tmp)
         assert result.returncode == 0, (result.returncode, result.stdout, result.stderr)
         payload = payload_of(result)
         assert payload["value"] == {

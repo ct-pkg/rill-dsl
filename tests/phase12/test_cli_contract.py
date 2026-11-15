@@ -33,8 +33,8 @@ def case_usage_errors_are_exit_2():
         ["check"],
         ["run"],
         ["fmt"],
-        ["parse", "--dump-ast", "a.rill", "--bogus"],
-        ["run", "a.rill", "--profile", "nobody"],
+        ["parse", "--dump-ast", "a.ri", "--bogus"],
+        ["run", "a.ri", "--profile", "nobody"],
     ]
     for args in checks:
         result = run_cli(args)
@@ -47,7 +47,7 @@ def case_usage_errors_are_exit_2():
 
 def case_diagnostics_are_exit_2():
     with tempfile.TemporaryDirectory() as tmp:
-        bad = write_file(tmp, "bad.rill", 'x <read> "unclosed\n')
+        bad = write_file(tmp, "bad.ri", 'x <read> "unclosed\n')
         for args in (
             ["tokenize", bad],
             ["parse", "--dump-ast", bad],
@@ -67,13 +67,13 @@ def case_diagnostics_are_exit_2():
 def case_fmt_round_trips_through_cli():
     source = "//map{\ncfg`configuration\n}\n<read> `cfg`.yml\n"
     with tempfile.TemporaryDirectory() as tmp:
-        path = write_file(tmp, "sample.rill", source)
+        path = write_file(tmp, "sample.ri", source)
         before = ast_of(path)
         for mode in ("--compress", "--display"):
             result = run_cli(["fmt", mode, path])
             assert result.returncode == 0, (mode, result.stdout, result.stderr)
             assert result.stdout.strip(), "%s 没有输出" % mode
-            formatted = write_file(tmp, mode.strip("-") + ".rill", result.stdout)
+            formatted = write_file(tmp, mode.strip("-") + ".ri", result.stdout)
             after = ast_of(formatted)
             assert before == after, "%s 改变了 AST" % mode
 

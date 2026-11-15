@@ -1,9 +1,9 @@
 {
   "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
   "name": "RILL",
-  "scopeName": "source.rill",
+  "scopeName": "source.ri",
   "fileTypes": [
-    "rill"
+    "ri"
   ],
   "patterns": [
     {
@@ -56,17 +56,17 @@
       }
     ],
     "map-block": {
-      "name": "meta.block.map.rill",
+      "name": "meta.block.map.ri",
       "begin": "//[ \\t]*map[ \\t]*\\{",
       "beginCaptures": {
         "0": {
-          "name": "keyword.control.block-header.rill"
+          "name": "keyword.control.block-header.ri"
         }
       },
       "end": "^[ \\t]*\\}",
       "endCaptures": {
         "0": {
-          "name": "punctuation.section.block.end.rill"
+          "name": "punctuation.section.block.end.ri"
         }
       },
       "patterns": [
@@ -74,30 +74,30 @@
           "match": "^[ \\t]*([A-Za-z0-9_-]+)(['`<])(.*)$",
           "captures": {
             "1": {
-              "name": "variable.other.mapping-key.rill"
+              "name": "variable.other.mapping-key.ri"
             },
             "2": {
-              "name": "keyword.operator.mapping-marker.rill"
+              "name": "keyword.operator.mapping-marker.ri"
             },
             "3": {
-              "name": "string.unquoted.mapping-value.rill"
+              "name": "string.unquoted.mapping-value.ri"
             }
           }
         }
       ]
     },
     "fn-block": {
-      "name": "meta.block.fn.rill",
+      "name": "meta.block.fn.ri",
       "begin": "//[ \\t]*fn[ \\t]*\\{",
       "beginCaptures": {
         "0": {
-          "name": "keyword.control.block-header.rill"
+          "name": "keyword.control.block-header.ri"
         }
       },
       "end": "^\\}",
       "endCaptures": {
         "0": {
-          "name": "punctuation.section.block.end.rill"
+          "name": "punctuation.section.block.end.ri"
         }
       },
       "patterns": [
@@ -110,61 +110,61 @@
       ]
     },
     "fn-definition": {
-      "name": "meta.function.definition.rill",
+      "name": "meta.function.definition.ri",
       "match": "(@)([ \\t]*)(\"(?:[^\"\\\\\\n]|\\\\.)*\"|'[^'\\n]*')",
       "captures": {
         "1": {
-          "name": "keyword.operator.function.rill"
+          "name": "keyword.operator.function.ri"
         },
         "3": {
-          "name": "entity.name.function.definition.rill"
+          "name": "entity.name.function.definition.ri"
         }
       }
     },
     "function-call": {
-      "name": "meta.function.call.rill",
+      "name": "meta.function.call.ri",
       "match": "(@)([ \\t]*)(\"(?:[^\"\\\\\\n]|\\\\.)*\"|'[^'\\n]*')",
       "captures": {
         "1": {
-          "name": "keyword.operator.function.rill"
+          "name": "keyword.operator.function.ri"
         },
         "3": {
-          "name": "entity.name.function.call.rill"
+          "name": "entity.name.function.call.ri"
         }
       }
     },
     "comment": {
-      "name": "comment.line.double-slash.rill",
+      "name": "comment.line.double-slash.ri",
       "match": "//.*"
     },
     "strings": {
       "patterns": [
         {
-          "name": "string.quoted.double.rill",
+          "name": "string.quoted.double.ri",
           "match": "\"(?:[^\"\\\\\\n]|\\\\.)*\""
         },
         {
-          "name": "string.quoted.single.rill",
+          "name": "string.quoted.single.ri",
           "match": "'[^'\\n]*'"
         }
       ]
     },
     "map-reference": {
-      "name": "string.quoted.other.mapping-reference.rill",
+      "name": "string.quoted.other.mapping-reference.ri",
       "match": "`[^`\\n]+`"
     },
     "verbs": {
-      "name": "meta.verb.rill",
+      "name": "meta.verb.ri",
       "match": "(<)([^>\\n]*)(>)",
       "captures": {
         "1": {
-          "name": "punctuation.definition.verb.begin.rill"
+          "name": "punctuation.definition.verb.begin.ri"
         },
         "2": {
-          "name": "entity.name.function.verb.rill"
+          "name": "entity.name.function.verb.ri"
         },
         "3": {
-          "name": "punctuation.definition.verb.end.rill"
+          "name": "punctuation.definition.verb.end.ri"
         }
       }
     },
@@ -172,56 +172,56 @@
       "match": "(\\[)(to|with|from|in|on|into|ok|error|results)(\\])",
       "captures": {
         "1": {
-          "name": "punctuation.definition.preposition.begin.rill"
+          "name": "punctuation.definition.preposition.begin.ri"
         },
         "2": {
-          "name": "support.type.preposition.rill"
+          "name": "support.type.preposition.ri"
         },
         "3": {
-          "name": "punctuation.definition.preposition.end.rill"
+          "name": "punctuation.definition.preposition.end.ri"
         }
       }
     },
     "variables": {
       "patterns": [
         {
-          "name": "variable.other.rill",
+          "name": "variable.other.ri",
           "match": "\\$[A-Za-z_][A-Za-z0-9_]*"
         },
         {
-          "name": "variable.language.self.rill",
+          "name": "variable.language.self.ri",
           "match": "\\$(?![A-Za-z0-9_])"
         }
       ]
     },
     "fields": {
-      "name": "variable.other.property.rill",
+      "name": "variable.other.property.ri",
       "match": "(?<![\\w\\-.:'\"`])\\.[A-Za-z_][A-Za-z0-9_]*"
     },
     "numbers": {
-      "name": "constant.numeric.rill",
+      "name": "constant.numeric.ri",
       "match": "(?<![\\w\\-.:'\"`])-?[0-9]+\\b"
     },
     "keywords": {
-      "name": "keyword.control.rill",
+      "name": "keyword.control.ri",
       "match": "(?<![\\w-])(?:else-if|else|if|each|parallel|break)(?![\\w-])"
     },
     "operators": {
       "patterns": [
         {
-          "name": "keyword.operator.pipe.rill",
+          "name": "keyword.operator.pipe.ri",
           "match": "\\|>"
         },
         {
-          "name": "keyword.operator.assignment.rill",
+          "name": "keyword.operator.assignment.ri",
           "match": "->"
         },
         {
-          "name": "keyword.operator.default.rill",
+          "name": "keyword.operator.default.ri",
           "match": "\\?"
         },
         {
-          "name": "punctuation.separator.comma.rill",
+          "name": "punctuation.separator.comma.ri",
           "match": ","
         }
       ]
@@ -229,19 +229,19 @@
     "punctuation": {
       "patterns": [
         {
-          "name": "punctuation.section.braces.rill",
+          "name": "punctuation.section.braces.ri",
           "match": "[{}]"
         },
         {
-          "name": "punctuation.section.brackets.rill",
+          "name": "punctuation.section.brackets.ri",
           "match": "[\\[\\]]"
         },
         {
-          "name": "punctuation.section.parens.rill",
+          "name": "punctuation.section.parens.ri",
           "match": "[()]"
         },
         {
-          "name": "keyword.operator.function.rill",
+          "name": "keyword.operator.function.ri",
           "match": "@"
         }
       ]

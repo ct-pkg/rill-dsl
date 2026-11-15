@@ -26,7 +26,7 @@ RILL 0.1.x 的实现：一个把工具调用写成句子的小语言，带 lexer
 ```console
 $ cd <repo>
 $ bash ct/build.sh          # 需要 ct 工具链与 cc；已构建可跳过
-$ ./ct/bin/rill_ct run examples/quickstart/shell.rill \
+$ ./ct/bin/rill_ct run examples/quickstart/shell.ri \
     --profile shell --host-profile examples/quickstart/profiles/shell.json
 region=cn
 env=prod
@@ -43,7 +43,7 @@ stdout，退出码 0 表示脚本成功。上面的 JSON 是实测输出，只�
 ## 3. 第一个脚本（Agent 宿主）
 
 ```console
-$ ./ct/bin/rill_ct run examples/quickstart/agent.rill \
+$ ./ct/bin/rill_ct run examples/quickstart/agent.ri \
     --profile agent --host-profile examples/quickstart/profiles/agent.json
 {"ok":true,"value":"region=cn\nenv=prod\n","error":null,"host_meta":{"stdio":{"tool":"send","channel":"tool","text":"region=cn\nenv=prod\n"},"tool_meta":{"transport":{"kind":"process","tool":"send","pid":<子进程 pid>,"argv":["python3","../../testdata/0.1.0/host/agent/tools/tool_server.py"],"code":0}}},"host":{"profile":"agent","principal":{"kind":"role","name":"engineer"}}}
 $ echo $?
@@ -72,8 +72,8 @@ agent.json` 写的是 `examples/quickstart`，所以请从仓库根目录运行�
 | `ct/` | 产品实现（自举）；`ct/bin/rill_ct` 是 CLI |
 | `src/rill/` | Python 参考实现，仅供内部对拍/测试，不对外 |
 | `examples/tour/` | 16 个可跑样例与说明 |
-| `examples/quickstart/shell.rill` | Shell 版：`<read> … |> <send> $ [to] user` |
-| `examples/quickstart/agent.rill` | Agent 版：`engineer <read> file:config.txt …` |
+| `examples/quickstart/shell.ri` | Shell 版：`<read> … |> <send> $ [to] user` |
+| `examples/quickstart/agent.ri` | Agent 版：`engineer <read> file:config.txt …` |
 | `examples/quickstart/profiles/shell.json` | Shell 能力清单：只读文件、读 env、写 stdio |
 | `examples/quickstart/profiles/agent.json` | Agent manifest：role/roles/types/workspace/tools/limits |
 | `examples/quickstart/profiles/tools.json` | 三个 `command` 工具，指向真实工具服务 |
@@ -85,10 +85,10 @@ agent.json` 写的是 `examples/quickstart`，所以请从仓库根目录运行�
 ## 6. 其他命令
 
 ```console
-$ ./ct/bin/rill_ct tokenize examples/quickstart/shell.rill
-$ ./ct/bin/rill_ct parse --dump-ast examples/quickstart/agent.rill
-$ ./ct/bin/rill_ct check examples/quickstart/agent.rill --profile agent
-$ ./ct/bin/rill_ct fmt --display examples/quickstart/agent.rill
+$ ./ct/bin/rill_ct tokenize examples/quickstart/shell.ri
+$ ./ct/bin/rill_ct parse --dump-ast examples/quickstart/agent.ri
+$ ./ct/bin/rill_ct check examples/quickstart/agent.ri --profile agent
+$ ./ct/bin/rill_ct fmt --display examples/quickstart/agent.ri
 ```
 
 `parse` / `check` / `run` 成功退出 0；诊断退出 2（stdout 是

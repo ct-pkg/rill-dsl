@@ -1,7 +1,7 @@
 # RILL 0.1.0 — CT 侧实现（token / parse / check / run）
 
 独立的 CT 实现，不碰 `src/rill/` 的 Python 对照实现，也不改 `testdata/` 的既有 golden。
-范围：读 `.rill` → 词法 → 语法 → 加载期校验 → 求值 → 格式化 → 真实 Shell/Agent 宿主。
+范围：读 `.ri` → 词法 → 语法 → 加载期校验 → 求值 → 格式化 → 真实 Shell/Agent 宿主。
 
 ```
 ct/
@@ -63,10 +63,10 @@ PH-19 收口时已用掉 927，Agent 宿主再要 ~500。整套一次编译必�
 CLI 形状与 Python 版对齐：
 
 ```bash
-ct/bin/rill tokenize testdata/0.1.0/positive/tokens/compact/source.rill
-ct/bin/rill parse --dump-ast testdata/0.1.0/positive/simple/read-write/source.rill --profile shell
-ct/bin/rill check testdata/0.1.0/positive/check/each-bareword-w01/source.rill
-ct/bin/rill run testdata/0.1.0/positive/run/segment/success-plain/source.rill \
+ct/bin/rill tokenize testdata/0.1.0/positive/tokens/compact/source.ri
+ct/bin/rill parse --dump-ast testdata/0.1.0/positive/simple/read-write/source.ri --profile shell
+ct/bin/rill check testdata/0.1.0/positive/check/each-bareword-w01/source.ri
+ct/bin/rill run testdata/0.1.0/positive/run/segment/success-plain/source.ri \
   --profile shell --fakes testdata/0.1.0/fakes/tools.json
 ```
 

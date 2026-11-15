@@ -148,9 +148,9 @@ def case_cli_fs_uses_tool_not_os():
             handle.write("REAL\n")
         write_tools(tmp, {"read": {"queue": [{"ok": True, "value": "FAKE"}]}})
         manifest = write_manifest(tmp)
-        write_script(tmp, "script.rill", "<read> config.txt\n")
+        write_script(tmp, "script.ri", "<read> config.txt\n")
         result = run_cli(
-            ["run", "script.rill", "--profile", "agent", "--host-profile", manifest],
+            ["run", "script.ri", "--profile", "agent", "--host-profile", manifest],
             cwd=tmp,
         )
         assert result.returncode == 0, (result.returncode, result.stdout, result.stderr)
@@ -163,9 +163,9 @@ def case_cli_escape_is_tool_error():
     with tempfile.TemporaryDirectory() as tmp:
         write_tools(tmp, {"read": {"queue": [{"ok": True, "value": "secret"}]}})
         manifest = write_manifest(tmp)
-        write_script(tmp, "script.rill", "<read> ../outside.txt\n")
+        write_script(tmp, "script.ri", "<read> ../outside.txt\n")
         result = run_cli(
-            ["run", "script.rill", "--profile", "agent", "--host-profile", manifest],
+            ["run", "script.ri", "--profile", "agent", "--host-profile", manifest],
             cwd=tmp,
         )
         assert result.returncode == 0, (result.returncode, result.stdout, result.stderr)
@@ -179,9 +179,9 @@ def case_cli_env_context():
     with tempfile.TemporaryDirectory() as tmp:
         write_tools(tmp, {})
         manifest = write_manifest(tmp, context={"RILL_TEST_PORT": "8080"})
-        write_script(tmp, "script.rill", "<env> RILL_TEST_PORT\n")
+        write_script(tmp, "script.ri", "<env> RILL_TEST_PORT\n")
         result = run_cli(
-            ["run", "script.rill", "--profile", "agent", "--host-profile", manifest],
+            ["run", "script.ri", "--profile", "agent", "--host-profile", manifest],
             cwd=tmp,
         )
         assert result.returncode == 0, (result.returncode, result.stdout, result.stderr)

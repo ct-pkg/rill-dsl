@@ -10,7 +10,7 @@
 /*
  * rill_ct.ct - RILL 0.1.0 first layer in CT (C with traits).
  *
- * Pipeline: read a .rill file -> tokenize -> parse -> emit JSON.
+ * Pipeline: read a .ri file -> tokenize -> parse -> emit JSON.
  * The observable contract is deliberately the same as the Python reference in
  * src/rill/: exit 0 with {"tokens":[...]} or {"ast":...}, exit 2 with
  * {"error":{stage,code,line,col,message}}.  Stages are "tokenize" and "parse".

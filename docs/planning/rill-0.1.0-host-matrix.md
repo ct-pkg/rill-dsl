@@ -11,8 +11,8 @@
 
 - 五个槽位固定为 process / fs / env / stdio / exit，Parser 不 import 任何宿主模块；
 - 两个 profile 的 AST 逐节点相等（`tests/phase11/test_agent_fixtures.py` 对每个
-  fixture 比对，`testdata/0.1.0/host/agent/real-transport.rill` 与
-  `testdata/0.1.0/host/shared/read-send/source.rill` 是同一份源码）；
+  fixture 比对，`testdata/0.1.0/host/agent/real-transport.ri` 与
+  `testdata/0.1.0/host/shared/read-send/source.ri` 是同一份源码）；
 - `--fakes` 优先于两个真实宿主，退出码 0/1/2/3 由 harness 协议解释；
 - Shell 的能力清单来自 `--host-profile` 的 shell manifest；Agent 的 manifest
   额外声明 `roles` / `types` / `context` / `limits` / `tools`；
@@ -48,7 +48,7 @@ Agent 的同类约束由 `limits.time_ms` 与工具的 `timeout_ms` 共同承担
 | 越界/失败 | OS 错误转 `E-HOST-FS-*` | 越界 `E-HOST-FS-OUTSIDE`；工具错误按工具串返回 | 越界是工具错误，不是 OS 错误 |
 
 Agent 的 `read`/`write` 只把 workspace 相对路径交给工具，`host_meta.fs` 记录
-`tool/path/root/type`；`real-transport.rill` 用真实 `config.txt` 证明文件内容
+`tool/path/root/type`；`real-transport.ri` 用真实 `config.txt` 证明文件内容
 来自工具子进程，而不是 fixture 里的字符串。
 
 ## 3. 环境变量
@@ -106,10 +106,10 @@ harness 的 SUT 把“退出 1 + `{"ok": false}`”当运行结果。
 
 | 项 | 位置/命令 | 说明 |
 | --- | --- | --- |
-| 同源源码 | `testdata/0.1.0/host/shared/read-send/source.rill` | Agent 的 `shared-read-send/script.rill` 与它逐字相同 |
+| 同源源码 | `testdata/0.1.0/host/shared/read-send/source.ri` | Agent 的 `shared-read-send/script.ri` 与它逐字相同 |
 | Agent fixture | `testdata/0.1.0/host/agent/` | 14 例：五类能力成功/失败 + role/limits/type |
 | canonical manifest | `.../agent/profiles/agent.json` + `tools.json` | 角色、类型、context、limits、`command` 工具 |
-| 真实传输 | `.../agent/tools/tool_server.py` + `real-transport.rill` | 工具是真实子进程，读真实 `config.txt` |
+| 真实传输 | `.../agent/tools/tool_server.py` + `real-transport.ri` | 工具是真实子进程，读真实 `config.txt` |
 | 单测 | `python3 tests/phase11/test_tool_transport.py` | pid、工具日志、真实文件三者可观察 |
 | harness | `bash tools/check-0.1.0.sh --bucket host` | 同源 AST 用例仍全绿 |
 
@@ -133,7 +133,7 @@ harness 的 SUT 把“退出 1 + `{"ok": false}`”当运行结果。
   的失败退出码已统一为 1（PH-11 卡 §7 #12）。
 - 动态主语（`$var` 角色）按默认角色处理；类型表只有 `path` / `text` 两种约束。
 - 单测 fixture 仍允许 `queue/default` 桩；它们只证明映射与取值，不证明真实副作用，
-  canonical manifest 与 `real-transport.rill` 才证明工具走出进程。
+  canonical manifest 与 `real-transport.ri` 才证明工具走出进程。
 - PH-10 的 `docs/planning/rill-0.1.0-shell-profile.md` §4 里“Agent 预留”的表述
   以本文件为准；PH-10 卡 §8 #2 的 agent 动词集裁定由 PH-11 卡 §7 #6 取代。
 

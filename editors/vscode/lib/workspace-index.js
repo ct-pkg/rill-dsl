@@ -33,7 +33,7 @@ class WorkspaceIndex {
 
     let uris = [];
     try {
-      uris = await vscode.workspace.findFiles('**/*.rill', EXCLUDE, MAX_FILES);
+      uris = await vscode.workspace.findFiles('**/*.ri', EXCLUDE, MAX_FILES);
     } catch (error) {
       console.error('[rill] findFiles failed:', error);
     }

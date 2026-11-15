@@ -5,7 +5,7 @@
 - 采用 **`DefinitionProvider` + `ReferenceProvider`**，不实现 Language Server。
 - 函数符号解析用插件内的 **JavaScript 扫描器**，覆盖 `src/rill/lexer.py` 中与
   `@ "name"` 相关的词法规则；再用仓库的 Python lexer/parser 做逐文件对拍。
-- 跨文件解析是**工作区索引**：扫描工作区内全部 `*.rill`，按函数名字符串精确匹配。
+- 跨文件解析是**工作区索引**：扫描工作区内全部 `*.ri`，按函数名字符串精确匹配。
 - 打包不依赖 node/npm/vsce，`tools/package_vsix.py` 直接生成 `.vsix`。
 
 ## 2. 为什么不用 LSP
@@ -19,7 +19,7 @@
 | 后续扩展 | 若将来需要诊断/补全，可在同一 `lib/scanner.js` 上再加 Provider，或整体迁移到 LSP，不影响语法文件 |
 
 代价：每次跳转会在扩展进程内做一次工作区索引（带 mtime 缓存），文件极多时首次会慢；
-LSP 的常驻索引会更省。当前仓库规模（对拍覆盖 128 个 `.rill`）下不构成问题。
+LSP 的常驻索引会更省。当前仓库规模（对拍覆盖 128 个 `.ri`）下不构成问题。
 
 ## 3. 语法支持的来源
 
@@ -71,14 +71,14 @@ LSP 的常驻索引会更省。当前仓库规模（对拍覆盖 128 个 `.rill`
 3. **语法高亮是启发式**：`//fn{}` 区域结束标记取列首 `}`（仓库 formatter 的输出形态）。
    若手工把 `//fn{}` 整体缩进、且函数体结束括号也顶格，区域可能提前结束。
 4. **不做语义校验**：未知动词、未知介词、实参数量不匹配由 `check`/`load` 负责，插件不重复实现。
-5. **不处理超长文件/超大工作区**：默认最多索引 5000 个 `.rill`，并跳过 `.git/node_modules/dist/out/build/.ctbuild/.venv`。
+5. **不处理超长文件/超大工作区**：默认最多索引 5000 个 `.ri`，并跳过 `.git/node_modules/dist/out/build/.ctbuild/.venv`。
 6. **位置列宽**按 UTF-16 码元计数（VS Code 口径）；Python 侧对拍数据已换算成同一口径。
 
 ## 6. 验证方式与结果
 
 `test/run-tests.js` 做三件事：
 
-1. 调 `test/oracle.py`，用仓库 `src/rill/lexer.py` 产出全部 `.rill` 的函数定义/调用点，
+1. 调 `test/oracle.py`，用仓库 `src/rill/lexer.py` 产出全部 `.ri` 的函数定义/调用点，
    同时用 `parser.py` 的 AST 交叉核对名字集合；
 2. 与 `lib/scanner.js` 逐文件比对 `name/line/character/length`；
 3. 跑同文件、跨文件、注释/字符串/map/函数体嵌套/转义名/未闭合输入等边界用例，
@@ -88,7 +88,7 @@ LSP 的常驻索引会更省。当前仓库规模（对拍覆盖 128 个 `.rill`
 
 ```text
 oracle: 128 个文件对拍通过，10 个 lex 错误文件跳过
-checks: 550, failed: 0
+checks: 544, failed: 0
 PASS
 ```
 

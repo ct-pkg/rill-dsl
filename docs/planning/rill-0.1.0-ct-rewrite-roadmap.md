@@ -86,7 +86,7 @@ P6 可在 P2 后与 P3/P4 并行，P7/P8 在同一 `HostCapabilities` 上顺序�
 
 | 路径 | 内容 |
 | --- | --- |
-| `tools/diff/diff.py` | 对拍入口：同一 `.rill` 输入分别调 Python SUT 与 CT SUT，逐层比较 |
+| `tools/diff/diff.py` | 对拍入口：同一 `.ri` 输入分别调 Python SUT 与 CT SUT，逐层比较 |
 | `tools/diff/sut.ct.json` | CT SUT 命令/参数/构建产物路径（与 `testdata/0.1.0/sut.json` 并列，不改后者） |
 | `docs/reviews/diff/PH-<n>.md` | 每个 phase 收口的差异报告 |
 | `docs/reviews/diff/registry.md` | 已裁定差异登记（host-specific、规范歧义、golden 修订） |

@@ -29,8 +29,8 @@ def host_scripts():
     base = os.path.join(ROOT, "testdata", "0.1.0", "host")
     for dirpath, dir_names, file_names in os.walk(base):
         dir_names.sort()
-        if "script.rill" in file_names and "expect.json" in file_names:
-            found.append(os.path.join(dirpath, "script.rill"))
+        if "script.ri" in file_names and "expect.json" in file_names:
+            found.append(os.path.join(dirpath, "script.ri"))
     found.sort()
     return found
 

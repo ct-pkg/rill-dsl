@@ -651,7 +651,7 @@ Shell 宿主要执行进程，就必须有 `proc` 能力。规范只说“脚本
 > 不支持脚本内授权声明：能力边界由 `HostProfile` 在加载期声明并校验。Agent 宿主用内核角色/工具白名单；Shell 宿主用 manifest 或 CLI 参数（如 `--allow=proc,fs`）。DSL 无授权语法，脚本不可自证能力。
 
 ```text
-Shell: rill run --allow=proc,fs script.rill
+Shell: rill run --allow=proc,fs script.ri
 Agent: 内核配置声明 proc/fs
 ```
 
@@ -908,7 +908,7 @@ Shell 脚本必须能描述自己的依赖，否则同一脚本换机器就跑�
 <run> "false"
 ```
 
-在 Shell 里执行 `rill run s.rill; echo $?`，规范没有说应该得到什么。两种读法都“说得通”：
+在 Shell 里执行 `rill run s.ri; echo $?`，规范没有说应该得到什么。两种读法都“说得通”：
 
 | 读法 | 结果 |
 | --- | --- |
@@ -926,7 +926,7 @@ Shell 脚本必须能描述自己的依赖，否则同一脚本换机器就跑�
 > 0.1.0 不定义数字退出码。DSL 只定义“成功 / 未处理失败”二态；Shell 宿主把未处理失败映射为非 0，Agent 宿主映射为工具错误。具体数字由 HostCapabilities 决定，正文不写死。
 
 ```text
-rill run s.rill; echo $?   // 只保证非 0，具体数字由宿主决定
+rill run s.ri; echo $?   // 只保证非 0，具体数字由宿主决定
 ```
 
 后果：

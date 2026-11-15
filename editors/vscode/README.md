@@ -2,7 +2,7 @@
 
 为 RILL 0.1.x 提供：
 
-- `.rill` 语法高亮（关键字、动词、介词、字符串、变量、`//map{}`、`//fn{}`）；
+- `.ri` 语法高亮（关键字、动词、介词、字符串、变量、`//map{}`、`//fn{}`）；
 - `F12` / `Ctrl+Click` 跳转到函数定义（支持跨文件工作区索引）；
 - `Shift+F12` 查看函数的全部调用点。
 
@@ -30,23 +30,23 @@ VS Code 兼容编辑器（如 Trae CN）同样走“从 VSIX 安装”。
 
 ## 2. 试用跳转
 
-用 VS Code 打开**仓库根目录**（这样工作区索引能扫到 `examples/` 下的全部 `.rill`）。
+用 VS Code 打开**仓库根目录**（这样工作区索引能扫到 `examples/` 下的全部 `.ri`）。
 
 ### 同文件
 
-1. 打开 `examples/vscode/demo.rill`；
+1. 打开 `examples/vscode/demo.ri`；
 2. 把光标放到调用语句里的 `"greet-user"` 上（第 8 行）；
 3. 按 `F12` 或 `Ctrl+Click`，应跳到 `//fn{}` 里的同名定义；
 4. 在定义处按 `Shift+F12`，应列出调用点。
 
 ### 跨文件
 
-1. 打开 `examples/vscode/cross-file/main.rill`；
+1. 打开 `examples/vscode/cross-file/main.ri`；
 2. 在 `"format-report"` 上按 `F12`，应跳到
-   `examples/vscode/cross-file/shared.rill` 的定义；
+   `examples/vscode/cross-file/shared.ri` 的定义；
 3. 在未定义的函数名上按 `F12`，不应发生跳转。
 
-> `cross-file/main.rill` 单独 `check` 会报“未声明的函数”：RILL 0.1.x 没有
+> `cross-file/main.ri` 单独 `check` 会报“未声明的函数”：RILL 0.1.x 没有
 > import/模块机制，跨文件只是编辑器的导航索引，不改变语言加载期语义。
 
 ## 3. 重新打包
@@ -85,7 +85,7 @@ PASS
 | `extension.js` | DefinitionProvider / ReferenceProvider 注册 |
 | `lib/scanner.js` | 按 `src/rill/lexer.py` 复刻的函数符号扫描 |
 | `lib/symbols.js` | 同文件/跨文件定义解析与调用点收集 |
-| `lib/workspace-index.js` | 工作区 `.rill` 索引与 mtime 缓存 |
+| `lib/workspace-index.js` | 工作区 `.ri` 索引与 mtime 缓存 |
 | `syntaxes/rill.tmLanguage.json` | TextMate 语法 |
 | `language-configuration.json` | 注释、括号、自动闭合、缩进 |
 | `test/oracle.py` | 用仓库 lexer/parser 产出对拍数据 |

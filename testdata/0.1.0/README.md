@@ -34,7 +34,7 @@ testdata/0.1.0/
 
 | 文件 | 作用 |
 | --- | --- |
-| `source.rill` | 输入脚本，UTF-8 + LF，按字节原样使用（压缩态与展示态都允许） |
+| `source.ri` | 输入脚本，UTF-8 + LF，按字节原样使用（压缩态与展示态都允许） |
 | `case.json` | 期望声明：kind、phase、expect；详见 §4 |
 
 用例 id = 目录相对 `testdata/0.1.0/` 的路径，例如
@@ -188,7 +188,7 @@ harness 只认“命令 + 退出码 + stdout JSON”；产品 CLI 的最终形�
 
 1. **选桶与 id**：合法输入放 `positive/`，必须报错放 `negative/<阶段>/`，不阻断的警告也放
    `positive/`（`kind: warning`），双宿主同源放 `host/shared/`。目录名用小写 kebab。
-2. **写 `source.rill`**：只写 0.1.0 正文允许的语法；不要从 `docs/spec/`、`docs/design/`
+2. **写 `source.ri`**：只写 0.1.0 正文允许的语法；不要从 `docs/spec/`、`docs/design/`
    里的 v0.1 历史材料复制语法。压缩态与展示态都可以，但字节必须是你想测的那一版。
 3. **写 `case.json`**：按 §4 选 kind；`note` 写清守的是规范哪一节或哪条评审。
 4. **ast / tokens 补 golden**：

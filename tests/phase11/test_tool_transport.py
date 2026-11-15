@@ -130,12 +130,12 @@ def case_cli_real_tools_read_and_run():
         manifest = write_manifest(tmp)
         write_script(
             tmp,
-            "read.rill",
+            "read.ri",
             'engineer <read> file:config.txt |> <send> $ [to] user\n',
         )
         log = os.path.join(tmp, "calls.log")
         result = run_cli(
-            ["run", "read.rill", "--profile", "agent", "--host-profile", manifest],
+            ["run", "read.ri", "--profile", "agent", "--host-profile", manifest],
             cwd=tmp,
             env={"RILL_TOOL_LOG": log},
         )
@@ -150,9 +150,9 @@ def case_cli_real_tools_read_and_run():
         assert [item["tool"] for item in calls] == ["read", "send"], calls
         assert all(item["pid"] != os.getpid() for item in calls), calls
 
-        write_script(tmp, "run.rill", 'engineer <run> "printf agent-egress"\n')
+        write_script(tmp, "run.ri", 'engineer <run> "printf agent-egress"\n')
         result = run_cli(
-            ["run", "run.rill", "--profile", "agent", "--host-profile", manifest],
+            ["run", "run.ri", "--profile", "agent", "--host-profile", manifest],
             cwd=tmp,
             env={"RILL_TOOL_LOG": log},
         )
@@ -166,7 +166,7 @@ def case_cli_real_tools_read_and_run():
 def case_canonical_manifest_runs_real_tools():
     """canonical manifest 的工具是 command 形态；真实文件内容经工具进程返回。"""
     profile = os.path.join(HOST_ROOT, "profiles", "agent.json")
-    script = os.path.join(HOST_ROOT, "real-transport.rill")
+    script = os.path.join(HOST_ROOT, "real-transport.ri")
     with tempfile.TemporaryDirectory() as tmp:
         log = os.path.join(tmp, "calls.log")
         result = run_cli(

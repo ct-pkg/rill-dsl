@@ -50,10 +50,10 @@ def python_sources():
 
 def case_fakes_unhandled_failure_exits_one():
     with tempfile.TemporaryDirectory() as tmp:
-        write_script(tmp, "script.rill", "<read> missing.txt\n")
+        write_script(tmp, "script.ri", "<read> missing.txt\n")
         fakes = write_json(os.path.join(tmp, "fakes.json"), FAKES_READ_FAIL)
         result = run_cli(
-            ["run", "script.rill", "--profile", "shell", "--fakes", fakes], cwd=tmp
+            ["run", "script.ri", "--profile", "shell", "--fakes", fakes], cwd=tmp
         )
         assert result.returncode == 1, (result.returncode, result.stdout, result.stderr)
         payload = payload_of(result)
@@ -65,12 +65,12 @@ def case_fakes_handled_failure_exits_zero():
     with tempfile.TemporaryDirectory() as tmp:
         write_script(
             tmp,
-            "script.rill",
+            "script.ri",
             "<read> missing.txt [error] { <send> $ [to] user }\n",
         )
         fakes = write_json(os.path.join(tmp, "fakes.json"), FAKES_READ_FAIL)
         result = run_cli(
-            ["run", "script.rill", "--profile", "shell", "--fakes", fakes], cwd=tmp
+            ["run", "script.ri", "--profile", "shell", "--fakes", fakes], cwd=tmp
         )
         assert result.returncode == 0, (result.returncode, result.stdout, result.stderr)
         payload = payload_of(result)
@@ -102,8 +102,8 @@ def case_host_unavailable_is_retired():
     assert not hits, "E-RUN-HOST-UNAVAILABLE 仍在正常路径：%r" % hits
 
     with tempfile.TemporaryDirectory() as tmp:
-        write_script(tmp, "script.rill", "<read> x\n")
-        result = run_cli(["run", "script.rill", "--profile", "agent"], cwd=tmp)
+        write_script(tmp, "script.ri", "<read> x\n")
+        result = run_cli(["run", "script.ri", "--profile", "agent"], cwd=tmp)
         assert result.returncode == 0, (result.returncode, result.stdout, result.stderr)
         payload = payload_of(result)
         assert "E-RUN-HOST-UNAVAILABLE" not in result.stdout, result.stdout
@@ -112,15 +112,15 @@ def case_host_unavailable_is_retired():
 
 def case_payload_declares_host_identity():
     with tempfile.TemporaryDirectory() as tmp:
-        write_script(tmp, "shell.rill", '<send> "hi" [to] user\n')
-        result = run_cli(["run", "shell.rill", "--profile", "shell"], cwd=tmp)
+        write_script(tmp, "shell.ri", '<send> "hi" [to] user\n')
+        result = run_cli(["run", "shell.ri", "--profile", "shell"], cwd=tmp)
         assert result.returncode == 0, (result.returncode, result.stdout, result.stderr)
         shell = payload_of(result)["host"]
         assert shell["profile"] == "shell", shell
         assert shell["principal"]["kind"] == "os-user", shell
 
-        write_script(tmp, "agent.rill", "<read> x\n")
-        result = run_cli(["run", "agent.rill", "--profile", "agent"], cwd=tmp)
+        write_script(tmp, "agent.ri", "<read> x\n")
+        result = run_cli(["run", "agent.ri", "--profile", "agent"], cwd=tmp)
         assert result.returncode == 0, (result.returncode, result.stdout, result.stderr)
         agent = payload_of(result)["host"]
         assert agent["profile"] == "agent", agent
@@ -152,7 +152,7 @@ def case_standalone_ok_error_points_to_trailing_block():
     with tempfile.TemporaryDirectory() as tmp:
         write_script(
             tmp,
-            "script.rill",
+            "script.ri",
             '<send> "hi" [to] user\n[ok] $x { <send> $x [to] user }\n',
         )
         fakes = write_json(
@@ -163,7 +163,7 @@ def case_standalone_ok_error_points_to_trailing_block():
             },
         )
         result = run_cli(
-            ["run", "script.rill", "--profile", "shell", "--fakes", fakes], cwd=tmp
+            ["run", "script.ri", "--profile", "shell", "--fakes", fakes], cwd=tmp
         )
         assert result.returncode == 2, (result.returncode, result.stdout, result.stderr)
         error = payload_of(result)["error"]

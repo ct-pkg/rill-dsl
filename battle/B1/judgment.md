@@ -62,7 +62,7 @@ $ cd /Users/samxx/trae-ws/rill-dsl && git rev-parse HEAD && git status --short
 033e5860406b91bbf226a5aa42a1818d520d28c0
 ?? battle/
 
-$ find . -type f \( -name '*.rill' -o -name '*.dsl' \) -not -path './.git/*' | wc -l
+$ find . -type f \( -name '*.ri' -o -name '*.dsl' \) -not -path './.git/*' | wc -l
 0
 
 $ sed -n '22p;37p;70p;85p;87p;92p;150p;152,154p;199p;428p;430p' docs/design/dsl-spec-v0.1.md
@@ -115,7 +115,7 @@ $ grep -n '^# allow:' docs/design/dsl-spec-v0.1.md; grep -n '^示例 ' docs/desi
 | 席位声称 | 核实结果 |
 | --- | --- |
 | 主张席 §1.1 的 v0.1 行号（L22/L37/L70/L85/L87/L92/L199/L391-L393/L404/L417） | 逐行一致，**成立** |
-| 主张席、成本席的仓库无实现、无 `.rill`/`.dsl` 脚本 | `find` 计数 0，**成立** |
+| 主张席、成本席的仓库无实现、无 `.ri`/`.dsl` 脚本 | `find` 计数 0，**成立** |
 | CT 词法只有 6 类 token、`\n` 直接 `continue` | 原文一致，**成立** |
 | 三席均以 `ct-lang` HEAD `da83ade…` 为锚 | **已漂移**：当前 `6c21f26…`；上表锚点内容在当前 HEAD 仍一致，但 sha 声明失效 |
 | 反证席 §1.2 “工具签名取规范自带例子：`grep` 声明 2 参 `(pattern, path)`（L355-362）” | **核实失败**：规范全文无任何工具形参声明；L356 只是 `# allow: read, grep, write`，L358 起是示例 1 代码；L97 仅出现用法 `grep "foo" "file"` |

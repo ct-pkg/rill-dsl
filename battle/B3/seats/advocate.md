@@ -29,7 +29,7 @@
 | F2 | 规范现文：「缺省时继承内核默认策略」 | `dsl-spec-v0.1.md:55` | **不利** |
 | F3 | 加载期校验已定义为「AST 调用集 ⊆ allow」 | `dsl-spec-v0.1.md:229` | 有利（改默认值零新增机制） |
 | F4 | 「向后兼容是硬约束」 | `dsl-spec-v0.1.md:510` | **不利**（默认值翻转是语义变更） |
-| F5 | 仓库零脚本文件（`.rill`/`.dsl` 计数 0） | E1-2 | 有利（迁移成本为零） |
+| F5 | 仓库零脚本文件（`.ri`/`.dsl` 计数 0） | E1-2 | 有利（迁移成本为零） |
 | F6 | §8 六个示例全部自带 `# allow:` | `dsl-spec-v0.1.md:356/368/380/399/411` | 有利（默认拒绝不误伤主流写法） |
 | F7 | 执行期第三层在每次调用前跑 | `dsl-spec-v0.1.md:249`、`:449` | 有利（快照/实时之争的战场） |
 | F8 | 白名单热更新「需人工审批或审计日志」 | `dsl-spec-v0.1.md:512` | 有利（规范已承认热更新是特权操作） |
@@ -86,7 +86,7 @@ E1（已跑，原样输出）：
 $ grep -c "缺省时继承注册表级白名单" docs/design/dsl-spec-v0.1.md
 1
 rc=0
-$ find . -type f \( -name "*.rill" -o -name "*.dsl" \) -not -path "./.git/*" | wc -l
+$ find . -type f \( -name "*.ri" -o -name "*.dsl" \) -not -path "./.git/*" | wc -l
        0
 rc=0
 $ grep -rn "tool_registry_add" --include="*.md" . | wc -l

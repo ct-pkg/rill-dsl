@@ -4,7 +4,7 @@
   1. 有哪些用例；
   2. 用例声明本身是否合法。
 
-一个用例 = 一个目录 + source.rill + case.json。
+一个用例 = 一个目录 + source.ri + case.json。
 """
 
 import json
@@ -42,7 +42,7 @@ PROFILE_NAMES = ("shell", "agent")
 NAME_RE = re.compile(r"^[a-z0-9][a-z0-9-]*$")
 
 CASE_FILE = "case.json"
-SOURCE_FILE = "source.rill"
+SOURCE_FILE = "source.ri"
 
 
 class Case(object):

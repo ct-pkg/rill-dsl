@@ -27,7 +27,7 @@ def cases():
 def run_cli(relative_case, fakes, expected_exit):
     env = dict(os.environ)
     env["PYTHONPATH"] = os.path.join(ROOT, "src")
-    source = os.path.join(relative_case, "source.rill")
+    source = os.path.join(relative_case, "source.ri")
     result = subprocess.run(
         [
             sys.executable,

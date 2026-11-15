@@ -13,7 +13,7 @@
 **运行**（在 `examples/tour/` 下）
 
 ```console
-$ ../../ct/bin/rill run 03-into-order.rill
+$ ../../ct/bin/rill run 03-into-order.ri
 ```
 
 **真实输出**

@@ -146,8 +146,8 @@ def case_cli_real_read():
     with tempfile.TemporaryDirectory() as tmp:
         with open(os.path.join(tmp, "config.txt"), "w", encoding="utf-8") as handle:
             handle.write("port: 8080\n")
-        write_script(tmp, "script.rill", "<read> config.txt\n")
-        result = run_cli(["run", "script.rill", "--profile", "shell"], cwd=tmp)
+        write_script(tmp, "script.ri", "<read> config.txt\n")
+        result = run_cli(["run", "script.ri", "--profile", "shell"], cwd=tmp)
         assert result.returncode == 0, (result.returncode, result.stderr)
         payload = payload_of(result)
         assert payload["ok"] is True, payload
@@ -158,7 +158,7 @@ def case_cli_fakes_win_over_real_host():
     with tempfile.TemporaryDirectory() as tmp:
         with open(os.path.join(tmp, "config.txt"), "w", encoding="utf-8") as handle:
             handle.write("REAL\n")
-        write_script(tmp, "script.rill", "<read> config.txt\n")
+        write_script(tmp, "script.ri", "<read> config.txt\n")
         fakes = os.path.join(tmp, "fakes.json")
         with open(fakes, "w", encoding="utf-8") as handle:
             json.dump(
@@ -169,14 +169,14 @@ def case_cli_fakes_win_over_real_host():
                 handle,
             )
         result = run_cli(
-            ["run", "script.rill", "--profile", "shell", "--fakes", fakes], cwd=tmp
+            ["run", "script.ri", "--profile", "shell", "--fakes", fakes], cwd=tmp
         )
         assert result.returncode == 0, (result.returncode, result.stderr)
         payload = payload_of(result)
         assert payload["value"] == "FAKE", payload
 
         # fake 连能力声明都不需要：默认 shell profile 拒绝 fs.write，fake write 仍成功。
-        write_script(tmp, "write.rill", "<read> in.txt |> <write> out.txt\n")
+        write_script(tmp, "write.ri", "<read> in.txt |> <write> out.txt\n")
         with open(fakes, "w", encoding="utf-8") as handle:
             json.dump(
                 {
@@ -189,7 +189,7 @@ def case_cli_fakes_win_over_real_host():
                 handle,
             )
         result = run_cli(
-            ["run", "write.rill", "--profile", "shell", "--fakes", fakes], cwd=tmp
+            ["run", "write.ri", "--profile", "shell", "--fakes", fakes], cwd=tmp
         )
         payload = payload_of(result)
         assert result.returncode == 0 and payload["ok"] is True, (result.returncode, payload)
@@ -200,8 +200,8 @@ def case_cli_fakes_win_over_real_host():
 def case_agent_host_is_available():
     # PH-11 起 agent 有真实宿主；没有工具时由工具注册表拒绝，不再报宿主不可用。
     with tempfile.TemporaryDirectory() as tmp:
-        write_script(tmp, "script.rill", "<read> config.txt\n")
-        result = run_cli(["run", "script.rill", "--profile", "agent"], cwd=tmp)
+        write_script(tmp, "script.ri", "<read> config.txt\n")
+        result = run_cli(["run", "script.ri", "--profile", "agent"], cwd=tmp)
         assert result.returncode == 0, (result.returncode, result.stdout, result.stderr)
         payload = payload_of(result)
         assert payload["ok"] is False, payload
@@ -212,8 +212,8 @@ def case_agent_host_is_available():
 
 def case_unmapped_verb_via_cli():
     with tempfile.TemporaryDirectory() as tmp:
-        write_script(tmp, "script.rill", "<parse> config.txt\n")
-        result = run_cli(["run", "script.rill", "--profile", "shell"], cwd=tmp)
+        write_script(tmp, "script.ri", "<parse> config.txt\n")
+        result = run_cli(["run", "script.ri", "--profile", "shell"], cwd=tmp)
         assert result.returncode == 2, (result.returncode, result.stdout)
         error = payload_of(result)["error"]
         assert error["code"] == "E-RUN-VERB-UNREGISTERED", error
@@ -222,9 +222,9 @@ def case_unmapped_verb_via_cli():
 
 def case_missing_host_profile_is_diagnostic():
     with tempfile.TemporaryDirectory() as tmp:
-        write_script(tmp, "script.rill", "<read> config.txt\n")
+        write_script(tmp, "script.ri", "<read> config.txt\n")
         result = run_cli(
-            ["run", "script.rill", "--profile", "shell", "--host-profile", "nope.json"],
+            ["run", "script.ri", "--profile", "shell", "--host-profile", "nope.json"],
             cwd=tmp,
         )
         assert result.returncode == 2, (result.returncode, result.stdout)

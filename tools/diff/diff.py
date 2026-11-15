@@ -13,7 +13,7 @@
 
 两侧都是 ``testdata/0.1.0`` 的 SUT 协议（命令 + 退出码 + stdout JSON）：
 Python 侧读 ``testdata/0.1.0/sut.json``，CT 侧读 ``tools/diff/sut.ct.json``。
-用例发现规则与 harness 相同：``positive/**/source.rill`` + ``negative/**/source.rill``。
+用例发现规则与 harness 相同：``positive/**/source.ri`` + ``negative/**/source.ri``。
 
 比较项（逐层取最小可比较面）：
   token 层：成功比完整 ``{"tokens":[...]}`` 信封；诊断比 ``stage/code/line/col`` 与退出码。
@@ -97,8 +97,8 @@ def discover_sources(root):
     for bucket in ("positive", "negative"):
         base = os.path.join(fixtures, bucket)
         for dirpath, _dirnames, filenames in os.walk(base):
-            if "source.rill" in filenames:
-                rel = os.path.relpath(os.path.join(dirpath, "source.rill"), fixtures)
+            if "source.ri" in filenames:
+                rel = os.path.relpath(os.path.join(dirpath, "source.ri"), fixtures)
                 found.append(rel.replace(os.sep, "/"))
     found.sort()
     positive = [p for p in found if p.startswith("positive/")]
@@ -223,7 +223,7 @@ def fmt_sources(root):
         base = os.path.join(fixtures, bucket)
         for dirpath, dirnames, filenames in os.walk(base):
             dirnames.sort()
-            if "source.rill" not in filenames:
+            if "source.ri" not in filenames:
                 continue
             case_path = os.path.join(dirpath, "case.json")
             if not os.path.isfile(case_path):
@@ -237,12 +237,12 @@ def fmt_sources(root):
                 continue
             if case.get("kind") not in FMT_KINDS:
                 continue
-            rel = os.path.relpath(os.path.join(dirpath, "source.rill"), fixtures)
+            rel = os.path.relpath(os.path.join(dirpath, "source.ri"), fixtures)
             found.append(rel.replace(os.sep, "/"))
     for dirpath, dirnames, filenames in os.walk(os.path.join(fixtures, "host")):
         dirnames.sort()
-        if "script.rill" in filenames and "expect.json" in filenames:
-            rel = os.path.relpath(os.path.join(dirpath, "script.rill"), fixtures)
+        if "script.ri" in filenames and "expect.json" in filenames:
+            rel = os.path.relpath(os.path.join(dirpath, "script.ri"), fixtures)
             found.append(rel.replace(os.sep, "/"))
     found.sort()
     return found
@@ -275,19 +275,19 @@ def fmt_pipeline(sut, root, source_path, tmpdir, tag):
     compressed, err = fmt_text(sut, root, "compress", source_path)
     if err:
         return None, "compress: " + err
-    compress_path = os.path.join(tmpdir, tag + "-compress.rill")
+    compress_path = os.path.join(tmpdir, tag + "-compress.ri")
     write_text(compress_path, compressed)
 
     displayed, err = fmt_text(sut, root, "display", compress_path)
     if err:
         return None, "display: " + err
-    display_path = os.path.join(tmpdir, tag + "-display.rill")
+    display_path = os.path.join(tmpdir, tag + "-display.ri")
     write_text(display_path, displayed)
 
     recompressed, err = fmt_text(sut, root, "compress", display_path)
     if err:
         return None, "recompress: " + err
-    recompress_path = os.path.join(tmpdir, tag + "-recompress.rill")
+    recompress_path = os.path.join(tmpdir, tag + "-recompress.ri")
     write_text(recompress_path, recompressed)
 
     return {
@@ -358,7 +358,7 @@ def compare_header_tolerance(mode, py_sut, ct_sut, root, tmpdir):
     """E-4：``//map{`` 与 ``//map {`` 必须产出同一文本。"""
     texts = {}
     for name, text in FMT_HEADER_TOLERANCE:
-        path = os.path.join(tmpdir, name + ".rill")
+        path = os.path.join(tmpdir, name + ".ri")
         write_text(path, text)
         if mode == "roundtrip":
             problem = compare_roundtrip(py_sut, ct_sut, root, path)
@@ -500,7 +500,7 @@ def host_fixtures(root):
         path = os.path.join(base, name)
         if (
             os.path.isdir(path)
-            and os.path.isfile(os.path.join(path, "script.rill"))
+            and os.path.isfile(os.path.join(path, "script.ri"))
             and os.path.isfile(os.path.join(path, "expect.json"))
         ):
             found.append(path)
@@ -536,7 +536,7 @@ def agent_fixtures(root):
         path = os.path.join(base, name)
         if (
             os.path.isdir(path)
-            and os.path.isfile(os.path.join(path, "script.rill"))
+            and os.path.isfile(os.path.join(path, "script.ri"))
             and os.path.isfile(os.path.join(path, "expect.json"))
         ):
             found.append(path)
@@ -633,7 +633,7 @@ def run_agent_host_layer(opts, py_sut, ct_sut, root):
         name = os.path.relpath(path, base)
         with open(os.path.join(path, "expect.json"), encoding="utf-8") as handle:
             spec = json.load(handle)
-        script = os.path.join(path, "script.rill")
+        script = os.path.join(path, "script.ri")
         tmp = tempfile.mkdtemp(prefix="rill-agent-")
         try:
             manifest = write_agent_workspace(tmp, spec)
@@ -674,8 +674,8 @@ def run_agent_host_layer(opts, py_sut, ct_sut, root):
         shutil.copyfile(
             os.path.join(base, "config.txt"), os.path.join(tmp, "config.txt")
         )
-        script = os.path.join(tmp, "real-transport.rill")
-        shutil.copyfile(os.path.join(base, "real-transport.rill"), script)
+        script = os.path.join(tmp, "real-transport.ri")
+        shutil.copyfile(os.path.join(base, "real-transport.ri"), script)
         args = [
             "run", script, "--profile", "agent",
             "--host-profile", os.path.join(tmp, "agent.json"),
@@ -727,7 +727,7 @@ def run_host_layer(opts, py_sut, ct_sut, root):
             "profiles",
             spec.get("profile", "min") + ".json",
         )
-        script = os.path.join(path, "script.rill")
+        script = os.path.join(path, "script.ri")
         args = [
             "run",
             script,
@@ -781,7 +781,7 @@ def run_host_layer(opts, py_sut, ct_sut, root):
         )
         for name, source in HOST_DIRECTED:
             directed += 1
-            script = os.path.join(tmp, name + ".rill")
+            script = os.path.join(tmp, name + ".ri")
             write_text(script, source)
             args = [
                 "run",
@@ -846,7 +846,7 @@ def run_fmt_layer(opts, py_sut, ct_sut, root):
     try:
         for name, text in FMT_DIRECTED:
             directed += 1
-            path = os.path.join(tmpdir, name + ".rill")
+            path = os.path.join(tmpdir, name + ".ri")
             write_text(path, text)
             if mode == "roundtrip":
                 problem = compare_roundtrip(py_sut, ct_sut, root, path)

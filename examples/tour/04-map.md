@@ -14,7 +14,7 @@
 **运行**（在 `examples/tour/` 下）
 
 ```console
-$ ../../ct/bin/rill run 04-map.rill
+$ ../../ct/bin/rill run 04-map.ri
 ```
 
 **真实输出**

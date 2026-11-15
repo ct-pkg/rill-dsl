@@ -14,7 +14,7 @@ program，后面的语句不再执行。
 **运行**（在 `examples/tour/` 下）
 
 ```console
-$ ../../ct/bin/rill run 07-break.rill
+$ ../../ct/bin/rill run 07-break.ri
 ```
 
 **真实输出**

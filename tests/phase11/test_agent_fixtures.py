@@ -85,7 +85,7 @@ def run_fixture(path):
     fixture = os.path.basename(path)
     with open(os.path.join(path, "expect.json"), encoding="utf-8") as handle:
         spec = json.load(handle)
-    script = os.path.join(path, "script.rill")
+    script = os.path.join(path, "script.ri")
 
     check_ast(fixture, script)
 
@@ -165,8 +165,8 @@ def case_fixture_coverage():
 
 
 def case_shared_source_is_identical():
-    shared = os.path.join(SHARED_ROOT, "read-send", "source.rill")
-    agent = os.path.join(HOST_ROOT, "shared-read-send", "script.rill")
+    shared = os.path.join(SHARED_ROOT, "read-send", "source.ri")
+    agent = os.path.join(HOST_ROOT, "shared-read-send", "script.ri")
     with open(shared, encoding="utf-8") as handle:
         shared_text = handle.read()
     with open(agent, encoding="utf-8") as handle:

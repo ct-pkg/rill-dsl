@@ -20,20 +20,20 @@ PD-1 与 PD-2 的修复合并进行：口径统一由同一个宽度来源给出
 ### 1.1 最小复现（两行）
 
 ```console
-$ cat pd1.rill
+$ cat pd1.ri
 <read> /etc/hosts |> <send> $"-x" [to] user
 <send> 'after' [to] user
 ```
 
 ```console
-$ ct/bin/rill run pd1.rill
+$ ct/bin/rill run pd1.ri
 {"error":{"stage":"parse","code":"E-PARSE-UNEXPECTED","line":1,"col":30,"message":"语句后出现意外 token -x"}}
 $ echo $?
 2
 ```
 
 ```console
-$ PYTHONPATH=src python3 -m rill run pd1.rill
+$ PYTHONPATH=src python3 -m rill run pd1.ri
 # stderr 前半是 /etc/hosts 原文，最后一行是 -x
 {"ok": true, "value": "after", "error": null, "host_meta": {"stdio": {"channel": "stderr", "text": "after"}}, "host": {"profile": "shell", "principal": {"kind": "os-user", "name": "samxx"}}}
 $ echo $?
@@ -78,18 +78,18 @@ $ echo $?
 ### 2.1 最小复现（两行）
 
 ```console
-$ cat pd2.rill
+$ cat pd2.ri
 <env> PATH -> $v
 <send> "n="$v [to] user
 ```
 
 ```console
-$ ct/bin/rill run pd2.rill
+$ ct/bin/rill run pd2.ri
 {"error":{"stage":"parse","code":"E-PARSE-UNEXPECTED","line":2,"col":12,"message":"语句后出现意外 token v"}}
 $ echo $?
 2
 
-$ PYTHONPATH=src python3 -m rill run pd2.rill
+$ PYTHONPATH=src python3 -m rill run pd2.ri
 {"error": {"stage": "parse", "code": "E-PARSE-UNEXPECTED", "line": 2, "col": 12, "message": "语句后出现意外 token 'v'"}}
 $ echo $?
 2

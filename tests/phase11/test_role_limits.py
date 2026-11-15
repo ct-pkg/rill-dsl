@@ -100,9 +100,9 @@ def case_cli_role_denied():
                 "auditor": {"verbs": ["read", "review"]},
             },
         )
-        write_script(tmp, "deny.rill", "auditor <write> out.txt\n")
+        write_script(tmp, "deny.ri", "auditor <write> out.txt\n")
         result = run_cli(
-            ["run", "deny.rill", "--profile", "agent", "--host-profile", manifest],
+            ["run", "deny.ri", "--profile", "agent", "--host-profile", manifest],
             cwd=tmp,
         )
         assert result.returncode == 2, (result.returncode, result.stdout, result.stderr)
@@ -110,9 +110,9 @@ def case_cli_role_denied():
         assert error["code"] == "E-HOST-ROLE-DENIED", error
         assert "auditor" in error["message"] and "write" in error["message"], error
 
-        write_script(tmp, "unknown.rill", "hacker <read> out.txt\n")
+        write_script(tmp, "unknown.ri", "hacker <read> out.txt\n")
         result = run_cli(
-            ["run", "unknown.rill", "--profile", "agent", "--host-profile", manifest],
+            ["run", "unknown.ri", "--profile", "agent", "--host-profile", manifest],
             cwd=tmp,
         )
         assert result.returncode == 2, (result.returncode, result.stdout)
@@ -148,8 +148,8 @@ def case_default_role_and_omitted_subject():
 
 def case_shell_stays_role_free():
     with tempfile.TemporaryDirectory() as tmp:
-        write_script(tmp, "script.rill", '<send> "hello" [to] user\n')
-        result = run_cli(["run", "script.rill", "--profile", "shell"], cwd=tmp)
+        write_script(tmp, "script.ri", '<send> "hello" [to] user\n')
+        result = run_cli(["run", "script.ri", "--profile", "shell"], cwd=tmp)
         assert result.returncode == 0, (result.returncode, result.stdout, result.stderr)
         assert payload_of(result)["ok"] is True, payload_of(result)
 
