@@ -1,12 +1,15 @@
-"""RILL 0.1.x 加载期校验（PH-4）。
+"""RILL 0.1.x 加载期校验（PH-4 / PH-22）。
 
-只消费 AST 与 profile 名：建 map/fn/verb 表、查名字、查同块重复短词；
-不执行工具、不求值、不读宿主能力。规范依据：``docs/RILL-0.1.0.md``
-§4.17、§4.18、§五、§4.20；错误码与规范缺口见 ``docs/phases/PH-4/card.md`` §8。
+只消费 AST 与 profile 名：建 map 表、函数形状表、verb 表，查同块重复短词与
+函数形状冲突；不执行工具、不求值、不读宿主能力。规范依据：
+``docs/RILL-0.1.0.md`` §4.17、§4.18、§4.20、§五；函数形状规则见
+``docs/decisions/D-022.md`` 与 ``docs/phases/PH-22/card.md``。
 
-PH-4-T1 范围：``check`` 入口、MapTable 与同块重复短词；fn/verb 表在 T2/T3 补齐。
+函数没有名字：签名是模板第一段机械导出的形状键（``shape.py``）。同一
+``//fn{}`` 内同形报 ``E-03``；调用无候选报 ``E-04``；多候选报 ``E-05``。
 """
 
+from . import shape
 from .errors import LoadError
 
 PROFILES = ("shell", "agent")
@@ -27,7 +30,6 @@ DEFAULT_VERBS = (
 
 # PH-10：shell profile 额外有声明的宿主动词（进程与环境变量）。
 # PH-11：agent profile 共用同一动词集；能力差异回到宿主实现，不写进语法。
-# 缺口与裁定的取代关系见 PH-11 卡 §7 #6。
 SHELL_VERBS = DEFAULT_VERBS + ("env", "run")
 AGENT_VERBS = SHELL_VERBS
 
@@ -84,13 +86,27 @@ def _collect_maps(program):
 
 
 def _collect_functions(program):
-    """``FnDef.name`` 精确匹配；同块重名不报错，登记为缺口（PH-4 卡 §8 #5）。"""
-    functions = {}
+    """按文档顺序收集全部 ``FnDef``；同一 ``//fn{}`` 内同形报 ``E-03``。"""
+    functions = []
     for header in program.get("headers", []):
         if header["kind"] != "FnBlock":
             continue
+        seen = []
         for definition in header["defs"]:
-            functions.setdefault(definition["name"], definition)
+            for first in seen:
+                if first["shape"] == definition["shape"]:
+                    span = definition["span"]
+                    first_span = first["span"]
+                    raise LoadError(
+                        "E-03",
+                        "函数形状重复：%s" % shape.describe(definition["shape"]),
+                        span["line"],
+                        span["col"],
+                        hint="首个同形定义在第 %d 行；两份形状均为 %s"
+                        % (first_span["line"], shape.describe(definition["shape"])),
+                    )
+            seen.append(definition)
+            functions.append(definition)
     return functions
 
 
@@ -132,7 +148,7 @@ def _collect_params(node, names, defaults):
 
 def _check_fn_defaults(functions):
     """§4.18：默认值只允许尾部连续省略，中间缺省在加载期报错。"""
-    for definition in functions.values():
+    for definition in functions:
         names, defaults = template_params(definition)
         tail_started = False
         for name in names:
@@ -142,33 +158,71 @@ def _check_fn_defaults(functions):
                 span = definition["span"]
                 raise LoadError(
                     "E-LOAD-FN-DEFAULT-NOT-TAIL",
-                    "函数 %r 的默认值只能出现在尾部；$%s 缺少默认值"
-                    % (definition["name"], name),
+                    "函数形状 %s 的默认值只能出现在尾部；$%s 缺少默认值"
+                    % (shape.describe(definition["shape"]), name),
                     span["line"],
                     span["col"],
                 )
 
 
-def _check_arity(call, definition):
-    """§4.18：实参按位置绑定，数量不匹配直接报错，不补默认值。"""
-    names, defaults = template_params(definition)
-    given = len(call["args"])
-    missing = [
-        name for name in names[given:] if name not in defaults
-    ] if given < len(names) else []
-    if given > len(names) or missing:
-        span = call["span"]
+def _position_count(call):
+    count = 1  # 宾语位始终存在
+    if call["subject"] is not None:
+        count += 1
+    count += sum(1 for item in call["post"] if item["kind"] == "PrepPhrase")
+    return count
+
+
+def _check_call(node, functions):
+    span = node["span"]
+    call = node["call"]
+    call_shape = shape.shape_of(call, template=False)
+    exact, arity = shape.find(functions, call_shape)
+    if exact:
+        if len(exact) > 1:
+            lines = ", ".join(str(item["span"]["line"]) for item in exact)
+            raise LoadError(
+                "E-05",
+                "函数形状二义：%s" % shape.describe(call_shape),
+                span["line"],
+                span["col"],
+                hint="候选定义行：%s" % lines,
+            )
+        return
+    if arity:
+        definition = arity
         raise LoadError(
             "E-LOAD-FN-ARITY",
-            "函数 %r 需要 %d 个实参，实际 %d 个"
-            % (definition["name"], len(names), given),
+            "函数形状 %s 需要 %d 个位置，实际 %d 个"
+            % (
+                shape.describe(definition["shape"]),
+                _position_count(definition["template"][0]),
+                _position_count(call),
+            ),
             span["line"],
             span["col"],
         )
+    same_verb = [
+        shape.describe(item["shape"])
+        for item in functions
+        if item["shape"]["verb"] == call_shape["verb"]
+    ]
+    hint = (
+        "同动词已定义形状：%s" % "；".join(same_verb)
+        if same_verb
+        else "同动词没有已定义形状"
+    )
+    raise LoadError(
+        "E-04",
+        "未声明的函数形状：%s" % shape.describe(call_shape),
+        span["line"],
+        span["col"],
+        hint=hint,
+    )
 
 
 def _check_nodes(node, functions, verbs):
-    """查 ``@ STRING`` 的名字与 ``VerbCall`` 的动词；不解绑实参。"""
+    """按文档顺序查 ``CallStmt`` 的形状与 ``VerbCall`` 的动词。"""
     if isinstance(node, list):
         for item in node:
             _check_nodes(item, functions, verbs)
@@ -176,16 +230,7 @@ def _check_nodes(node, functions, verbs):
     if not isinstance(node, dict) or "kind" not in node:
         return
     if node["kind"] == "CallStmt":
-        span = node["span"]
-        definition = functions.get(node["name"])
-        if definition is None:
-            raise LoadError(
-                "E-LOAD-FN-UNDECLARED",
-                "未声明的函数 %r；只能调用 //fn{} 内定义的名字" % node["name"],
-                span["line"],
-                span["col"],
-            )
-        _check_arity(node, definition)
+        _check_call(node, functions)
     if node["kind"] == "VerbCall" and node["verb"] not in verbs:
         span = node["span"]
         raise LoadError(
