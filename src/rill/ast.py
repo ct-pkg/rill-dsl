@@ -16,11 +16,11 @@ FIELDS = {
     "MapBlock": ("entries",),
     "MapEntry": ("short", "marker", "long"),
     "FnBlock": ("defs",),
-    "FnDef": ("name", "template", "body"),
+    "FnDef": ("shape", "template", "body"),
     "Block": ("body",),
     # 语句
     "SimpleStmt": ("call", "tail", "pipe"),
-    "CallStmt": ("name", "args", "tail", "pipe"),
+    "CallStmt": ("call", "tail", "pipe"),
     "PrepBlockStmt": ("prep", "subject", "block"),
     "IfStmt": ("branches", "else_body"),
     "IfBranch": ("condition", "body"),

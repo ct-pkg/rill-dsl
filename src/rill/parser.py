@@ -10,7 +10,7 @@ PH-3-T3 加入状语、介宾、``->`` 赋值、管道、``@`` 调用与 ``//fn`
 控制流与尾随块在 T4。
 """
 
-from . import ast
+from . import ast, shape
 from .errors import ParseError
 from .tokens import Token
 
@@ -81,9 +81,9 @@ class Parser(object):
         while self._at("NEWLINE"):
             self.i += 1
 
-    def _error(self, code, message, token=None):
+    def _error(self, code, message, token=None, hint=None):
         token = token or self._peek()
-        raise ParseError(code, message, token.line, token.col)
+        raise ParseError(code, message, token.line, token.col, hint=hint)
 
     def _expect(self, kind, what, code="E-PARSE-UNEXPECTED"):
         if not self._at(kind):
@@ -418,21 +418,22 @@ class Parser(object):
     def _parse_call_stmt(self):
         at = self._take()
         span = {"line": at.line, "col": at.col}
-        name = self._expect("STRING", "函数名（@ 后必须是字符串）")
-        if self._at("VERB") or (
-            self._peek().kind in _WORD_KINDS and self._peek(1).kind == "VERB"
-        ):
+        if self._at("STRING"):
             self._error(
-                "E-PARSE-FN-DEF-BODY",
-                "函数定义只能在 //fn{} 区块内",
-                at,
+                "E-07",
+                "@ 后不再写函数名；请直接写 verb_call（如 @ <read> \"a.yml\"）",
+                self._peek(),
+                hint="旧形态 @ \"name\" 已移除；删除字符串名字，形状相同的定义会按形状匹配",
             )
-        args = []
-        while self._peek().kind in _WORD_KINDS:
-            args.append(self._parse_word(bare_as_string=True))
+        if not (
+            self._at("VERB")
+            or (self._peek().kind in _WORD_KINDS and self._peek(1).kind == "VERB")
+        ):
+            self._error("E-PARSE-UNEXPECTED", "@ 后必须是函数调用 verb_call")
+        call = self._parse_verb_call()
         tail = self._parse_statement_tail()
         pipe = self._parse_pipe(lambda: self._parse_simple_stmt())
-        return ast.make("CallStmt", span=span, name=name.text, args=args, tail=tail, pipe=pipe)
+        return ast.make("CallStmt", span=span, call=call, tail=tail, pipe=pipe)
 
     def _parse_fn_block(self):
         head = self._take()
@@ -450,7 +451,13 @@ class Parser(object):
     def _parse_fn_def(self):
         at = self._take()
         span = {"line": at.line, "col": at.col}
-        name = self._expect("STRING", "函数名（@ 后必须是字符串）")
+        if self._at("STRING"):
+            self._error(
+                "E-07",
+                "@ 后不再写函数名；请直接写 verb_call（如 @ $path <read> $path）",
+                self._peek(),
+                hint="旧形态 @ \"name\" 已移除；签名由模板形状导出",
+            )
         self.template_mode = True
         try:
             if not (self._at("VERB") or self._peek(1).kind == "VERB" or self._default_subject_ahead()):
@@ -462,8 +469,15 @@ class Parser(object):
                 template.append(self._parse_verb_call())
         finally:
             self.template_mode = False
+        definition_shape = shape.shape_of(template[0], template=True)
         body = self._parse_block("函数体")
-        return ast.make("FnDef", span=span, name=name.text, template=template, body=body)
+        return ast.make(
+            "FnDef",
+            span=span,
+            shape=definition_shape,
+            template=template,
+            body=body,
+        )
 
     def _default_subject_ahead(self):
         """模板主语写成 ``$变量?默认值`` 时，``?`` 挡住了 ``<动词>`` 的探测。"""
