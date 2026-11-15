@@ -46,6 +46,7 @@
 | P-021 | 跨 exec payload 的污点/能力标签（taint） | **undecidable**：规范无主体、无标签模型。重开条件：启用外部 webhook 订阅方，或发生“低权脚本经事件把数据送入特权工具”的事件 | emit `external_egress` 的后续 | [D-014](../decisions/D-014.md)、[B3 反证席 §5](../../battle/B3/seats/challenger.md) |
 | P-022 | `# emit:` 是否在脚本里声明 payload schema | **decided（本轮裁定）**：不进脚本 header；schema 由内核配置按事件名提供，未声明不校验。理由：MVP 不为 schema 造语法，且与 emit payload 字面量重复 | M6 的 schema 用例 | [05 §2.2](dsl/05-data-metadata.md)、[D-014](../decisions/D-014.md) |
 | P-023 | `# allow:` 含未注册的工具/函数名是否报错 | **decided**：不报错；白名单只收窄不校验，未注册名不授权、等同没写，不产生任何加载期 kind。内核可 lint 提示但不得拒绝脚本。依据：[06 §2](dsl/06-security.md)、[D-011](../decisions/D-011.md)（无独立 D 记录） | 加载期校验边界 | [06 §2](dsl/06-security.md) |
+| P-024 | `rillShell` 与现行入口 `ct/bin/rill` 的命名关系：是否改名、是否合并为同一二进制 | **pending**（D-021 明确留作未决，不在 D-021 内拍）。缺的是：产品对外名称与二进制分发形态的取舍，属用户裁定 | 入口名与发布形态 | [D-021](../decisions/D-021.md) |
 
 ## 3. 状态规则
 

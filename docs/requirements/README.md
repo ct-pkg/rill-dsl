@@ -16,7 +16,7 @@
 | --- | --- | --- | --- | --- |
 | R-001 | 目标 | 以最少 token 表达工具调用与流程编排，语法边界由内核严格控制，安全由三层白名单兜底 | baseline | v0.1 开篇、§1 |
 | R-002 | 非目标 | agent 主循环、上下文压缩、记忆/跨脚本状态、审批、调度归内核，不进单次执行语法 | decided | [06 §6](../spec/dsl/06-security.md)、[D-013](../decisions/D-013.md)、[P1-4](../design/dsl-discussion.md#L269-L276)、[P1-9](../design/dsl-discussion.md#L317-L324) |
-| R-003 | 非目标 | MVP 不做并行；`par` 只讨论预留，不产生可执行能力 | pending | [讨论稿 P1-5](../design/dsl-discussion.md#L277-L284)、[P1-10](../design/dsl-discussion.md#L325-L332) |
+| R-003 | 非目标 | MVP 不做并行；`par` 只讨论预留，不产生可执行能力 | pending | [讨论稿 P1-5](../design/dsl-discussion.md#L277-L284)、[P1-10](../design/dsl-discussion.md#L325-L332)、[D-019](../decisions/D-019.md)、[D-021](../decisions/D-021.md)（并行是暂缓，不是终态排除） |
 | R-004 | 非目标 | 不做类型系统、模块/import、try/catch、递归、通用对象字面量、正则字面量 | baseline | v0.1 §9（尚未重新拍板） |
 | R-005 | 约束 | 实现语言为 CT；但 CT 只作实现语言，运行期语义（动态值、管道、工具注册、事件）需自建。**【2026-11-15 补记】目标未变：CT 是正式实现；`src/rill/` 的 Python 版永久保留为参考实现与对拍基准，CT 实现未完成，重写账见 `docs/planning/rill-0.1.0-ct-rewrite-roadmap.md`。** | decided（CT 为目标；Python 为长期参考实现） | [讨论稿 §5](../design/dsl-discussion.md#L349-L366)、[实现语言偏离评估](../design/rill-0.1.0-implementation-language-gap.md) |
 | R-006 | 约束 | 单文件脚本；值是动态的（null/bool/number/string/json_object/json_array） | baseline | v0.1 §4 R5、§9 |
@@ -77,7 +77,7 @@
 | 正文 | Rill DSL 规范 `v0.1 rev.1`（词法/文法/语义/安全/运行时/示例/里程碑） | unverified | [dsl/README.md](../spec/dsl/README.md) |
 | S-001 | 调用形态：空格参数，括号仅分组 | unverified | [S-001](../spec/S-001-call-form.md) |
 | S-002..S-024 | 文法、语义、安全、错误、值层的可验收条目 | unverified | [规格索引](../spec/README.md) |
-| P-001..P-023 | 未决问题清单 | pending / partial | [PENDING](../spec/PENDING.md) |
+| P-001..P-024 | 未决问题清单 | pending / partial | [PENDING](../spec/PENDING.md) |
 
 ## 6. 候选偏离（未签字，不计为已登记 deviation）
 
