@@ -5,6 +5,9 @@
   python3 tools/diff/diff.py --layer ast            # PH-14 预演（忽略 span）
   python3 tools/diff/diff.py --layer error          # PH-15 加载期（check）
   python3 tools/diff/diff.py --layer eval           # PH-16 运行期（run，10 例）
+  python3 tools/diff/diff.py --layer fmt --mode compress   # PH-18 压缩态
+  python3 tools/diff/diff.py --layer fmt --mode display    # PH-18 展示态
+  python3 tools/diff/diff.py --layer fmt --mode roundtrip  # PH-18 压缩→展示→压缩
   python3 tools/diff/diff.py --layer all --bucket negative
 
 两侧都是 ``testdata/0.1.0`` 的 SUT 协议（命令 + 退出码 + stdout JSON）：
@@ -16,6 +19,10 @@ Python 侧读 ``testdata/0.1.0/sut.json``，CT 侧读 ``tools/diff/sut.ct.json``
   ast 层：成功比忽略 ``span`` 后的 AST；诊断比 ``stage/code/line/col`` 与退出码。
   error 层：用 ``check`` 跑 ``negative/**``；诊断比 ``stage/code/line/col`` 与退出码。
             加载期负例（``negative/load/**``）由此进入对拍；正例不在本层语料内。
+  fmt 层：71 个 round-trip 输入（45 个正例 fixture + 26 个 host 脚本）。compress /
+            display 逐字节比 Python 的 ``fmt`` 输出（stdout 是纯文本，不走 JSON）；
+            roundtrip 再比三段文本与各段 AST（忽略 span），两侧 AST 均须等于原文。
+            另含 E-3 的 3 个定向长词用例与 E-4 的 ``//map{`` / ``//map {`` 容忍。
 
 退出码：0 差异为 0；1 存在差异；2 用法或清单错误。
 """
@@ -23,10 +30,28 @@ Python 侧读 ``testdata/0.1.0/sut.json``，CT 侧读 ``tools/diff/sut.ct.json``
 import argparse
 import json
 import os
+import shutil
 import subprocess
 import sys
+import tempfile
 
 SPAN_KEYS = ("span",)
+
+# PH-18 的 round-trip 语料：case.json 里这些 kind 的正例，加上双宿主脚本。
+FMT_KINDS = ("ast", "check", "run", "warning", "host-ast-equal")
+
+# E-3 定向用例：长词含空格 / 含双引号 / 含单引号。
+FMT_DIRECTED = (
+    ("space-longword", "//map{\ns'my application\n}\n<write> `s`.yml\n"),
+    ("dquote-longword", "//map{\np'a\"b\n}\n<write> `p`\n"),
+    ("squote-longword", "//map{\nq'it's here\n}\n<write> `q`\n"),
+)
+
+# E-4：头写法的空格容忍。
+FMT_HEADER_TOLERANCE = (
+    ("map-header-tight", "//map{\ncfg`configuration\n}\n<read> `cfg`\n"),
+    ("map-header-space", "//map {\ncfg`configuration\n}\n<read> `cfg`\n"),
+)
 
 
 def repo_root():
@@ -101,6 +126,223 @@ def canonical(node):
     if isinstance(node, list):
         return [canonical(item) for item in node]
     return node
+
+
+def run_text(sut, root, args):
+    """``fmt`` 的 stdout 是纯文本，不是 JSON 信封。"""
+    env = dict(os.environ)
+    env.update(sut["env"])
+    try:
+        proc = subprocess.run(
+            sut["command"] + list(args),
+            cwd=root,
+            env=env,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            universal_newlines=True,
+            timeout=sut["timeout"],
+        )
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        return None, "", "无法启动 %s：%s" % (" ".join(sut["command"]), exc)
+    return proc.returncode, proc.stdout, ""
+
+
+def read_text(path):
+    with open(path, encoding="utf-8") as fh:
+        return fh.read()
+
+
+def write_text(path, text):
+    with open(path, "w", encoding="utf-8") as fh:
+        fh.write(text)
+
+
+def text_diff(py_text, ct_text):
+    if py_text == ct_text:
+        return ""
+    limit = min(len(py_text), len(ct_text))
+    index = 0
+    while index < limit and py_text[index] == ct_text[index]:
+        index += 1
+    line = py_text.count("\n", 0, index) + 1
+    col = index - (py_text.rfind("\n", 0, index) + 1) + 1
+    return "第 %d 行第 %d 列起不同：py=%r ct=%r" % (
+        line,
+        col,
+        py_text[index:index + 40],
+        ct_text[index:index + 40],
+    )
+
+
+def fmt_sources(root):
+    """71 个 round-trip 输入；规则与 ``tests/phase12`` 的 fixture 选择一致。"""
+    fixtures = os.path.join(root, "testdata", "0.1.0")
+    found = []
+    for bucket in ("positive", "host"):
+        base = os.path.join(fixtures, bucket)
+        for dirpath, dirnames, filenames in os.walk(base):
+            dirnames.sort()
+            if "source.rill" not in filenames:
+                continue
+            case_path = os.path.join(dirpath, "case.json")
+            if not os.path.isfile(case_path):
+                continue
+            try:
+                with open(case_path, encoding="utf-8") as fh:
+                    case = json.load(fh)
+            except (OSError, ValueError):
+                continue
+            if case.get("retired"):
+                continue
+            if case.get("kind") not in FMT_KINDS:
+                continue
+            rel = os.path.relpath(os.path.join(dirpath, "source.rill"), fixtures)
+            found.append(rel.replace(os.sep, "/"))
+    for dirpath, dirnames, filenames in os.walk(os.path.join(fixtures, "host")):
+        dirnames.sort()
+        if "script.rill" in filenames and "expect.json" in filenames:
+            rel = os.path.relpath(os.path.join(dirpath, "script.rill"), fixtures)
+            found.append(rel.replace(os.sep, "/"))
+    found.sort()
+    return found
+
+
+def fmt_text(sut, root, mode, path):
+    code, text, err = run_text(sut, root, ["fmt", "--" + mode, path])
+    if err:
+        return None, err
+    if code != 0:
+        return None, "退出码 %s（%s）" % (code, text.strip()[:120])
+    return text, ""
+
+
+def ast_of(sut, root, path):
+    code, payload, err = run(
+        sut, root, ["parse", "--dump-ast", path, "--profile", "shell"]
+    )
+    if err:
+        return None, err
+    if code != 0:
+        return None, "parse 退出码 %s" % code
+    if "ast" not in payload:
+        return None, "缺少 ast 字段"
+    return canonical(payload["ast"]), ""
+
+
+def fmt_pipeline(sut, root, source_path, tmpdir, tag):
+    """压缩→展示→压缩；返回三段文本与落盘路径。"""
+    compressed, err = fmt_text(sut, root, "compress", source_path)
+    if err:
+        return None, "compress: " + err
+    compress_path = os.path.join(tmpdir, tag + "-compress.rill")
+    write_text(compress_path, compressed)
+
+    displayed, err = fmt_text(sut, root, "display", compress_path)
+    if err:
+        return None, "display: " + err
+    display_path = os.path.join(tmpdir, tag + "-display.rill")
+    write_text(display_path, displayed)
+
+    recompressed, err = fmt_text(sut, root, "compress", display_path)
+    if err:
+        return None, "recompress: " + err
+    recompress_path = os.path.join(tmpdir, tag + "-recompress.rill")
+    write_text(recompress_path, recompressed)
+
+    return {
+        "text": {
+            "compress": compressed,
+            "display": displayed,
+            "recompress": recompressed,
+        },
+        "path": {
+            "compress": compress_path,
+            "display": display_path,
+            "recompress": recompress_path,
+        },
+    }, ""
+
+
+def compare_fmt_mode(mode, py_sut, ct_sut, root, source_path):
+    py_text, py_err = fmt_text(py_sut, root, mode, source_path)
+    ct_text, ct_err = fmt_text(ct_sut, root, mode, source_path)
+    if py_err or ct_err:
+        return "fmt 失败：py=%s ct=%s" % (py_err or "ok", ct_err or "ok")
+    return text_diff(py_text, ct_text)
+
+
+def compare_roundtrip(py_sut, ct_sut, root, source_path):
+    tmpdir = tempfile.mkdtemp(prefix="rill-fmt-")
+    try:
+        py_run, err = fmt_pipeline(py_sut, root, source_path, tmpdir, "py")
+        if err:
+            return "python: " + err
+        ct_run, err = fmt_pipeline(ct_sut, root, source_path, tmpdir, "ct")
+        if err:
+            return "ct: " + err
+
+        for stage in ("compress", "display", "recompress"):
+            problem = text_diff(py_run["text"][stage], ct_run["text"][stage])
+            if problem:
+                return "%s 文本不一致：%s" % (stage, problem)
+
+        py_base, err = ast_of(py_sut, root, source_path)
+        if err:
+            return "python 原 AST: " + err
+        ct_base, err = ast_of(ct_sut, root, source_path)
+        if err:
+            return "ct 原 AST: " + err
+        if py_base != ct_base:
+            return "原 AST 两侧不一致"
+
+        for stage in ("compress", "display", "recompress"):
+            for label, sut, base in (
+                ("py", py_sut, py_base),
+                ("ct", ct_sut, ct_base),
+            ):
+                tree, err = ast_of(sut, root, py_run["path"][stage])
+                if err:
+                    return "%s %s AST: %s" % (label, stage, err)
+                if tree != base:
+                    return "%s %s AST 与原文不等" % (label, stage)
+                other = ct_base if label == "py" else py_base
+                if tree != other:
+                    return "%s %s AST 与另一实现不等" % (label, stage)
+        return ""
+    finally:
+        shutil.rmtree(tmpdir, ignore_errors=True)
+
+
+def compare_header_tolerance(mode, py_sut, ct_sut, root, tmpdir):
+    """E-4：``//map{`` 与 ``//map {`` 必须产出同一文本。"""
+    texts = {}
+    for name, text in FMT_HEADER_TOLERANCE:
+        path = os.path.join(tmpdir, name + ".rill")
+        write_text(path, text)
+        if mode == "roundtrip":
+            problem = compare_roundtrip(py_sut, ct_sut, root, path)
+            if problem:
+                return "%s: %s" % (name, problem)
+            continue
+        py_text, py_err = fmt_text(py_sut, root, mode, path)
+        if py_err:
+            return "%s: python: %s" % (name, py_err)
+        ct_text, ct_err = fmt_text(ct_sut, root, mode, path)
+        if ct_err:
+            return "%s: ct: %s" % (name, ct_err)
+        problem = text_diff(py_text, ct_text)
+        if problem:
+            return "%s: %s" % (name, problem)
+        texts[name] = (py_text, ct_text)
+    if mode == "roundtrip":
+        return ""
+    tight = FMT_HEADER_TOLERANCE[0][0]
+    spaced = FMT_HEADER_TOLERANCE[1][0]
+    if texts[tight][0] != texts[spaced][0]:
+        return "Python 两种头写法输出不一致"
+    if texts[tight][1] != texts[spaced][1]:
+        return "CT 两种头写法输出不一致"
+    return ""
 
 
 def compare_ok(layer, py_payload, ct_payload):
@@ -198,9 +440,72 @@ def compare_source(layer, py_sut, ct_sut, root, source):
     return "非约定退出码 %s（仅 0/2 可比）" % py_rc, ""
 
 
+def run_fmt_layer(opts, py_sut, ct_sut, root):
+    """fmt 层：71 例语料 + E-3 定向用例 + E-4 头写法容忍。"""
+    mode = opts.mode
+    sources = fmt_sources(root)
+    print("== layer=fmt mode=%s" % mode)
+    print("   python: %s" % " ".join(py_sut["command"]))
+    print("   ct    : %s" % " ".join(ct_sut["command"]))
+
+    diffs = 0
+    for source in sources:
+        path = os.path.join(root, "testdata", "0.1.0", source)
+        if mode == "roundtrip":
+            problem = compare_roundtrip(py_sut, ct_sut, root, path)
+        else:
+            problem = compare_fmt_mode(mode, py_sut, ct_sut, root, path)
+        if problem:
+            diffs += 1
+            print("   DIFF %s: %s" % (source, problem))
+        elif opts.verbose:
+            print("   PASS %s" % source)
+    print("   corpus=%d diffs=%d" % (len(sources), diffs))
+
+    directed = 0
+    directed_diffs = 0
+    tmpdir = tempfile.mkdtemp(prefix="rill-fmt-case-")
+    try:
+        for name, text in FMT_DIRECTED:
+            directed += 1
+            path = os.path.join(tmpdir, name + ".rill")
+            write_text(path, text)
+            if mode == "roundtrip":
+                problem = compare_roundtrip(py_sut, ct_sut, root, path)
+            else:
+                problem = compare_fmt_mode(mode, py_sut, ct_sut, root, path)
+            if problem:
+                directed_diffs += 1
+                print("   DIFF directed/%s: %s" % (name, problem))
+            elif opts.verbose:
+                print("   PASS directed/%s" % name)
+
+        problem = compare_header_tolerance(mode, py_sut, ct_sut, root, tmpdir)
+    finally:
+        shutil.rmtree(tmpdir, ignore_errors=True)
+    header_diffs = 1 if problem else 0
+    if problem:
+        print("   DIFF header-tolerance: %s" % problem)
+    elif opts.verbose:
+        print("   PASS header-tolerance")
+    print(
+        "   directed=%d direct_diffs=%d headers=%d header_diffs=%d"
+        % (directed, directed_diffs, len(FMT_HEADER_TOLERANCE), header_diffs)
+    )
+
+    total = diffs + directed_diffs + header_diffs
+    print("   RESULT: %s" % ("PASS" if total == 0 else "FAIL"))
+    return total
+
+
 def main(argv):
     parser = argparse.ArgumentParser(description="Python 参考实现 vs CT 实现逐层对拍")
-    parser.add_argument("--layer", choices=("token", "ast", "error", "eval", "all"), default="token")
+    parser.add_argument(
+        "--layer",
+        choices=("token", "ast", "error", "eval", "fmt", "all"),
+        default="token",
+    )
+    parser.add_argument("--mode", choices=("compress", "display", "roundtrip"), default="compress")
     parser.add_argument("--bucket", choices=("positive", "negative", "all"), default="all")
     parser.add_argument("--python-sut", default="")
     parser.add_argument("--ct-sut", default="")
@@ -212,6 +517,12 @@ def main(argv):
     ct_path = opts.ct_sut or os.path.join(root, "tools", "diff", "sut.ct.json")
     py_sut = load_sut(py_path, root)
     ct_sut = load_sut(ct_path, root)
+
+    if opts.layer == "fmt":
+        if opts.bucket != "all":
+            print("diff.py: --layer fmt 只跑固定的 71 例语料", file=sys.stderr)
+            return 2
+        return 1 if run_fmt_layer(opts, py_sut, ct_sut, root) else 0
 
     positive, negative = discover_sources(root)
     sources = positive + negative
