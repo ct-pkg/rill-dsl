@@ -267,12 +267,19 @@ pub int cmd_run(int argc, char **argv)
     body = jget(program, "body");
     for (i = 0; i < body->len; i++) {
         out = eval_stmt(&ev, body->items[i], jnull());
+        if (out.is_break) {
+            if (out.break_target != 0 && out.break_target[0] != 0) {
+                eval_set_var(&ev, out.break_target, out.value);
+            }
+            eout_success(&out, out.value ? out.value : jnull());
+            break;
+        }
         if (!out.ok) break;
     }
 
     root = jobj();
     jput(root, "ok", jbool(out.ok));
-    jput(root, "value", out.ok && out.value ? out.value : jnull());
+    jput(root, "value", out.value ? out.value : jnull());
     jput(root, "error",
          out.ok ? jnull() : jstr(out.error ? out.error : LOAD_DEFAULT_ERROR));
     jput(root, "host_meta",

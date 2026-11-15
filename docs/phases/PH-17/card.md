@@ -32,23 +32,24 @@
 
 | 路径 | 用途 |
 | --- | --- |
-| `ct/src/eval_control.h.ct` | if/each/break 接口 |
-| `ct/src/eval_control.m.ct` | truthy、场域、each 结果数组 |
-| `ct/src/eval_parallel.h.ct` | 并行分支接口 |
-| `ct/src/eval_parallel.m.ct` | 分支三态与 `[results]` |
-| `ct/src/eval_fn.h.ct` | 函数调用接口 |
-| `ct/src/eval_fn.m.ct` | 参数绑定、默认值、返回 |
+| `ct/src/eval/eval.h.ct`（控制流分区） | if/each/break：truthy、场域、each 结果数组 |
+| `ct/src/eval/eval.h.ct`（并行分区） | 并行分支三态与 `[results]` |
+| `ct/src/eval/eval.h.ct`（函数分区） | 参数绑定、默认值、返回 |
 | `docs/reviews/diff/PH-17.md` | 本阶段差异报告 |
+
+> 路径修订（PH-17 首个实现提交前）：原卡写 `eval_control.m.ct` 等，但 `.m.ct` 是映射单元，
+> 不产产物且不能定义函数（实测 `a .m.ct unit cannot define a function`）。多单元化后求值域
+> 落在 `ct/src/eval/eval.h.ct` 一个单元内分三区，理由见 `docs/phases/pending/ct-multiunit.md` §1。
 
 ## 3. 任务清单
 
 | ID | 交付物 | 提交 | 回滚 | verify | effort | 覆盖 |
 | --- | --- | --- | --- | --- | --- | --- |
-| PH-17-T1 | `ct/src/eval_control.h.ct`、`ct/src/eval_control.m.ct`（if） | `feat(ct): PH-17-T1 if 控制流` | `git revert <sha>` | `bash tools/check-0.1.0.sh --sut './ct/bin/rill_ct' --show positive/run/control/if-subject` | S | E-2 |
-| PH-17-T2 | `ct/src/eval_control.m.ct`（each） | `feat(ct): PH-17-T2 each 遍历` | `git revert <sha>` | `bash tools/check-0.1.0.sh --sut './ct/bin/rill_ct' --show positive/run/control/each-round-failure` | M | E-3 |
-| PH-17-T3 | `ct/src/eval_control.m.ct`（break） | `feat(ct): PH-17-T3 break 场域` | `git revert <sha>` | `bash tools/check-0.1.0.sh --sut './ct/bin/rill_ct' --show positive/run/control/break-pipe` | M | E-4 |
-| PH-17-T4 | `ct/src/eval_parallel.h.ct`、`ct/src/eval_parallel.m.ct` | `feat(ct): PH-17-T4 parallel 与 results` | `git revert <sha>` | `bash tools/check-0.1.0.sh --sut './ct/bin/rill_ct' --show positive/run/parallel/three-state` | M | E-5 |
-| PH-17-T5 | `ct/src/eval_fn.h.ct`、`ct/src/eval_fn.m.ct` | `feat(ct): PH-17-T5 fn 绑定与返回` | `git revert <sha>` | `bash tools/check-0.1.0.sh --sut './ct/bin/rill_ct' --show positive/run/call/return-last` | M | E-6 |
+| PH-17-T1 | `ct/src/eval/eval.h.ct`（if） | `feat(ct): PH-17-T1 if 控制流` | `git revert <sha>` | `bash tools/check-0.1.0.sh --sut './ct/bin/rill_ct' --show positive/run/control/if-subject` | S | E-2 |
+| PH-17-T2 | `ct/src/eval/eval.h.ct`（each） | `feat(ct): PH-17-T2 each 遍历` | `git revert <sha>` | `bash tools/check-0.1.0.sh --sut './ct/bin/rill_ct' --show positive/run/control/each-round-failure` | M | E-3 |
+| PH-17-T3 | `ct/src/eval/eval.h.ct`（break） | `feat(ct): PH-17-T3 break 场域` | `git revert <sha>` | `bash tools/check-0.1.0.sh --sut './ct/bin/rill_ct' --show positive/run/control/break-pipe` | M | E-4 |
+| PH-17-T4 | `ct/src/eval/eval.h.ct`（parallel） | `feat(ct): PH-17-T4 parallel 与 results` | `git revert <sha>` | `bash tools/check-0.1.0.sh --sut './ct/bin/rill_ct' --show positive/run/parallel/three-state` | M | E-5 |
+| PH-17-T5 | `ct/src/eval/eval.h.ct`（fn） | `feat(ct): PH-17-T5 fn 绑定与返回` | `git revert <sha>` | `bash tools/check-0.1.0.sh --sut './ct/bin/rill_ct' --show positive/run/call/return-last` | M | E-6 |
 | PH-17-T6 | `docs/reviews/diff/PH-17.md` | `docs(diff): PH-17-T6 控制流差异报告` | `git revert <sha>` | `python3 tools/diff/diff.py --layer eval` | S | E-1,E-7,E-8 |
 
 ## 4. 退出判据（exit-criteria）

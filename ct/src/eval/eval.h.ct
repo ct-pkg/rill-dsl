@@ -26,6 +26,8 @@ pub struct EOut {
     JVal *value;
     const char *error;
     JVal *meta;
+    int is_break;
+    const char *break_target;
 };
 
 pub struct EVar {
@@ -46,6 +48,8 @@ pub void eout_success(EOut *o, JVal *v)
     o->value = v;
     o->error = 0;
     o->meta = 0;
+    o->is_break = 0;
+    o->break_target = 0;
 }
 
 pub void eout_failure(EOut *o, const char *e)
@@ -54,6 +58,20 @@ pub void eout_failure(EOut *o, const char *e)
     o->value = 0;
     o->error = e;
     o->meta = 0;
+    o->is_break = 0;
+    o->break_target = 0;
+}
+
+/* §4.15：break 在 C 里没有异常可用；用 EOut 上的 is_break 逐层早退，
+   由 program / 管道场域 / each / parallel / fn 各自决定在哪一层截住。 */
+pub void eout_break(EOut *o, JVal *v, const char *target)
+{
+    o->ok = 1;
+    o->value = v;
+    o->error = 0;
+    o->meta = 0;
+    o->is_break = 1;
+    o->break_target = target;
 }
 
 /* 只读的伪宿主 JSON（fakes 目录）。标准 JSON 子集：对象/数组/字符串/
@@ -284,17 +302,49 @@ static JVal *eval_value(Eval *ev, JVal *node, JVal *dollar)
 }
 
 static EOut run_block(Eval *ev, JVal *block, JVal *dollar, int last_value);
+static EOut eval_stmt_core(Eval *ev, JVal *stmt, JVal *dollar);
+static EOut eval_call_outcome(Eval *ev, JVal *call, JVal *dollar);
+static EOut eval_expr_outcome(Eval *ev, JVal *node, JVal *dollar);
+static EOut apply_tail(Eval *ev, JVal *tail, EOut out);
 pub EOut eval_stmt(Eval *ev, JVal *stmt, JVal *dollar);
+
+/* §4.12：truthy 与 [ok] 的 ok 是两条通道，空串成功仍是 truthy=false。 */
+static int truthy(JVal *v)
+{
+    if (v == 0 || v->kind == J_NULL) return 0;
+    if (v->kind == J_BOOL) return v->boolean;
+    if (v->kind == J_INT) return v->num != 0;
+    if (v->kind == J_STR) return v->str != 0 && v->str[0] != 0;
+    if (v->kind == J_ARR || v->kind == J_OBJ) return v->len > 0;
+    return 1;
+}
+
+/* §4.10：未写 [error] 时失败默认收口为规范串，host_meta 继续透传。 */
+static EOut unhandled(EOut cause)
+{
+    EOut o;
+    eout_failure(&o, LOAD_DEFAULT_ERROR);
+    o.meta = cause.meta;
+    return o;
+}
+
+/* break 值作错误串时只认字符串；0.1.0 的 fixture 里 break 值都是串。 */
+static const char *break_error(JVal *v)
+{
+    return (v != 0 && v->kind == J_STR) ? v->str : 0;
+}
 
 static EOut apply_tail(Eval *ev, JVal *tail, EOut out)
 {
     JVal *cur;
     EOut failure;
-    int failed = !out.ok;
+    int failed;
     JVal *ok_block = 0;
     JVal *error_block = 0;
     int i;
 
+    if (out.is_break) return out;
+    failed = !out.ok;
     cur = out.ok ? out.value : jstr(out.error ? out.error : LOAD_DEFAULT_ERROR);
     failure = out;
     for (i = 0; i < tail->len; i++) {
@@ -306,6 +356,7 @@ static EOut apply_tail(Eval *ev, JVal *tail, EOut out)
             EOut bo;
             if (failed) continue;
             bo = run_block(ev, jget(item, "body"), cur, 0);
+            if (bo.is_break) return bo;
             if (!bo.ok) {
                 failure = bo;
                 failed = 1;
@@ -321,31 +372,32 @@ static EOut apply_tail(Eval *ev, JVal *tail, EOut out)
     if (!failed) {
         if (ok_block != 0) {
             EOut bo = run_block(ev, jget(ok_block, "body"), out.value, 0);
-            if (!bo.ok) {
-                EOut u;
-                eout_failure(&u, LOAD_DEFAULT_ERROR);
-                return u;
-            }
+            if (bo.is_break) return bo;
+            if (!bo.ok) return unhandled(bo);
             cur = bo.value;
         }
-        eout_success(&out, cur);
-        return out;
+        {
+            EOut o;
+            eout_success(&o, cur);
+            o.meta = out.meta;
+            return o;
+        }
     }
     {
         const char *err = failure.error ? failure.error : LOAD_DEFAULT_ERROR;
         if (error_block != 0) {
             EOut bo = run_block(ev, jget(error_block, "body"), jstr(err), 0);
-            if (!bo.ok) {
-                EOut u;
-                eout_failure(&u, LOAD_DEFAULT_ERROR);
-                return u;
+            if (bo.is_break) return bo;
+            if (!bo.ok) return unhandled(bo);
+            {
+                EOut o;
+                eout_success(&o, bo.value);
+                o.meta = bo.meta ? bo.meta : failure.meta;
+                return o;
             }
-            eout_success(&out, bo.value);
-            return out;
         }
     }
-    eout_failure(&out, LOAD_DEFAULT_ERROR);
-    return out;
+    return unhandled(failure);
 }
 
 static EOut run_block(Eval *ev, JVal *block, JVal *dollar, int last_value)
@@ -358,7 +410,7 @@ static EOut run_block(Eval *ev, JVal *block, JVal *dollar, int last_value)
     eout_success(&out, dollar ? dollar : jnull());
     for (i = 0; i < body->len; i++) {
         out = eval_stmt(ev, body->items[i], dollar);
-        if (!out.ok) {
+        if (out.is_break || !out.ok) {
             ev->vars = saved;
             return out;
         }
@@ -369,159 +421,398 @@ static EOut run_block(Eval *ev, JVal *block, JVal *dollar, int last_value)
     return out;
 }
 
-pub EOut eval_stmt(Eval *ev, JVal *stmt, JVal *dollar)
+/* 动词调用：fake 队列 / default；语句位与条件位共用这一份。 */
+static EOut eval_call_outcome(Eval *ev, JVal *call, JVal *dollar)
 {
+    const char *verb = jget_str(call, "verb");
+    JVal *spec = jget(ev->tools, verb);
+    JVal *queue;
+    JVal *entry = 0;
     EOut out;
-    const char *kind = jget_str(stmt, "kind");
+    int okv = 1;
+    JVal *okb;
+    int i;
 
+    (void)dollar;
     eout_success(&out, jnull());
-    if (strcmp(kind, "SimpleStmt") == 0) {
-        JVal *call = jget(stmt, "call");
-        const char *verb = jget_str(call, "verb");
-        JVal *spec = jget(ev->tools, verb);
-        JVal *queue;
-        JVal *entry = 0;
-        int okv = 1;
-        JVal *okb;
-        JVal *post = jget(call, "post");
-        int i;
+    if (spec == 0) {
+        fail("run", "E-RUN-VERB-UNREGISTERED", 0, 0,
+             "fake 动词 '%s' 未注册", verb);
+    }
+    queue = jget(spec, "queue");
+    if (queue != 0 && queue->kind == J_ARR && queue->len > 0) {
+        entry = queue->items[0];
+        for (i = 0; i < queue->len - 1; i++) {
+            queue->items[i] = queue->items[i + 1];
+        }
+        queue->len--;
+    } else {
+        entry = jget(spec, "default");
+        if (entry == 0 || entry->kind == J_NULL) {
+            eout_failure(&out, "fake 动词没有排队结果且无 default");
+            return out;
+        }
+    }
+    okb = jget(entry, "ok");
+    if (okb != 0 && okb->kind == J_BOOL) okv = okb->boolean;
+    if (okv) {
+        eout_success(&out, jget(entry, "value"));
+        out.meta = jget(entry, "host_meta");
+    } else {
+        const char *err = jget_str(entry, "error");
+        eout_failure(&out, (err && *err) ? err : LOAD_DEFAULT_ERROR);
+        out.meta = jget(entry, "host_meta");
+    }
+    return out;
+}
 
-        if (spec == 0) {
-            fail("run", "E-RUN-VERB-UNREGISTERED", 0, 0,
-                 "fake 动词 '%s' 未注册", verb);
-        }
-        queue = jget(spec, "queue");
-        if (queue != 0 && queue->kind == J_ARR && queue->len > 0) {
-            entry = queue->items[0];
-            for (i = 0; i < queue->len - 1; i++) {
-                queue->items[i] = queue->items[i + 1];
-            }
-            queue->len--;
-        } else {
-            entry = jget(spec, "default");
-            if (entry == 0 || entry->kind == J_NULL) {
-                eout_failure(&out, "fake 动词没有排队结果且无 default");
-                return apply_tail(ev, jget(stmt, "tail"), out);
-            }
-        }
-        okb = jget(entry, "ok");
-        if (okb != 0 && okb->kind == J_BOOL) okv = okb->boolean;
-        if (okv) {
-            eout_success(&out, jget(entry, "value"));
-            out.meta = jget(entry, "host_meta");
-        } else {
-            const char *err = jget_str(entry, "error");
-            eout_failure(&out, (err && *err) ? err : LOAD_DEFAULT_ERROR);
-            out.meta = jget(entry, "host_meta");
-        }
-        (void)post;
-    } else if (strcmp(kind, "CallStmt") == 0) {
-        const char *name = jget_str(stmt, "name");
-        JVal *args = jget(stmt, "args");
-        JVal *def = 0;
-        JVal *headers = jget(ev->program, "headers");
-        JVal *body;
-        char *pname[64];
-        JVal *pdef[64];
-        JVal *bind[64];
-        JVal *stack[512];
-        EVar *saved;
-        int np = 0;
-        int sp = 0;
-        int na;
-        int i;
+/* §4.12：expr 位的 |> 是只传 value 的管道，没有尾随块。 */
+static EOut eval_pipe_expr(Eval *ev, JVal *pipe, JVal *dollar)
+{
+    JVal *stages = jget(pipe, "stages");
+    JVal *value = dollar;
+    EOut out;
+    int i;
 
-        for (i = 0; i < headers->len; i++) {
-            JVal *header = headers->items[i];
-            JVal *defs;
-            int d;
-            if (strcmp(jget_str(header, "kind"), "FnBlock") != 0) continue;
-            defs = jget(header, "defs");
-            for (d = 0; d < defs->len; d++) {
-                JVal *cand = defs->items[d];
-                if (strcmp(jget_str(cand, "name"), name) == 0) {
-                    def = cand;
+    eout_success(&out, dollar ? dollar : jnull());
+    for (i = 0; i < stages->len; i++) {
+        out = eval_call_outcome(ev, stages->items[i], value);
+        if (out.is_break || !out.ok) return out;
+        value = out.value;
+    }
+    return out;
+}
+
+/* §4.12：条件就是 expr（值 / 动词调用 / 管道），统一归约成 {value, ok}。 */
+static EOut eval_expr_outcome(Eval *ev, JVal *node, JVal *dollar)
+{
+    const char *kind;
+    EOut out;
+
+    if (node == 0) {
+        eout_success(&out, jnull());
+        return out;
+    }
+    kind = jget_str(node, "kind");
+    if (strcmp(kind, "VerbCall") == 0) {
+        return eval_call_outcome(ev, node, dollar);
+    }
+    if (strcmp(kind, "Pipe") == 0) return eval_pipe_expr(ev, node, dollar);
+    eout_success(&out, eval_value(ev, node, dollar));
+    return out;
+}
+
+/* §4.12：if 是纯条件判断，不挂尾随块、不参与管道。 */
+static EOut eval_if_stmt(Eval *ev, JVal *stmt, JVal *dollar)
+{
+    JVal *branches = jget(stmt, "branches");
+    JVal *else_body = jget(stmt, "else_body");
+    EOut out;
+    int i;
+
+    for (i = 0; i < branches->len; i++) {
+        JVal *br = branches->items[i];
+        EOut cond = eval_expr_outcome(ev, jget(br, "condition"), dollar);
+        if (!cond.ok) return cond;
+        if (truthy(cond.value)) {
+            return run_block(ev, jget(br, "body"), dollar, 0);
+        }
+    }
+    if (else_body != 0 && else_body->kind != J_NULL) {
+        return run_block(ev, else_body, dollar, 0);
+    }
+    eout_success(&out, dollar ? dollar : jnull());
+    return out;
+}
+
+/* §4.13：null → error 且 0 轮；数组逐项；其他非数组单元素一次。
+   失败轮占 null 并继续，each 级 [ok]/[error] 复用 apply_tail。 */
+static EOut eval_each_stmt(Eval *ev, JVal *stmt, JVal *dollar)
+{
+    const char *var = jget_str(stmt, "var");
+    JVal *tail = jget(stmt, "tail");
+    JVal *body = jget(stmt, "body");
+    EOut src = eval_expr_outcome(ev, jget(stmt, "source"), dollar);
+    JVal *values;
+    const char *first_error = 0;
+    EVar *saved = ev->vars;
+    JVal *items = 0;
+    int i;
+    int n;
+
+    if (!src.ok) return apply_tail(ev, tail, src);
+    if (src.value == 0 || src.value->kind == J_NULL) {
+        EOut f;
+        eout_failure(&f, 0);
+        return apply_tail(ev, tail, f);
+    }
+    values = jarr();
+    if (src.value->kind == J_ARR) {
+        items = src.value;
+        n = items->len;
+    } else {
+        n = 1;
+    }
+    for (i = 0; i < n; i++) {
+        JVal *item = items ? items->items[i] : src.value;
+        EOut round;
+        ev->vars = saved;
+        var_lookup(ev, var, item, 1);
+        round = run_block(ev, body, item, 1);
+        if (round.is_break) {
+            ev->vars = saved;
+            if (round.break_target != 0 && round.break_target[0] != 0) {
+                var_lookup(ev, round.break_target, round.value, 1);
+            }
+            jpush(values, jnull());
+            break;
+        }
+        if (round.ok) {
+            jpush(values, round.value);
+        } else {
+            jpush(values, jnull());
+            if (first_error == 0) first_error = round.error;
+        }
+    }
+    ev->vars = saved;
+    {
+        EOut base;
+        if (first_error == 0) {
+            eout_success(&base, values);
+        } else {
+            eout_failure(&base, first_error);
+            base.value = values;
+        }
+        return apply_tail(ev, tail, base);
+    }
+}
+
+/* §4.14：分支按源序串行模拟；$ 是进入分支的当前值，不是最终数组。 */
+static EOut eval_parallel_stmt(Eval *ev, JVal *stmt, JVal *dollar)
+{
+    JVal *branches = jget(stmt, "branches");
+    JVal *results = jget(stmt, "results");
+    JVal *values = jarr();
+    const char *first_error = 0;
+    EOut base;
+    int i;
+
+    for (i = 0; i < branches->len; i++) {
+        EVar *saved = ev->vars;
+        EOut br = eval_stmt(ev, branches->items[i], dollar);
+        ev->vars = saved;
+        if (br.is_break) {
+            JVal *bv = br.value;
+            const char *bt = br.break_target;
+            if (bt != 0 && bt[0] != 0) var_lookup(ev, bt, bv, 1);
+            eout_failure(&br, break_error(bv));
+        }
+        if (br.ok) {
+            jpush(values, br.value);
+        } else {
+            jpush(values, jnull());
+            if (first_error == 0) first_error = br.error;
+        }
+    }
+    if (first_error == 0) {
+        eout_success(&base, values);
+    } else {
+        eout_failure(&base, first_error);
+        base.value = values;
+    }
+    if (results != 0 && results->kind != J_NULL) {
+        EOut bo = run_block(ev, results, values, 0);
+        JVal *block_dollar = values;
+        if (bo.is_break) {
+            JVal *bv = bo.value;
+            const char *bt = bo.break_target;
+            if (bt != 0 && bt[0] != 0) var_lookup(ev, bt, bv, 1);
+            eout_failure(&bo, break_error(bv));
+        } else if (bo.ok) {
+            block_dollar = bo.value;
+        }
+        if (!bo.ok) return bo;
+        base.value = block_dollar;
+    }
+    return base;
+}
+
+/* §4.18：模板参数首次出现去重；默认值只在缺实参时于调用方作用域求值。 */
+static EOut eval_fn_call(Eval *ev, JVal *stmt, JVal *dollar)
+{
+    const char *name = jget_str(stmt, "name");
+    JVal *args = jget(stmt, "args");
+    JVal *def = 0;
+    JVal *headers = jget(ev->program, "headers");
+    JVal *body;
+    char *pname[64];
+    JVal *pdef[64];
+    JVal *bind[64];
+    JVal *stack[512];
+    EVar *saved;
+    EOut out;
+    int np = 0;
+    int sp = 0;
+    int na;
+    int i;
+
+    for (i = 0; i < headers->len; i++) {
+        JVal *header = headers->items[i];
+        JVal *defs;
+        int d;
+        if (strcmp(jget_str(header, "kind"), "FnBlock") != 0) continue;
+        defs = jget(header, "defs");
+        for (d = 0; d < defs->len; d++) {
+            JVal *cand = defs->items[d];
+            if (strcmp(jget_str(cand, "name"), name) == 0) {
+                def = cand;
+                break;
+            }
+        }
+        if (def != 0) break;
+    }
+    if (def == 0) {
+        fail("run", "E-RUN-FN-UNDECLARED", 0, 0, "未声明的函数 '%s'", name);
+    }
+    stack[sp++] = jget(def, "template");
+    while (sp > 0) {
+        JVal *n = stack[--sp];
+        const char *nk;
+        int k;
+        if (n == 0) continue;
+        if (n->kind == J_ARR) {
+            for (k = n->len - 1; k >= 0; k--) {
+                if (sp < 512) stack[sp++] = n->items[k];
+            }
+            continue;
+        }
+        if (n->kind != J_OBJ) continue;
+        nk = jget_str(n, "kind");
+        if (strcmp(nk, "Variable") == 0 || strcmp(nk, "Default") == 0) {
+            const char *pn = jget_str(n, "name");
+            int idx = -1;
+            for (k = 0; k < np; k++) {
+                if (strcmp(pname[k], pn) == 0) {
+                    idx = k;
                     break;
                 }
             }
-            if (def != 0) break;
-        }
-        if (def == 0) {
-            fail("run", "E-RUN-FN-UNDECLARED", 0, 0, "未声明的函数 '%s'", name);
-        }
-        stack[sp++] = jget(def, "template");
-        while (sp > 0) {
-            JVal *n = stack[--sp];
-            const char *nk;
-            int k;
-            if (n == 0) continue;
-            if (n->kind == J_ARR) {
-                for (k = n->len - 1; k >= 0; k--) {
-                    if (sp < 512) stack[sp++] = n->items[k];
-                }
-                continue;
+            if (idx < 0 && np < 64) {
+                idx = np;
+                pname[np] = xstrdup(pn);
+                pdef[np] = 0;
+                np++;
             }
-            if (n->kind != J_OBJ) continue;
-            nk = jget_str(n, "kind");
-            if (strcmp(nk, "Variable") == 0 ||
-                strcmp(nk, "Default") == 0) {
-                const char *pn = jget_str(n, "name");
-                int idx = -1;
-                for (k = 0; k < np; k++) {
-                    if (strcmp(pname[k], pn) == 0) {
-                        idx = k;
-                        break;
-                    }
-                }
-                if (idx < 0 && np < 64) {
-                    idx = np;
-                    pname[np] = xstrdup(pn);
-                    pdef[np] = 0;
-                    np++;
-                }
-                if (strcmp(nk, "Default") == 0 && idx >= 0 &&
-                    pdef[idx] == 0) {
-                    pdef[idx] = jget(n, "value");
-                }
-            } else {
-                for (k = n->len - 1; k >= 0; k--) {
-                    if (strcmp(n->keys[k], "kind") == 0) continue;
-                    if (sp < 512) stack[sp++] = n->items[k];
-                }
+            if (strcmp(nk, "Default") == 0 && idx >= 0 && pdef[idx] == 0) {
+                pdef[idx] = jget(n, "value");
+            }
+        } else {
+            for (k = n->len - 1; k >= 0; k--) {
+                if (strcmp(n->keys[k], "kind") == 0) continue;
+                if (sp < 512) stack[sp++] = n->items[k];
             }
         }
-        na = args->len;
-        if (na > np) {
+    }
+    na = args->len;
+    if (na > np) {
+        fail("run", "E-RUN-FN-ARITY", 0, 0,
+             "函数 '%s' 需要 %d 个实参，实际 %d 个", name, np, na);
+    }
+    for (i = 0; i < na; i++) {
+        bind[i] = eval_value(ev, args->items[i], dollar);
+    }
+    for (; i < np; i++) {
+        if (pdef[i] == 0) {
             fail("run", "E-RUN-FN-ARITY", 0, 0,
                  "函数 '%s' 需要 %d 个实参，实际 %d 个", name, np, na);
         }
-        for (i = 0; i < na; i++) {
-            bind[i] = eval_value(ev, args->items[i], dollar);
-        }
-        for (; i < np; i++) {
-            if (pdef[i] == 0) {
-                fail("run", "E-RUN-FN-ARITY", 0, 0,
-                     "函数 '%s' 需要 %d 个实参，实际 %d 个", name, np, na);
-            }
-            bind[i] = eval_value(ev, pdef[i], dollar);
-        }
-        saved = ev->vars;
-        for (i = 0; i < np; i++) var_lookup(ev, pname[i], bind[i], 1);
-        body = jget(jget(def, "body"), "body");
-        if (body->len == 0) {
-            eout_success(&out, jnull());
-        } else {
-            out = run_block(ev, jget(def, "body"), dollar, 1);
-            if (out.ok) eout_success(&out, out.value);
-        }
+        bind[i] = eval_value(ev, pdef[i], dollar);
+    }
+    saved = ev->vars;
+    for (i = 0; i < np; i++) var_lookup(ev, pname[i], bind[i], 1);
+    body = jget(jget(def, "body"), "body");
+    if (body->len == 0) {
+        eout_success(&out, jnull());
         ev->vars = saved;
     } else {
-        fail("run", "E-RUN-UNSUPPORTED", 0, 0, "暂不支持的语句 %s", kind);
-    }
-    out = apply_tail(ev, jget(stmt, "tail"), out);
-    if (out.ok && jget(stmt, "pipe") != 0 &&
-        jget(stmt, "pipe")->kind != J_NULL) {
-        out = eval_stmt(ev, jget(stmt, "pipe"), out.value ? out.value : jnull());
+        out = run_block(ev, jget(def, "body"), dollar, 1);
+        ev->vars = saved;
+        if (out.is_break) {
+            JVal *bv = out.value;
+            const char *bt = out.break_target;
+            if (bt != 0 && bt[0] != 0) var_lookup(ev, bt, bv, 1);
+            eout_failure(&out, break_error(bv));
+        } else if (out.ok) {
+            eout_success(&out, out.value);
+        }
     }
     return out;
+}
+
+static EOut eval_break_stmt(Eval *ev, JVal *stmt, JVal *dollar)
+{
+    JVal *node = jget(stmt, "value");
+    const char *target = jget_str(stmt, "target");
+    JVal *v = (node != 0 && node->kind != J_NULL)
+                  ? eval_value(ev, node, dollar)
+                  : jnull();
+    EOut out;
+    eout_break(&out, v, (target != 0 && target[0] != 0) ? target : 0);
+    return out;
+}
+
+static EOut eval_stmt_core(Eval *ev, JVal *stmt, JVal *dollar)
+{
+    const char *kind = jget_str(stmt, "kind");
+    JVal *pipe = jget(stmt, "pipe");
+    EOut out;
+
+    if (strcmp(kind, "SimpleStmt") == 0) {
+        out = eval_call_outcome(ev, jget(stmt, "call"), dollar);
+        if (!out.is_break) out = apply_tail(ev, jget(stmt, "tail"), out);
+    } else if (strcmp(kind, "CallStmt") == 0) {
+        out = eval_fn_call(ev, stmt, dollar);
+        if (!out.is_break) out = apply_tail(ev, jget(stmt, "tail"), out);
+    } else if (strcmp(kind, "IfStmt") == 0) {
+        out = eval_if_stmt(ev, stmt, dollar);
+    } else if (strcmp(kind, "EachStmt") == 0) {
+        out = eval_each_stmt(ev, stmt, dollar);
+    } else if (strcmp(kind, "ParallelStmt") == 0) {
+        out = eval_parallel_stmt(ev, stmt, dollar);
+    } else if (strcmp(kind, "BreakStmt") == 0) {
+        return eval_break_stmt(ev, stmt, dollar);
+    } else {
+        eout_success(&out, jnull());
+        fail("run", "E-RUN-UNSUPPORTED", 0, 0, "暂不支持的语句 %s", kind);
+    }
+    if (!out.is_break && out.ok && pipe != 0 && pipe->kind != J_NULL) {
+        out = eval_stmt_core(ev, pipe, out.value ? out.value : jnull());
+    }
+    return out;
+}
+
+/* §4.15：带 |> 的 simple_stmt / call_stmt / parallel 自成管道场域，
+   break 只中断该管道并把 break 值作为语句结果。 */
+pub EOut eval_stmt(Eval *ev, JVal *stmt, JVal *dollar)
+{
+    const char *kind = jget_str(stmt, "kind");
+    JVal *pipe = jget(stmt, "pipe");
+    EOut out = eval_stmt_core(ev, stmt, dollar);
+
+    if (out.is_break && pipe != 0 && pipe->kind != J_NULL &&
+        (strcmp(kind, "SimpleStmt") == 0 || strcmp(kind, "CallStmt") == 0 ||
+         strcmp(kind, "ParallelStmt") == 0)) {
+        JVal *v = out.value;
+        if (out.break_target != 0 && out.break_target[0] != 0) {
+            var_lookup(ev, out.break_target, v, 1);
+        }
+        eout_success(&out, v);
+    }
+    return out;
+}
+
+/* 供 CLI 在 program 层把 break 的目标变量写回（§4.15 顶层 break）。 */
+pub void eval_set_var(Eval *ev, const char *name, JVal *value)
+{
+    var_lookup(ev, name, value, 1);
 }

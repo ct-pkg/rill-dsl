@@ -174,7 +174,7 @@ def args_for(layer, root, source):
     if layer == "error":
         return ["check", source, "--profile", "shell"]
     if layer == "eval":
-        profile, fakes = case_opts(root, source)
+        profile, fakes = case_opts(root, os.path.dirname(source))
         return ["run", source, "--profile", profile, "--fakes", fakes]
     return ["parse", "--dump-ast", source, "--profile", "shell"]
 
@@ -234,6 +234,8 @@ def main(argv):
                 "positive/run/into/",
                 "positive/run/pipe/",
                 "positive/run/call/",
+                "positive/run/control/",
+                "positive/run/parallel/",
             )
             layer_sources = [s for s in positive if s.startswith(prefixes)]
         else:
