@@ -1,6 +1,8 @@
 # RILL 解析期缺陷登记：`$"..."` 与「引号串在前」的相邻拼接
 
-> 状态：open（PD-2 已裁定 A／修实现，尚未动代码）。2026-11-15 由 `examples/tour/` 样例集发现并单独记账。
+> 状态：closed（2026-11-15，PH-22-T5 落地）。PD-1 修 CT、PD-2 按 A 案修 CT；
+> Python 参考实现保持冻结，PD-2 的两侧分歧按 `expected_diff` 登记。
+> 2026-11-15 由 `examples/tour/` 样例集发现并单独记账。
 > 复现基线：`ct/bin/rill`（当日主干构建）与 `PYTHONPATH=src python3 -m rill`。
 > 样例侧处理：`examples/README.md` §4 已说明样例一律不使用这两种写法。
 > 本文件不动 `ct/src`、不改 golden、不改判据。
@@ -161,3 +163,16 @@ PD-1 的根因就是 `p_raw_len`（parser）与 `f_raw_width`（formatter）对�
 - 两条共用一次宽度口径改造，修的时候不得只改其中一侧或其中一种 token。
 - 修完要带 fixture + 对拍证据（PD-2 的新增分歧按 `expected_diff` 登记）；未修完不得写成通过。
 - 发现位置：`examples/tour/` 01–16 编写过程（提交 `c1b3e43`、`c744c79`、`c812a92`）。
+
+## 4. 落地（PH-22-T5，2026-11-15）
+
+| 项 | 落点 | 证据 |
+| --- | --- | --- |
+| 唯一宽度来源 | `ct/src/lexer/lexer.h.ct` 的 `Token.raw_len`；`p_adjacent` 与 `f_raw_width` 只读它 | `docs/reviews/diff/PH-22.md` §3 |
+| PD-1 `$"-x"` | `testdata/0.1.0/directed/pd1/source.ri` | ast / error / eval 三层 0 差异 |
+| PD-2 `"n="$v` | `testdata/0.1.0/directed/pd2/source.ri` + `case.json#expected_diff` | CT 解析成功；Python 冻结在 `E-PARSE-UNEXPECTED@2:12`，计入 `expected` 不计 `diffs` |
+| 精确匹配 | `tools/diff/diff.py` 的 `expected_diff_hit`：用例 + 层 + 两侧摘要，摘要不符按失败处理 | 无通配豁免 |
+
+配套正例：`"n="$v`、`"a "$v" b"`、单引号同类、双引号内含 `\"`/`\\` 由 `directed/pd2`
+与 `examples/phase22` 覆盖；PD-1 的 `$"..."` 在管道内为非空字符串（`directed/pd1`）。
+
