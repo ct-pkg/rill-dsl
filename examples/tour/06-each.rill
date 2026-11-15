@@ -1,0 +1,8 @@
+// each 遍历数组：三轮各取一次 read，[ok] 里 $ 是按源序的结果数组。
+// break $ 把数组作为程序 value 收口，这样在 payload 里能直接看到收集结果。
+// search / read 由 --fakes 的测试传输应答，见 fakes/each.json。
+each $f [in] <search> '*.txt' (data) {
+    <read> $f
+} [ok] {
+    break $
+}

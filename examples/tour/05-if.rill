@@ -1,0 +1,10 @@
+// 条件就是 expr：这里用文件内容当 truthy / falsy 的输入。
+<read> data/empty.txt -> $empty
+<read> data/greeting.txt -> $text
+if $empty {
+    <send> '空文件是 truthy' [to] user
+} else-if $text {
+    <send> '空文件 falsy，非空文件 truthy' [to] user
+} else {
+    <send> '两个都是 falsy' [to] user
+}

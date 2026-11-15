@@ -1,0 +1,6 @@
+// break 在 [error] 里收口整个程序：payload 的 value 就是 break 带的字符串。
+<read> data/missing.txt [error] {
+    <send> '读取失败，用 break 收口' [to] user
+    break 'fallback'
+}
+<send> '这一句不会执行' [to] user

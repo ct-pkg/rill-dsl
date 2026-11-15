@@ -1,0 +1,15 @@
+{
+  "schema": "rill-fakes-tools/0",
+  "description": "each 样例：search 给三项，read 依次返回 A / B / C。",
+  "tools": {
+    "search": {"queue": [], "default": {"ok": true, "value": ["a", "b", "c"]}},
+    "read": {
+      "queue": [
+        {"ok": true, "value": "A"},
+        {"ok": true, "value": "B"},
+        {"ok": true, "value": "C"}
+      ],
+      "default": {"ok": false, "error": "E_FAKE_EXHAUSTED"}
+    }
+  }
+}

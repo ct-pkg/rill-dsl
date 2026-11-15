@@ -1,0 +1,10 @@
+// parallel 三个分支，三种状态都在：
+//   1 成功；2 未处理失败（结果位 null）；3 失败但分支内 [error] 处理（结果位是处理后 value）。
+// 失败用 env 缺失而不是读文件，错误串里不带本机路径。
+parallel {
+    <read> data/one.txt
+    <env> RILL_TOUR_MISSING_A
+    <env> RILL_TOUR_MISSING_B [error] { <send> 'branch-3 已处理' [to] user }
+} [results] {
+    <send> $ [to] user
+}
