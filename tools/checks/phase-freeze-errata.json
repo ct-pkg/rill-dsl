@@ -17,6 +17,86 @@
       },
       "date": "2026-11-15",
       "reason": "T5 verify 原用 --bucket negative --kind error，会连带选中 negative/load/** 7 条（PH-15）导致整体退出 1；改为 9 个 --case 精确过滤，判据 E-3 实质不变。"
+    },
+    {
+      "id": "PH-17-T1-path",
+      "phase": "PH-17",
+      "file": "docs/phases/PH-17/card.md",
+      "section": "任务清单",
+      "line": 48,
+      "old_sha256": "2232f4754e015f22bd71f2ea85ed68eab5406ee539e0b89dcf219f164f0106fe",
+      "new_sha256": "cf8900c51e1af6bf8ec8dc4212a268f5ea4e4c3e3d5b7acdd3d93b3a75573a19",
+      "closeout": {
+        "file": "docs/reviews/closeout-17.md",
+        "section": "5. 与卡面偏差",
+        "must_contain": "eval_control.m.ct"
+      },
+      "date": "2026-11-15",
+      "reason": "PH-17 走路线乙后求值域落在 ct/src/eval/eval.h.ct 单元内分区；原 .m.ct 是映射单元、不能定义函数。只改交付物路径，verify 与 E-1..E-8 不变。"
+    },
+    {
+      "id": "PH-17-T2-path",
+      "phase": "PH-17",
+      "file": "docs/phases/PH-17/card.md",
+      "section": "任务清单",
+      "line": 49,
+      "old_sha256": "349d977b99b86d91e7fb620ad6f65abfb0e5837e11afc5e549702fdbb3a907ed",
+      "new_sha256": "669df601f3eeb4a054a040dfcd759c76442b599cbe7226433723ec9ae3f21371",
+      "closeout": {
+        "file": "docs/reviews/closeout-17.md",
+        "section": "5. 与卡面偏差",
+        "must_contain": "eval_control.m.ct"
+      },
+      "date": "2026-11-15",
+      "reason": "PH-17 走路线乙后求值域落在 ct/src/eval/eval.h.ct 单元内分区；原 .m.ct 是映射单元、不能定义函数。只改交付物路径，verify 与 E-1..E-8 不变。"
+    },
+    {
+      "id": "PH-17-T3-path",
+      "phase": "PH-17",
+      "file": "docs/phases/PH-17/card.md",
+      "section": "任务清单",
+      "line": 50,
+      "old_sha256": "325cb1f5d6a0821ff5d976353e0335c696d6eeab72836576b70025340d50f0af",
+      "new_sha256": "dd4411ca8e78aa191fc3949ef7209b21b4bf4a27906586097493c22cca7f4178",
+      "closeout": {
+        "file": "docs/reviews/closeout-17.md",
+        "section": "5. 与卡面偏差",
+        "must_contain": "eval_control.m.ct"
+      },
+      "date": "2026-11-15",
+      "reason": "PH-17 走路线乙后求值域落在 ct/src/eval/eval.h.ct 单元内分区；原 .m.ct 是映射单元、不能定义函数。只改交付物路径，verify 与 E-1..E-8 不变。"
+    },
+    {
+      "id": "PH-17-T4-path",
+      "phase": "PH-17",
+      "file": "docs/phases/PH-17/card.md",
+      "section": "任务清单",
+      "line": 51,
+      "old_sha256": "ed36a8a71a246cf04bdb44c317cd77a2e626ddf2d8b47f6d7d39e026188453d4",
+      "new_sha256": "47f9466d40d484d26f241f83fd6dfbaed5b3ff9f0054a7cd8b43434a6b8802a0",
+      "closeout": {
+        "file": "docs/reviews/closeout-17.md",
+        "section": "5. 与卡面偏差",
+        "must_contain": "eval_control.m.ct"
+      },
+      "date": "2026-11-15",
+      "reason": "PH-17 走路线乙后求值域落在 ct/src/eval/eval.h.ct 单元内分区；原 .m.ct 是映射单元、不能定义函数。只改交付物路径，verify 与 E-1..E-8 不变。"
+    },
+    {
+      "id": "PH-17-T5-path",
+      "phase": "PH-17",
+      "file": "docs/phases/PH-17/card.md",
+      "section": "任务清单",
+      "line": 52,
+      "old_sha256": "d1f7fa0d78368d2aa56695a85a64205337b34271e3481673aa2521889aca051a",
+      "new_sha256": "33eb4192078efb100d3fe67076031fba5f4ba9c96e891ec67908787b9f718dcc",
+      "closeout": {
+        "file": "docs/reviews/closeout-17.md",
+        "section": "5. 与卡面偏差",
+        "must_contain": "eval_control.m.ct"
+      },
+      "date": "2026-11-15",
+      "reason": "PH-17 走路线乙后求值域落在 ct/src/eval/eval.h.ct 单元内分区；原 .m.ct 是映射单元、不能定义函数。只改交付物路径，verify 与 E-1..E-8 不变。"
     }
   ]
 }
