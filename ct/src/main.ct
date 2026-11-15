@@ -1,0 +1,47 @@
+// main — RILL 0.1.0 CT 多单元版（见 docs/phases/pending/ct-multiunit.md）
+
+import common::common;
+
+import cli::cli;
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdarg.h>
+
+#define usage_fail(...) fail("cli", "E_USAGE", 0, 0, __VA_ARGS__)
+
+
+int main(int argc, char **argv)
+{
+    StdoutEmitter out;
+
+    if (setjmp(g_fail_jmp) != 0) {
+        out.failed = 0;
+        out.emit(0, 0);
+        return 2;
+    }
+
+    if (argc < 2) usage_fail("缺少子命令");
+    if (strcmp(argv[1], "tokenize") == 0) {
+        return cmd_tokenize(argc - 2, argv + 2);
+    }
+    if (strcmp(argv[1], "parse") == 0) {
+        return cmd_parse(argc - 2, argv + 2);
+    }
+    if (strcmp(argv[1], "check") == 0) {
+        return cmd_check(argc - 2, argv + 2);
+    }
+    if (strcmp(argv[1], "run") == 0) {
+        return cmd_run(argc - 2, argv + 2);
+    }
+    if (strcmp(argv[1], "-h") == 0 || strcmp(argv[1], "--help") == 0) {
+        printf("usage: rill-ct tokenize <file> | rill-ct parse --dump-ast <file> "
+               "[--profile shell|agent] | rill-ct check <file> "
+               "[--profile shell|agent] | rill-ct run <file> "
+               "[--fakes <json>] [--profile shell|agent]\n");
+        return 0;
+    }
+    usage_fail("未知子命令 %s", argv[1]);
+    return 2;
+}

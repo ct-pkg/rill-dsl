@@ -1,0 +1,527 @@
+// eval — RILL 0.1.0 CT 多单元版（见 docs/phases/pending/ct-multiunit.md）
+
+import common::common;
+
+import lexer::lexer;
+
+import parser::parser;
+
+import loader::loader;
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdarg.h>
+
+
+/* ------------------------------------------------------------------ */
+/* evaluator (PH-16 subset: segment / into / ok / error / pipe / call)  */
+/* ------------------------------------------------------------------ */
+
+/* 死马当活马：0.1.0 的未处理错误串，与 Python DEFAULT_ERROR 一致。 */
+#define LOAD_DEFAULT_ERROR "RILL DSL ERROR"
+
+pub struct EOut {
+    int ok;
+    JVal *value;
+    const char *error;
+    JVal *meta;
+};
+
+pub struct EVar {
+    char *name;
+    JVal *value;
+    struct EVar *next;
+};
+
+pub struct Eval {
+    JVal *program;
+    JVal *tools;
+    EVar *vars;
+};
+
+pub void eout_success(EOut *o, JVal *v)
+{
+    o->ok = 1;
+    o->value = v;
+    o->error = 0;
+    o->meta = 0;
+}
+
+pub void eout_failure(EOut *o, const char *e)
+{
+    o->ok = 0;
+    o->value = 0;
+    o->error = e;
+    o->meta = 0;
+}
+
+/* 只读的伪宿主 JSON（fakes 目录）。标准 JSON 子集：对象/数组/字符串/
+   整数/true/false/null。递归下降，深度由 JSON offer 自身限制。 */
+pub JVal *json_parse(const char *s, int *pos)
+{
+    JVal *v = 0;
+    char c;
+    int i;
+    while (s[*pos] == ' ' || s[*pos] == '\t' || s[*pos] == '\n' ||
+           s[*pos] == '\r') {
+        (*pos)++;
+    }
+    c = s[*pos];
+    if (c == '{') {
+        v = jobj();
+        (*pos)++;
+        for (;;) {
+            JVal *key;
+            JVal *val;
+            while (s[*pos] == ' ' || s[*pos] == '\t' || s[*pos] == '\n' ||
+                   s[*pos] == '\r') {
+                (*pos)++;
+            }
+            if (s[*pos] == '}') {
+                (*pos)++;
+                return v;
+            }
+            key = json_parse(s, pos);
+            while (s[*pos] == ' ' || s[*pos] == '\t' || s[*pos] == '\n' ||
+                   s[*pos] == '\r') {
+                (*pos)++;
+            }
+            if (s[*pos] == ':') (*pos)++;
+            val = json_parse(s, pos);
+            jput(v, key->str, val);
+            while (s[*pos] == ' ' || s[*pos] == '\t' || s[*pos] == '\n' ||
+                   s[*pos] == '\r') {
+                (*pos)++;
+            }
+            if (s[*pos] == ',') {
+                (*pos)++;
+                continue;
+            }
+            if (s[*pos] == '}') {
+                (*pos)++;
+                return v;
+            }
+            return v;
+        }
+    }
+    if (c == '[') {
+        v = jarr();
+        (*pos)++;
+        for (;;) {
+            while (s[*pos] == ' ' || s[*pos] == '\t' || s[*pos] == '\n' ||
+                   s[*pos] == '\r') {
+                (*pos)++;
+            }
+            if (s[*pos] == ']') {
+                (*pos)++;
+                return v;
+            }
+            jpush(v, json_parse(s, pos));
+            while (s[*pos] == ' ' || s[*pos] == '\t' || s[*pos] == '\n' ||
+                   s[*pos] == '\r') {
+                (*pos)++;
+            }
+            if (s[*pos] == ',') {
+                (*pos)++;
+                continue;
+            }
+            if (s[*pos] == ']') {
+                (*pos)++;
+                return v;
+            }
+            return v;
+        }
+    }
+    if (c == '"') {
+        int cap = 32;
+        int len = 0;
+        char *buf = (char *)xmalloc((size_t)cap);
+        (*pos)++;
+        while (s[*pos] && s[*pos] != '"') {
+            char ch = s[*pos];
+            if (ch == '\\') {
+                (*pos)++;
+                ch = s[*pos];
+                if (ch == 'n') ch = '\n';
+                else if (ch == 't') ch = '\t';
+                else if (ch == 'r') ch = '\r';
+                else if (ch == 'b') ch = '\b';
+                else if (ch == 'f') ch = '\f';
+                else if (ch == 'u') {
+                    ch = '?';
+                    for (i = 0; i < 4 && s[*pos + 1 + i]; i++) (*pos)++;
+                }
+            }
+            if (len + 1 >= cap) {
+                cap *= 2;
+                buf = (char *)xrealloc(buf, (size_t)cap);
+            }
+            buf[len++] = ch;
+            if (s[*pos]) (*pos)++;
+        }
+        if (s[*pos] == '"') (*pos)++;
+        v = jstrn(buf, len);
+        free(buf);
+        return v;
+    }
+    if (strncmp(s + *pos, "true", 4) == 0) {
+        *pos += 4;
+        return jbool(1);
+    }
+    if (strncmp(s + *pos, "false", 5) == 0) {
+        *pos += 5;
+        return jbool(0);
+    }
+    if (strncmp(s + *pos, "null", 4) == 0) {
+        *pos += 4;
+        return jnull();
+    }
+    {
+        long long num = 0;
+        int neg = 0;
+        if (s[*pos] == '-') {
+            neg = 1;
+            (*pos)++;
+        }
+        while (is_digit(s[*pos])) {
+            num = num * 10 + (s[*pos] - '0');
+            (*pos)++;
+        }
+        return jint(neg ? -num : num);
+    }
+}
+
+/* set=1 时写入并返回；set=0 时读取，未定义直接报 run 诊断。 */
+static JVal *var_lookup(Eval *ev, const char *name, JVal *value, int set)
+{
+    EVar *v;
+    for (v = ev->vars; v != 0; v = v->next) {
+        if (strcmp(v->name, name) == 0) {
+            if (set) v->value = value;
+            return v->value;
+        }
+    }
+    if (set) {
+        v = (EVar *)xmalloc(sizeof(EVar));
+        v->name = xstrdup(name);
+        v->value = value;
+        v->next = ev->vars;
+        ev->vars = v;
+        return value;
+    }
+    fail("run", "E-RUN-UNDEFINED", 0, 0, "变量 $%s 未定义", name);
+    return 0;
+}
+
+static JVal *eval_value(Eval *ev, JVal *node, JVal *dollar)
+{
+    const char *kind;
+    if (node == 0) return jnull();
+    kind = jget_str(node, "kind");
+    if (strcmp(kind, "String") == 0 || strcmp(kind, "Number") == 0) {
+        return jget(node, "value");
+    }
+    if (strcmp(kind, "Bare") == 0) return jget(node, "text");
+    if (strcmp(kind, "Variable") == 0) {
+        return var_lookup(ev, jget_str(node, "name"), 0, 0);
+    }
+    if (strcmp(kind, "Self") == 0) return dollar ? dollar : jnull();
+    if (strcmp(kind, "Field") == 0) {
+        JVal *field;
+        if (dollar == 0 || dollar->kind != J_OBJ) {
+            fail("run", "E-RUN-FIELD", 0, 0, "字段 .%s 的宿主不是对象",
+                 jget_str(node, "name"));
+        }
+        field = jget(dollar, jget_str(node, "name"));
+        if (field == 0) {
+            fail("run", "E-RUN-FIELD", 0, 0, "对象缺少字段 .%s",
+                 jget_str(node, "name"));
+        }
+        return field;
+    }
+    if (strcmp(kind, "Concat") == 0) {
+        JVal *parts = jget(node, "parts");
+        int i;
+        int total = 0;
+        char *buf;
+        int at = 0;
+        for (i = 0; i < parts->len; i++) {
+            JVal *part = eval_value(ev, parts->items[i], dollar);
+            if (part == 0 || part->kind != J_STR) {
+                fail("run", "E-RUN-CONCAT", 0, 0, "拼接段不是字符串");
+            }
+            total += (int)strlen(part->str);
+        }
+        buf = (char *)xmalloc((size_t)total + 1);
+        for (i = 0; i < parts->len; i++) {
+            JVal *part = eval_value(ev, parts->items[i], dollar);
+            memcpy(buf + at, part->str, strlen(part->str));
+            at += (int)strlen(part->str);
+        }
+        buf[at] = 0;
+        return jstrn(buf, at);
+    }
+    if (strcmp(kind, "Adverb") == 0) {
+        JVal *items = jget(node, "items");
+        JVal *out = jarr();
+        JVal *obj = jobj();
+        int i;
+        for (i = 0; i < items->len; i++) {
+            jpush(out, eval_value(ev, items->items[i], dollar));
+        }
+        jput(obj, "adverb", out);
+        return obj;
+    }
+    if (strcmp(kind, "PrepPhrase") == 0) {
+        JVal *obj = jobj();
+        jput(obj, "prep", jstr(jget_str(node, "prep")));
+        jput(obj, "object", eval_value(ev, jget(node, "object"), dollar));
+        return obj;
+    }
+    fail("run", "E-RUN-UNSUPPORTED", 0, 0, "暂不支持的值节点 %s", kind);
+    return jnull();
+}
+
+static EOut run_block(Eval *ev, JVal *block, JVal *dollar, int last_value);
+pub EOut eval_stmt(Eval *ev, JVal *stmt, JVal *dollar);
+
+static EOut apply_tail(Eval *ev, JVal *tail, EOut out)
+{
+    JVal *cur;
+    EOut failure;
+    int failed = !out.ok;
+    JVal *ok_block = 0;
+    JVal *error_block = 0;
+    int i;
+
+    cur = out.ok ? out.value : jstr(out.error ? out.error : LOAD_DEFAULT_ERROR);
+    failure = out;
+    for (i = 0; i < tail->len; i++) {
+        JVal *item = tail->items[i];
+        const char *kind = jget_str(item, "kind");
+        if (strcmp(kind, "Assign") == 0) {
+            if (!failed) var_lookup(ev, jget_str(item, "target"), cur, 1);
+        } else if (strcmp(kind, "IntoBlock") == 0) {
+            EOut bo;
+            if (failed) continue;
+            bo = run_block(ev, jget(item, "body"), cur, 0);
+            if (!bo.ok) {
+                failure = bo;
+                failed = 1;
+            } else {
+                cur = bo.value;
+            }
+        } else if (strcmp(kind, "OkBlock") == 0) {
+            ok_block = item;
+        } else if (strcmp(kind, "ErrorBlock") == 0) {
+            error_block = item;
+        }
+    }
+    if (!failed) {
+        if (ok_block != 0) {
+            EOut bo = run_block(ev, jget(ok_block, "body"), out.value, 0);
+            if (!bo.ok) {
+                EOut u;
+                eout_failure(&u, LOAD_DEFAULT_ERROR);
+                return u;
+            }
+            cur = bo.value;
+        }
+        eout_success(&out, cur);
+        return out;
+    }
+    {
+        const char *err = failure.error ? failure.error : LOAD_DEFAULT_ERROR;
+        if (error_block != 0) {
+            EOut bo = run_block(ev, jget(error_block, "body"), jstr(err), 0);
+            if (!bo.ok) {
+                EOut u;
+                eout_failure(&u, LOAD_DEFAULT_ERROR);
+                return u;
+            }
+            eout_success(&out, bo.value);
+            return out;
+        }
+    }
+    eout_failure(&out, LOAD_DEFAULT_ERROR);
+    return out;
+}
+
+static EOut run_block(Eval *ev, JVal *block, JVal *dollar, int last_value)
+{
+    EVar *saved = ev->vars;
+    EOut out;
+    JVal *body = jget(block, "body");
+    int i;
+
+    eout_success(&out, dollar ? dollar : jnull());
+    for (i = 0; i < body->len; i++) {
+        out = eval_stmt(ev, body->items[i], dollar);
+        if (!out.ok) {
+            ev->vars = saved;
+            return out;
+        }
+    }
+    ev->vars = saved;
+    if (last_value) return out;
+    eout_success(&out, dollar ? dollar : jnull());
+    return out;
+}
+
+pub EOut eval_stmt(Eval *ev, JVal *stmt, JVal *dollar)
+{
+    EOut out;
+    const char *kind = jget_str(stmt, "kind");
+
+    eout_success(&out, jnull());
+    if (strcmp(kind, "SimpleStmt") == 0) {
+        JVal *call = jget(stmt, "call");
+        const char *verb = jget_str(call, "verb");
+        JVal *spec = jget(ev->tools, verb);
+        JVal *queue;
+        JVal *entry = 0;
+        int okv = 1;
+        JVal *okb;
+        JVal *post = jget(call, "post");
+        int i;
+
+        if (spec == 0) {
+            fail("run", "E-RUN-VERB-UNREGISTERED", 0, 0,
+                 "fake 动词 '%s' 未注册", verb);
+        }
+        queue = jget(spec, "queue");
+        if (queue != 0 && queue->kind == J_ARR && queue->len > 0) {
+            entry = queue->items[0];
+            for (i = 0; i < queue->len - 1; i++) {
+                queue->items[i] = queue->items[i + 1];
+            }
+            queue->len--;
+        } else {
+            entry = jget(spec, "default");
+            if (entry == 0 || entry->kind == J_NULL) {
+                eout_failure(&out, "fake 动词没有排队结果且无 default");
+                return apply_tail(ev, jget(stmt, "tail"), out);
+            }
+        }
+        okb = jget(entry, "ok");
+        if (okb != 0 && okb->kind == J_BOOL) okv = okb->boolean;
+        if (okv) {
+            eout_success(&out, jget(entry, "value"));
+            out.meta = jget(entry, "host_meta");
+        } else {
+            const char *err = jget_str(entry, "error");
+            eout_failure(&out, (err && *err) ? err : LOAD_DEFAULT_ERROR);
+            out.meta = jget(entry, "host_meta");
+        }
+        (void)post;
+    } else if (strcmp(kind, "CallStmt") == 0) {
+        const char *name = jget_str(stmt, "name");
+        JVal *args = jget(stmt, "args");
+        JVal *def = 0;
+        JVal *headers = jget(ev->program, "headers");
+        JVal *body;
+        char *pname[64];
+        JVal *pdef[64];
+        JVal *bind[64];
+        JVal *stack[512];
+        EVar *saved;
+        int np = 0;
+        int sp = 0;
+        int na;
+        int i;
+
+        for (i = 0; i < headers->len; i++) {
+            JVal *header = headers->items[i];
+            JVal *defs;
+            int d;
+            if (strcmp(jget_str(header, "kind"), "FnBlock") != 0) continue;
+            defs = jget(header, "defs");
+            for (d = 0; d < defs->len; d++) {
+                JVal *cand = defs->items[d];
+                if (strcmp(jget_str(cand, "name"), name) == 0) {
+                    def = cand;
+                    break;
+                }
+            }
+            if (def != 0) break;
+        }
+        if (def == 0) {
+            fail("run", "E-RUN-FN-UNDECLARED", 0, 0, "未声明的函数 '%s'", name);
+        }
+        stack[sp++] = jget(def, "template");
+        while (sp > 0) {
+            JVal *n = stack[--sp];
+            const char *nk;
+            int k;
+            if (n == 0) continue;
+            if (n->kind == J_ARR) {
+                for (k = n->len - 1; k >= 0; k--) {
+                    if (sp < 512) stack[sp++] = n->items[k];
+                }
+                continue;
+            }
+            if (n->kind != J_OBJ) continue;
+            nk = jget_str(n, "kind");
+            if (strcmp(nk, "Variable") == 0 ||
+                strcmp(nk, "Default") == 0) {
+                const char *pn = jget_str(n, "name");
+                int idx = -1;
+                for (k = 0; k < np; k++) {
+                    if (strcmp(pname[k], pn) == 0) {
+                        idx = k;
+                        break;
+                    }
+                }
+                if (idx < 0 && np < 64) {
+                    idx = np;
+                    pname[np] = xstrdup(pn);
+                    pdef[np] = 0;
+                    np++;
+                }
+                if (strcmp(nk, "Default") == 0 && idx >= 0 &&
+                    pdef[idx] == 0) {
+                    pdef[idx] = jget(n, "value");
+                }
+            } else {
+                for (k = n->len - 1; k >= 0; k--) {
+                    if (strcmp(n->keys[k], "kind") == 0) continue;
+                    if (sp < 512) stack[sp++] = n->items[k];
+                }
+            }
+        }
+        na = args->len;
+        if (na > np) {
+            fail("run", "E-RUN-FN-ARITY", 0, 0,
+                 "函数 '%s' 需要 %d 个实参，实际 %d 个", name, np, na);
+        }
+        for (i = 0; i < na; i++) {
+            bind[i] = eval_value(ev, args->items[i], dollar);
+        }
+        for (; i < np; i++) {
+            if (pdef[i] == 0) {
+                fail("run", "E-RUN-FN-ARITY", 0, 0,
+                     "函数 '%s' 需要 %d 个实参，实际 %d 个", name, np, na);
+            }
+            bind[i] = eval_value(ev, pdef[i], dollar);
+        }
+        saved = ev->vars;
+        for (i = 0; i < np; i++) var_lookup(ev, pname[i], bind[i], 1);
+        body = jget(jget(def, "body"), "body");
+        if (body->len == 0) {
+            eout_success(&out, jnull());
+        } else {
+            out = run_block(ev, jget(def, "body"), dollar, 1);
+            if (out.ok) eout_success(&out, out.value);
+        }
+        ev->vars = saved;
+    } else {
+        fail("run", "E-RUN-UNSUPPORTED", 0, 0, "暂不支持的语句 %s", kind);
+    }
+    out = apply_tail(ev, jget(stmt, "tail"), out);
+    if (out.ok && jget(stmt, "pipe") != 0 &&
+        jget(stmt, "pipe")->kind != J_NULL) {
+        out = eval_stmt(ev, jget(stmt, "pipe"), out.value ? out.value : jnull());
+    }
+    return out;
+}
