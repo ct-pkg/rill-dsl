@@ -26,7 +26,7 @@
 | 09 | 安全与能力边界 | [15-profile](../../../examples/tour/15-profile.md) |
 | 10 | 错误与限制 | [10-error-lex](../../../examples/tour/10-error-lex.md)、[11-error-parse](../../../examples/tour/11-error-parse.md)、[12-error-run](../../../examples/tour/12-error-run.md) |
 | 11 | 常见错误 | [10-error-lex](../../../examples/tour/10-error-lex.md)、[11-error-parse](../../../examples/tour/11-error-parse.md) |
-| 12 | few-shot | [样例索引](../../../examples/README.md)（16 个实测样例，按能力分组） |
+| 12 | few-shot | [样例索引](../../../examples/README.md)（17 个实测样例，按能力分组） |
 
 ## 3. 读法建议
 

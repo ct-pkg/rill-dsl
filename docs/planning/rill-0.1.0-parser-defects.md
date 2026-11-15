@@ -1,7 +1,7 @@
 # RILL 解析期缺陷登记：`$"..."` 与「引号串在前」的相邻拼接
 
 > 状态：open（PD-2 已裁定 A／修实现，尚未动代码）。2026-11-15 由 `examples/tour/` 样例集发现并单独记账。
-> 复现基线：`ct/bin/rill_ct`（当日主干构建）与 `PYTHONPATH=src python3 -m rill`。
+> 复现基线：`ct/bin/rill`（当日主干构建）与 `PYTHONPATH=src python3 -m rill`。
 > 样例侧处理：`examples/README.md` §4 已说明样例一律不使用这两种写法。
 > 本文件不动 `ct/src`、不改 golden、不改判据。
 
@@ -26,7 +26,7 @@ $ cat pd1.rill
 ```
 
 ```console
-$ ct/bin/rill_ct run pd1.rill
+$ ct/bin/rill run pd1.rill
 {"error":{"stage":"parse","code":"E-PARSE-UNEXPECTED","line":1,"col":30,"message":"语句后出现意外 token -x"}}
 $ echo $?
 2
@@ -84,7 +84,7 @@ $ cat pd2.rill
 ```
 
 ```console
-$ ct/bin/rill_ct run pd2.rill
+$ ct/bin/rill run pd2.rill
 {"error":{"stage":"parse","code":"E-PARSE-UNEXPECTED","line":2,"col":12,"message":"语句后出现意外 token v"}}
 $ echo $?
 2

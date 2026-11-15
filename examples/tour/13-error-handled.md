@@ -12,7 +12,7 @@
 **运行**（在 `examples/tour/` 下）
 
 ```console
-$ ../../ct/bin/rill_ct run 13-error-handled.rill
+$ ../../ct/bin/rill run 13-error-handled.rill
 ```
 
 **真实输出**

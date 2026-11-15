@@ -225,7 +225,7 @@ src/host/agent_caps.h.ct:36:63: error: too many calls
 | 层 | 单元 | 产物 |
 | --- | --- | --- |
 | 一 | `common` `lexer` `parser` `loader` `formatter` | `ct/build/librill_core.a` + `ct/build/gen-lib/*.h` |
-| 二 | `eval` `json` `exec` `host` `shell` `agent*` `cli` `main` | `ct/bin/rill_ct` |
+| 二 | `eval` `json` `exec` `host` `shell` `agent*` `cli` `main` | `ct/bin/rill` |
 
 边界上三处人工对齐（`ct/src/host/bridge.h` + `ct/build.sh`）：
 

@@ -410,6 +410,12 @@ static void lx_normal(Lexer *l)
         lx_emit(l, TK_NEWLINE, "\n", line, col);
         return;
     }
+    if (ch == '#' && lx_peek(l, 1) == '!' && l->line == 1 && l->col == 1) {
+        /* 只认首行首列的 `#!`：整行按注释丢掉，换行仍由下一个 token 发出，
+           这样行号列号与后续诊断不受影响。 */
+        while (l->i < l->n && lx_peek(l, 0) != '\n') lx_advance(l, 1);
+        return;
+    }
     if (ch == '/' && lx_peek(l, 1) == '/') {
         lx_comment_or_header(l);
         return;

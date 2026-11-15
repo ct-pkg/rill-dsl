@@ -191,7 +191,7 @@ def case_canonical_manifest_loads():
 def main(argv=None):
     parser = argparse.ArgumentParser(description="PH-11 agent fixture 回归")
     parser.add_argument(
-        "--sut", default="", help="覆盖被测命令，如 './ct/bin/rill_ct'；缺省 python3 -m rill"
+        "--sut", default="", help="覆盖被测命令，如 './ct/bin/rill'；缺省 python3 -m rill"
     )
     opts = parser.parse_args(argv)
     SUT[:] = shlex.split(opts.sut) if opts.sut else []

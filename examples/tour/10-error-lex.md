@@ -12,7 +12,7 @@
 **运行**（在 `examples/tour/` 下）
 
 ```console
-$ ../../ct/bin/rill_ct run 10-error-lex.rill
+$ ../../ct/bin/rill run 10-error-lex.rill
 ```
 
 **真实输出**

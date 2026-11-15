@@ -14,7 +14,7 @@
 **运行**（在 `examples/tour/` 下；第一条 `<env>` 读的是命令前置的环境变量）
 
 ```console
-$ RILL_TOUR_SET=demo ../../ct/bin/rill_ct run 16-host-meta.rill
+$ RILL_TOUR_SET=demo ../../ct/bin/rill run 16-host-meta.rill
 ```
 
 **真实输出**

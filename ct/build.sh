@@ -5,7 +5,10 @@
 #
 # Requires: the ct-ast mainline `ct` (multi-unit `ct build`, v0.44.1+) and a C
 # compiler.  Lookup order for ct: $CT, `ct` on PATH, ~/.local/bin/ct.
-# Output: ct/bin/rill_ct
+# Output: ct/bin/rill
+#
+# 构建完成后，如果 ~/.local/bin 可写，会把它链成 `rill` 放上 PATH，
+# 这样 `#!/usr/bin/env rill` 的 shebang 才找得到解释器。
 #
 # 两次 `ct build`：ct 前端的「已解析调用点」表全局 1024 条（fill-in 见
 # docs/reviews/diff/PH-20.md §3），整套实现一次编译会超表。于是分两层：
@@ -16,7 +19,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-OUT="$ROOT/ct/bin/rill_ct"
+OUT="$ROOT/ct/bin/rill"
 BUILD="$ROOT/ct/build"
 LIBGEN="$BUILD/gen-lib"
 LIB="$BUILD/librill_core.a"
@@ -63,3 +66,13 @@ mkdir -p "$LIBGEN"
         -o "$OUT"
 )
 echo "built $OUT"
+
+# PATH 入口：shebang 行 `#!/usr/bin/env rill` 需要 PATH 上有 rill。
+if [ -d "$HOME/.local/bin" ] && [ -w "$HOME/.local/bin" ]; then
+    ln -sf "$OUT" "$HOME/.local/bin/rill"
+    echo "linked $HOME/.local/bin/rill -> $OUT"
+    case ":$PATH:" in
+        *":$HOME/.local/bin:"*) ;;
+        *) echo "note: $HOME/.local/bin 不在 PATH，shebang 需要它；请加进 shell 配置" ;;
+    esac
+fi

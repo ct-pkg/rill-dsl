@@ -14,7 +14,7 @@ formatter 与 `testdata/0.1.0/` 的夹具，不是按规范想象出来的。
 ```console
 $ cd <repo>
 $ bash ct/build.sh          # 需要 ct-ast 主线 `ct`（v0.44.1+）与一个 C 编译器
-$ ls ct/bin/rill_ct
+$ ls ct/bin/rill
 $ cd examples/tour
 ```
 
@@ -27,42 +27,48 @@ $ cd examples/tour
 
 | # | 样例 | 一句话 | 跑法 |
 | --- | --- | --- | --- |
-| 01 | [send](tour/01-send.md) | 动词 `<send>` + 宾语 + `[to] user`，结果信封与 `host_meta` | `../../ct/bin/rill_ct run 01-send.rill` |
-| 02 | [pipe](tour/02-pipe.md) | `\|>` 段间只传 `value`，下游用 `$` 取到 | `../../ct/bin/rill_ct run 02-pipe.rill` |
-| 03 | [into-order](tour/03-into-order.md) | `[into]` 可叠加、按书写顺序执行、不改写段输出 | `../../ct/bin/rill_ct run 03-into-order.rill` |
-| 04 | [map](tour/04-map.md) | `//map{}` 值映射与动词映射（`` `cfg` `` / `<r>`） | `../../ct/bin/rill_ct run 04-map.rill` |
+| 01 | [send](tour/01-send.md) | 动词 `<send>` + 宾语 + `[to] user`，结果信封与 `host_meta` | `../../ct/bin/rill run 01-send.rill` |
+| 02 | [pipe](tour/02-pipe.md) | `\|>` 段间只传 `value`，下游用 `$` 取到 | `../../ct/bin/rill run 02-pipe.rill` |
+| 03 | [into-order](tour/03-into-order.md) | `[into]` 可叠加、按书写顺序执行、不改写段输出 | `../../ct/bin/rill run 03-into-order.rill` |
+| 04 | [map](tour/04-map.md) | `//map{}` 值映射与动词映射（`` `cfg` `` / `<r>`） | `../../ct/bin/rill run 04-map.rill` |
 
 **B. 控制流**
 
 | # | 样例 | 一句话 | 跑法 |
 | --- | --- | --- | --- |
-| 05 | [if](tour/05-if.md) | `if` / `else-if` / `else`，truthy 规则，`if` 不产值 | `../../ct/bin/rill_ct run 05-if.rill` |
-| 06 | [each](tour/06-each.md) | `each` 遍历，`[ok]` 的 `$` 是按源序结果数组 | `../../ct/bin/rill_ct run 06-each.rill --fakes fakes/each.json` |
-| 07 | [break](tour/07-break.md) | `break <值>` 收口整个 program，后续语句不执行 | `../../ct/bin/rill_ct run 07-break.rill` |
-| 08 | [parallel](tour/08-parallel.md) | `parallel` 三态分支 + `[results]` 结果数组（含失败态） | `../../ct/bin/rill_ct run 08-parallel.rill` |
-| 09 | [fn](tour/09-fn.md) | `//fn{}` 定义、`@` 调用、尾部默认值、返回最后一句 | `../../ct/bin/rill_ct run 09-fn.rill` |
+| 05 | [if](tour/05-if.md) | `if` / `else-if` / `else`，truthy 规则，`if` 不产值 | `../../ct/bin/rill run 05-if.rill` |
+| 06 | [each](tour/06-each.md) | `each` 遍历，`[ok]` 的 `$` 是按源序结果数组 | `../../ct/bin/rill run 06-each.rill --fakes fakes/each.json` |
+| 07 | [break](tour/07-break.md) | `break <值>` 收口整个 program，后续语句不执行 | `../../ct/bin/rill run 07-break.rill` |
+| 08 | [parallel](tour/08-parallel.md) | `parallel` 三态分支 + `[results]` 结果数组（含失败态） | `../../ct/bin/rill run 08-parallel.rill` |
+| 09 | [fn](tour/09-fn.md) | `//fn{}` 定义、`@` 调用、尾部默认值、返回最后一句 | `../../ct/bin/rill run 09-fn.rill` |
 
 **C. 错误路径与格式化**
 
 | # | 样例 | 一句话 | 跑法 |
 | --- | --- | --- | --- |
-| 10 | [error-lex](tour/10-error-lex.md) | 词法错误：`{"error": ...}` 诊断 + 退出码 2 | `../../ct/bin/rill_ct run 10-error-lex.rill` |
-| 11 | [error-parse](tour/11-error-parse.md) | 解析错误：介词表外的 `[frobnicate]` | `../../ct/bin/rill_ct run 11-error-parse.rill` |
-| 12 | [error-run](tour/12-error-run.md) | 运行期失败：管道中断、下游不执行、退出码 1 | `../../ct/bin/rill_ct run 12-error-run.rill` |
-| 13 | [error-handled](tour/13-error-handled.md) | 有 `[error]` 继续 vs 没有就默认 break | `../../ct/bin/rill_ct run 13-error-handled.rill` |
-| 14 | [fmt](tour/14-fmt.md) | `fmt --compress` / `--display` 把代码变成什么 | `../../ct/bin/rill_ct fmt --compress 14-fmt.rill` |
+| 10 | [error-lex](tour/10-error-lex.md) | 词法错误：`{"error": ...}` 诊断 + 退出码 2 | `../../ct/bin/rill run 10-error-lex.rill` |
+| 11 | [error-parse](tour/11-error-parse.md) | 解析错误：介词表外的 `[frobnicate]` | `../../ct/bin/rill run 11-error-parse.rill` |
+| 12 | [error-run](tour/12-error-run.md) | 运行期失败：管道中断、下游不执行、退出码 1 | `../../ct/bin/rill run 12-error-run.rill` |
+| 13 | [error-handled](tour/13-error-handled.md) | 有 `[error]` 继续 vs 没有就默认 break | `../../ct/bin/rill run 13-error-handled.rill` |
+| 14 | [fmt](tour/14-fmt.md) | `fmt --compress` / `--display` 把代码变成什么 | `../../ct/bin/rill fmt --compress 14-fmt.rill` |
 
 **D. 宿主与元数据**
 
 | # | 样例 | 一句话 | 跑法 |
 | --- | --- | --- | --- |
-| 15 | [profile](tour/15-profile.md) | `--host-profile` 决定能不能写文件；拒绝是诊断不是失败 | `../../ct/bin/rill_ct run 15-profile.rill --host-profile profiles/min.json` |
-| 16 | [host-meta](tour/16-host-meta.md) | 成功与失败都带 `host_meta`，失败记 `host_error.code` | `RILL_TOUR_SET=demo ../../ct/bin/rill_ct run 16-host-meta.rill` |
+| 15 | [profile](tour/15-profile.md) | `--host-profile` 决定能不能写文件；拒绝是诊断不是失败 | `../../ct/bin/rill run 15-profile.rill --host-profile profiles/min.json` |
+| 16 | [host-meta](tour/16-host-meta.md) | 成功与失败都带 `host_meta`，失败记 `host_error.code` | `RILL_TOUR_SET=demo ../../ct/bin/rill run 16-host-meta.rill` |
+
+**E. 直接执行**
+
+| # | 样例 | 一句话 | 跑法 |
+| --- | --- | --- | --- |
+| 17 | [shebang](tour/17-shebang.md) | 首行 `#!/usr/bin/env rill`，`chmod +x` 后直接跑；`fmt` 保留 shebang | `./17-shebang.rill` |
 
 ## 3. 怎么读输出
 
 ```console
-$ ../../ct/bin/rill_ct run 01-send.rill
+$ ../../ct/bin/rill run 01-send.rill
 hello, rill
 {"ok":true,"value":"hello, rill","error":null,"host_meta":{"stdio":{"channel":"stderr","text":"hello, rill"}},"host":{"profile":"shell","principal":{"kind":"os-user","name":"samxx"}}}
 ```
@@ -92,7 +98,7 @@ harness 里出现的 `3`（BLOCK）是 SUT 适配层的"未实现"标记，不�
    变量在前的写法 `$x"n="` 正常。**已裁定走 A（修实现）**，但代码改动排在 PH-21 收口
    之后；在此之前不提供该写法的样例。
 2. **`$"..."` 的宽度口径不一致**。`<send> $"-x"` 在内部对拍的 Python 侧能解析成
-   `Self + String`，`ct/bin/rill_ct` 侧报解析错误：`ct/src/parser/parser.h.ct` 的
+   `Self + String`，`ct/bin/rill` 侧报解析错误：`ct/src/parser/parser.h.ct` 的
    `p_raw_len` 对 `$` 多算了 1 列。因此这里不提供 `$` 后紧跟字符串的样例。
 
 遇到这类问题按"记录现象、不改实现"处理：样例宁可少写一条，也不给一个跑不通的写法。

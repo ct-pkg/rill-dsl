@@ -16,7 +16,7 @@ ct/
 ├── src/host/            HostOps 能力表、exec、shell、agent（+ bridge.h 跨层类型）
 ├── src/cli/             tokenize/parse/check/run/fmt 五个子命令
 ├── rill_ct.ct           单文件旧实现（冻结为参考实现，不参与构建，可作两条路的对照）
-├── build.sh             从零构建出 ct/bin/rill_ct（两段 ct build，见下）
+├── build.sh             从零构建出 ct/bin/rill（两段 ct build，见下）
 ├── build/gen-lib/       第一段的生成头与 librill_core.a（每次重建）
 ├── test.sh              跑本层覆盖的门禁用例
 └── README.md            本文件（构建、规则映射、CT 限制、验证记录）
@@ -63,10 +63,10 @@ PH-19 收口时已用掉 927，Agent 宿主再要 ~500。整套一次编译必�
 CLI 形状与 Python 版对齐：
 
 ```bash
-ct/bin/rill_ct tokenize testdata/0.1.0/positive/tokens/compact/source.rill
-ct/bin/rill_ct parse --dump-ast testdata/0.1.0/positive/simple/read-write/source.rill --profile shell
-ct/bin/rill_ct check testdata/0.1.0/positive/check/each-bareword-w01/source.rill
-ct/bin/rill_ct run testdata/0.1.0/positive/run/segment/success-plain/source.rill \
+ct/bin/rill tokenize testdata/0.1.0/positive/tokens/compact/source.rill
+ct/bin/rill parse --dump-ast testdata/0.1.0/positive/simple/read-write/source.rill --profile shell
+ct/bin/rill check testdata/0.1.0/positive/check/each-bareword-w01/source.rill
+ct/bin/rill run testdata/0.1.0/positive/run/segment/success-plain/source.rill \
   --profile shell --fakes testdata/0.1.0/fakes/tools.json
 ```
 

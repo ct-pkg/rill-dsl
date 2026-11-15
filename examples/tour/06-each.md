@@ -15,7 +15,7 @@
 **运行**（在 `examples/tour/` 下）
 
 ```console
-$ ../../ct/bin/rill_ct run 06-each.rill --fakes fakes/each.json
+$ ../../ct/bin/rill run 06-each.rill --fakes fakes/each.json
 ```
 
 **真实输出**

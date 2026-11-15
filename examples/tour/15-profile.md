@@ -14,7 +14,7 @@
 **运行**（在 `examples/tour/` 下，先看只读 profile）
 
 ```console
-$ ../../ct/bin/rill_ct run 15-profile.rill --host-profile profiles/min.json
+$ ../../ct/bin/rill run 15-profile.rill --host-profile profiles/min.json
 ```
 
 **真实输出（min：拒绝写）**
@@ -26,7 +26,7 @@ $ ../../ct/bin/rill_ct run 15-profile.rill --host-profile profiles/min.json
 退出码 `2`，`out/copy.txt` 没有产生（目录里只有 `.gitkeep`）。
 
 ```console
-$ ../../ct/bin/rill_ct run 15-profile.rill --host-profile profiles/full.json
+$ ../../ct/bin/rill run 15-profile.rill --host-profile profiles/full.json
 ```
 
 **真实输出（full：允许写）**

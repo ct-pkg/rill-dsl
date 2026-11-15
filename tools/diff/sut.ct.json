@@ -1,8 +1,8 @@
 {
   "schema": "rill-sut/0",
-  "command": ["./ct/bin/rill_ct"],
+  "command": ["./ct/bin/rill"],
   "env": {},
   "timeout_seconds": 15,
-  "artifact": "ct/bin/rill_ct",
+  "artifact": "ct/bin/rill",
   "build": "bash ct/build.sh"
 }

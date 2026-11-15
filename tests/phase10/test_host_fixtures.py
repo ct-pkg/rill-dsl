@@ -164,7 +164,7 @@ def case_e2e_real_script():
 def main(argv=None):
     parser = argparse.ArgumentParser(description="PH-10 宿主 fixture 门禁")
     parser.add_argument(
-        "--sut", default="", help="覆盖被测命令，如 './ct/bin/rill_ct'；缺省 python3 -m rill"
+        "--sut", default="", help="覆盖被测命令，如 './ct/bin/rill'；缺省 python3 -m rill"
     )
     opts = parser.parse_args(argv)
     global SUT

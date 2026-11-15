@@ -38,12 +38,21 @@ int main(int argc, char **argv)
         return cmd_fmt(argc - 2, argv + 2);
     }
     if (strcmp(argv[1], "-h") == 0 || strcmp(argv[1], "--help") == 0) {
-        printf("usage: rill-ct tokenize <file> | rill-ct parse --dump-ast <file> "
-               "[--profile shell|agent] | rill-ct check <file> "
-               "[--profile shell|agent] | rill-ct run <file> "
-               "[--fakes <json>] [--profile shell|agent] | rill-ct fmt "
-               "--compress|--display <file>\n");
+        printf("usage: rill tokenize <file> | rill parse --dump-ast <file> "
+               "[--profile shell|agent] | rill check <file> "
+               "[--profile shell|agent] | rill run <file> "
+               "[--fakes <json>] [--profile shell|agent] | rill fmt "
+               "--compress|--display <file> | rill <file>\n");
         return 0;
+    }
+    {
+        /* shebang 入口：`#!/usr/bin/env rill` 只会把脚本路径传进来，没有子命令。
+           首个实参是可读文件时按 `run` 处理。 */
+        FILE *probe = fopen(argv[1], "rb");
+        if (probe != 0) {
+            fclose(probe);
+            return cmd_run(argc - 1, argv + 1);
+        }
     }
     usage_fail("未知子命令 %s", argv[1]);
     return 2;

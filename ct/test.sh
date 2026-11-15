@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Run the first-layer fixtures through the CT entry.
 #
-#   ct/test.sh              # uses ct/bin/rill_ct
+#   ct/test.sh              # uses ct/bin/rill
 #   ct/test.sh /path/to/bin # uses an explicit binary
 #
 # Covers: positive/tokens (12), positive/ast (23), negative/tokenize +
@@ -10,7 +10,7 @@
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-BIN="${1:-$ROOT/ct/bin/rill_ct}"
+BIN="${1:-$ROOT/ct/bin/rill}"
 
 if [ ! -x "$BIN" ]; then
     echo "ct/test.sh: $BIN is missing or not executable; run ct/build.sh first" >&2

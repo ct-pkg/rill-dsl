@@ -581,6 +581,33 @@ static char *f_assemble(FUnits *u, int display)
 /* entry                                                               */
 /* ------------------------------------------------------------------ */
 
+/* 首行 shebang 的长度；不是 shebang 返回 -1。 */
+static int f_shebang_len(const char *source)
+{
+    int i = 0;
+    if (source == 0 || source[0] != '#' || source[1] != '!') return -1;
+    while (source[i] != 0 && source[i] != '\n') i++;
+    return i;
+}
+
+/* `fmt` 回写时原样保留 shebang：否则格式化后的脚本不再可执行。
+   词法层把 shebang 当注释丢掉，只剩下它带来的换行，这里换回去。 */
+static char *f_keep_shebang(char *body, const char *source)
+{
+    FBuf b;
+    int sl = f_shebang_len(source);
+    const char *rest = body;
+
+    if (sl < 0) return body;
+    if (rest[0] == '\n') rest++;
+    fb_init(&b);
+    fb_putn(&b, source, sl);
+    fb_putc(&b, '\n');
+    fb_puts(&b, rest);
+    free(body);
+    return b.s;
+}
+
 /* display=0 压缩态，display=1 展示态；返回新分配的文本。 */
 pub char *fmt_format(const Token *toks, int ntoks, const char *source, int display)
 {
@@ -605,5 +632,5 @@ pub char *fmt_format(const Token *toks, int ntoks, const char *source, int displ
     }
     fr_sort_desc(&rev_value);
     fu_build(&units, &entries, &rev_value, &rev_verb, toks, ntoks, &fl, display);
-    return f_assemble(&units, display);
+    return f_keep_shebang(f_assemble(&units, display), source);
 }

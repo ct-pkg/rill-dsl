@@ -1,0 +1,2 @@
+#!/usr/bin/env rill
+<read> data/one.txt |> <send> $ [to] user

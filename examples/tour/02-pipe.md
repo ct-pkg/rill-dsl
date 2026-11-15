@@ -18,7 +18,7 @@
 **运行**（在 `examples/tour/` 下）
 
 ```console
-$ ../../ct/bin/rill_ct run 02-pipe.rill
+$ ../../ct/bin/rill run 02-pipe.rill
 ```
 
 **真实输出**
