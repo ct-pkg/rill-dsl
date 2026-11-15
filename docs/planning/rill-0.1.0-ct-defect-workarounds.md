@@ -176,3 +176,76 @@ error: use of undeclared identifier 'SH_PROFILE_MAX'
 
 - 字面量 128 与宏 `SH_PROFILE_MAX` 两处维护；改名时要同时改；
 - 不引入新的头文件机制，`ct build` 行为不变。
+
+## 8. 「已解析调用点」全局 1024 上限（PH-20 阻塞）
+
+### 8.1 命中点
+
+Agent 宿主按多单元落进 `ct/src/host/agent*.h.ct` 后，`ct build` 报：
+
+```
+src/host/agent_caps.h.ct:36:63: error: too many calls
+```
+
+不是「单单元 256 函数」那条（PH-17 已解），是另一张表。
+
+### 8.2 实测
+
+`MAX_CALLS` 定义在 ct 自身源码 `selfhost/ct-ast/frontend/parse/Expr.h.ct:55`
+（1024），由 `record_call()`（同文件 6059）在「调用点解析到已知函数」时累加。
+探针（`/tmp/ph20/p1..p3`，ct v0.49.0）：
+
+| 探针 | 内容 | 结果 |
+| --- | --- | --- |
+| p1 | 单文件 1100 次 `g(...)` | `m.ct:1027:11` 失败（第 1025 个） |
+| p2 | 两个单元各 600 次跨单元 `g(...)` | `b.ct:427:10` 失败（600+424） |
+| p3 | 先 `static` 前置声明、再 1100 次调用、最后定义 | 仍在 `1027` 失败 |
+
+推论：
+
+- 预算按**整个 build 累计**，不按单元重置；
+- 前置声明也算「已解析」，所以 static 包装省不了槽（包装体自身也是调用点）；
+- 只有「完全没有声明、定义在后面」的调用点不计数（p5 能过 1100 次，但这是
+  依赖前端解析顺序的偶然，不作为绕法）。
+
+量化基线：PH-19 收口时已用掉 927/1024（在 PH-19 基线上追加 N 次 `jint()` 探针，
+`N=95` 过、`N=100` 失败）；Agent 宿主实测需要约 500。
+
+### 8.3 绕法：语言核心出静态库，宿主层消费
+
+`ct build --lib` 可以把一组单元编成 `.a`，并把导出类型头留在 `--outdir`；另一次
+`ct build` 用 `#include` + `--ldflags` 消费它（探针 `/tmp/ph20/p4`、`p7` 已验：
+
+- `#include` 会原样进生成头；
+- `-fvisibility=hidden` 的静态库成员仍能被静态链接解析；
+- `--lib` 接受多输入，导出全部 pub 函数）。
+
+于是 `ct/build.sh` 分两段：
+
+| 层 | 单元 | 产物 |
+| --- | --- | --- |
+| 一 | `common` `lexer` `parser` `loader` `formatter` | `ct/build/librill_core.a` + `ct/build/gen-lib/*.h` |
+| 二 | `eval` `json` `exec` `host` `shell` `agent*` `cli` `main` | `ct/bin/rill_ct` |
+
+边界上三处人工对齐（`ct/src/host/bridge.h` + `ct/build.sh`）：
+
+1. 类型拼写：生成头写成 `struct JVal`，宿主层不再 `import common`，ct 只原样搬
+   `JVal *`。`bridge.h` 补 14 个 `typedef struct X X;`。
+2. `pub` 全局量：`--lib` 拒绝导出（`Module.h.ct:1138`）。`g_diag`/`g_fail_jmp`
+   收成 `static`，`main` 用 `fail_jmp_slot()` 取地址。
+3. trait 方法：宿主层不认识 `Emitter`，`out.emit()` 落到未初始化的
+   `__emitter_vptr`（实测 rc=139 段错误）。输出逻辑移进自由函数
+   `emitter_emit()`，trait 方法只转发。
+
+### 8.4 代价
+
+- 构建从一条命令变两条，新增 `ct/build/gen-lib/` 中间目录；
+- 跨层调用失去 ct 的元数/类型检查，靠 `bridge.h` typedef 与 `cc` 兜底；
+- 不引入宏、不引入包装函数、不改 lexer/parser，调用点总量不变，只是分两次编译。
+
+### 8.5 与上游的关系
+
+`record_call()` 只服务 `--emit-map` 的调用图，但即使不请求 `--emit-map` 也硬失败；
+把 `MAX_CALLS` 调大或改成「只在 `--emit-map` 时判定」是更正确的上游修法
+（ct-lang 的 `AGENTS.md` 已有 `MAX_CALLS 512→1024` 的容量例外先例）。本次**不改
+工具链**：`ct v0.49.0` 原样使用，改动全部落在本仓库的构建脚本与单元边界上。

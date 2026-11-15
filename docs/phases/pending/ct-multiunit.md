@@ -98,3 +98,30 @@ PH-17 §2 列出的 `eval_control.m.ct` / `eval_parallel.m.ct` / `eval_fn.m.ct` 
 
 迁移是一次提交；`git revert 89dcc3d` 即回到「单文件 + `ctc`」构建。
 `ctc` 路径在单文件冻结后仍可手动跑通，但不参与任何构建或门禁。
+
+## 6. PH-20 追加：构建分两段（调用点预算 1024）
+
+`ct` 前端还有一张不按单元重置的表：**每次 build 累计的已解析调用点上限 1024**
+（`selfhost/ct-ast/frontend/parse/Expr.h.ct:55` 的 `MAX_CALLS`，由
+`record_call()` 累加；前置声明也算解析，所以 static 包装省不了槽）。
+PH-19 收口时已用掉 927，Agent 宿主再需要约 500，一次编译必然超表。
+
+`ct/build.sh` 因此分两段：
+
+| 段 | 单元 | 产物 |
+| --- | --- | --- |
+| 语言核心 | `common` `lexer` `parser` `loader` `formatter` | `ct/build/librill_core.a` + `ct/build/gen-lib/*.h` |
+| 宿主与入口 | `eval` `json` `exec` `host` `shell` `agent*` `cli` `main` | `ct/bin/rill_ct` |
+
+边界规则（与 §2 的跨单元规则并列）：
+
+- 宿主层单元**不再 import** 语言核心，改 `#include "bridge.h"`；`bridge.h` 手写
+  `typedef struct JVal JVal;` 等 14 个别名（生成头的拼写是 `struct JVal`）。
+- `pub` 全局量在 `--lib` 下不可导出，`g_diag`/`g_fail_jmp` 收成 `static`，
+  `main` 用 `pub jmp_buf *fail_jmp_slot(void)` 取地址。
+- 跨层不要用 trait 方法（`out.emit()` 会落到未初始化的 `__emitter_vptr`，实测段错误）；
+  用自由函数入口。
+- 构建产物 `ct/build/` 已在 `ct/.gitignore` 里。
+
+实测与探针：`docs/reviews/diff/PH-20.md` §3、
+`docs/planning/rill-0.1.0-ct-defect-workarounds.md` §8。
