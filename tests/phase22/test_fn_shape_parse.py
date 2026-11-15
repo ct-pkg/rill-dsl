@@ -75,6 +75,7 @@ def test_fn_def_fields_are_whitelisted():
     definition = _first_def(parse_source("//fn{\n@ <read> $p { <read> $p }\n}\n"))
     assert set(definition) == {"kind", "shape", "template", "body", "span"}
     assert set(definition["shape"]) == {
+        "shape_version",
         "verb",
         "subject",
         "object",
