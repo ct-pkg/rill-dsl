@@ -1,0 +1,12 @@
+{
+  "schema": "rill.shell-profile/0",
+  "name": "tour-full",
+  "description": "在读能力之上放开写文件与起进程。",
+  "allow": {
+    "process": ["run"],
+    "fs": ["read", "write"],
+    "env": ["get"],
+    "stdio": ["write"]
+  },
+  "exit_codes": {"ok": 0, "unhandled": 1}
+}

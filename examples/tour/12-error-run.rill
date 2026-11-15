@@ -1,0 +1,2 @@
+// 管道首段失败且无 [error]：中断管道，下游不执行，退出码 1。
+<read> data/missing.txt |> <send> '下游不执行' [to] user

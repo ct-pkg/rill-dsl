@@ -1,0 +1,3 @@
+<env> RILL_TOUR_SET -> $v
+<send> $v [to] user
+<env> RILL_TOUR_MISSING

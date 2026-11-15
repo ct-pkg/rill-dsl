@@ -1,0 +1,12 @@
+{
+  "schema": "rill.shell-profile/0",
+  "name": "tour-min",
+  "description": "只读：读文件、读 env、写 stdio；不起进程、不写文件。",
+  "allow": {
+    "process": [],
+    "fs": ["read"],
+    "env": ["get"],
+    "stdio": ["write"]
+  },
+  "exit_codes": {"ok": 0, "unhandled": 1}
+}

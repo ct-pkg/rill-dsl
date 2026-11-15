@@ -1,0 +1,6 @@
+//map{
+cfg`data/one.txt
+r<read
+}
+<r> `cfg` ->$t
+<send> $t[to]user

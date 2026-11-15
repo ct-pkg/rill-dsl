@@ -1,0 +1,4 @@
+// 同一类失败两种结局：写了 [error] 就继续，不写就默认 break 收口 program。
+<env> RILL_TOUR_MISSING [error] { <send> $ [to] user }
+<env> RILL_TOUR_MISSING
+<send> '这一句不会执行' [to] user
