@@ -488,18 +488,18 @@ call_stmt   := "@" verb_call trailing_block* [ "|>" simple_stmt ]
 - 介词按名称与顺序精确匹配；`[into]` / `[ok]` / `[error]` / `[results]` 是尾随块或结果块，不是介宾，不进签名。
 - 模板不带尾随块；尾随块只能写在调用上。
 - 函数体最后一条语句的段输出即返回值；空体返回 `null`。
-- 正文出现 `@ "name"` 旧形态 → 解析期错误 `E-07`，错误位置在字符串 token，并给出迁移提示；不保留按名字查找的回退路径。
+- 正文出现 `@ "name"` 旧形态 → 解析期错误 `E-07`，错误位置在字符串 token，并给出迁移提示；不保留按名字查找的回退路径。`@` 后不得以字符串开头：常量主语写裸词，参数主语写 `$变量`，无主语直接写 `<动词>`。
 
 ```text
 //fn{
-@ $path <read> $path |> <parse> yaml {
+@ <read> $path |> <parse> yaml {
     <read> $path |> <parse> yaml
     <write> $path
 }
 }
 
 // 正文调用：形状与定义同形，每个参数位都写值
-@ "config.yml" <read> "config.yml" |> <send> "完成" [to] user
+@ <read> "config.yml" |> <send> "完成" [to] user
 ```
 
 ### 4.19 空格规则
@@ -636,13 +636,13 @@ each $f [in] xs {
 
 ```text
 //fn{
-@ $path <read> $path |> <parse> yaml {
+@ <read> $path |> <parse> yaml {
     <read> $path |> <parse> yaml
     <write> $path
 }
 }
 
-@ "config.yml" <read> "config.yml" |> <send> "完成" [to] user
+@ <read> "config.yml" |> <send> "完成" [to] user
 ```
 
 ### 示例 8：多角色协作
