@@ -1,0 +1,140 @@
+// host — 宿主能力接口：能力槽位与函数指针表（PH-19 T1）
+//
+// 为什么不用 trait：PH-51 实测指针接收者的 `.` 调用会发射 `S_f(&p)`（传 S**），
+// vtable 点静默错值。能力派发统一走 C 函数指针表，第一参数显式传具体宿主，
+// 不出现连续 get 方法链（见 docs/reviews/diff/PH-19.md）。
+
+import common::common;
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+/* 能力调用的统一结果：ok/error 对应 ExecOutcome，meta 对应 host_meta。 */
+pub struct HRes {
+    int ok;
+    JVal *value;
+    const char *error;
+    JVal *meta;
+};
+
+/* 能力函数签名：ctx 是具体宿主（ShellHost），显式传入。
+   PH-51 的绕法就是这张表——函数指针字段，不用指针接收者方法。 */
+pub struct HostOps {
+    void *ctx;
+    HRes (*fs_read)(void *ctx, const char *path);
+    HRes (*fs_write)(void *ctx, const char *path, JVal *content);
+    HRes (*process_run)(void *ctx, const char *command, JVal *stdin_value);
+    HRes (*env_get)(void *ctx, const char *name);
+    HRes (*stdio_write)(void *ctx, JVal *value);
+};
+
+pub void hres_success(HRes *r, JVal *value)
+{
+    r->ok = 1;
+    r->value = value;
+    r->error = 0;
+    r->meta = 0;
+}
+
+pub void hres_failure(HRes *r, const char *error, JVal *meta)
+{
+    r->ok = 0;
+    r->value = 0;
+    r->error = error;
+    r->meta = meta;
+}
+
+/* 与 Python 的 ``ExecOutcome.failure(..., {"host_error": {"code": ...}})`` 同形。 */
+pub JVal *host_error_meta(const char *code)
+{
+    JVal *inner = jobj();
+    JVal *meta = jobj();
+    jput(inner, "code", jstr(code));
+    jput(meta, "host_error", inner);
+    return meta;
+}
+
+/* HostError 的字符串形态固定为 ``CODE: message``。 */
+pub const char *host_error_text(const char *code, const char *detail)
+{
+    size_t n = strlen(code) + strlen(detail) + 4;
+    char *buf = (char *)xmalloc(n);
+    snprintf(buf, n, "%s: %s", code, detail);
+    return buf;
+}
+
+static JVal *h_field(JVal *entry, const char *key)
+{
+    JVal *v = jget(entry, key);
+    return (v != 0 && v->kind != J_NULL) ? v : 0;
+}
+
+/* Python ``_require_text``：只接受非空字符串。 */
+static const char *h_require_text(JVal *v)
+{
+    return (v != 0 && v->kind == J_STR && v->str[0] != 0) ? v->str : 0;
+}
+
+static HRes h_verb_args(const char *detail)
+{
+    HRes r;
+    hres_failure(&r, host_error_text("E-HOST-VERB-ARGS", detail),
+                 host_error_meta("E-HOST-VERB-ARGS"));
+    return r;
+}
+
+/*
+ * 动词分派与参数校验。形状对齐 Python ShellVerbRegistry.VERB_MAP：
+ *   read → fs.read, write → fs.write, run → process.run,
+ *   env → env.get, send → stdio.write。
+ * entry 由求值器填好 {verb, subject, object, post, input}。
+ */
+pub HRes host_call(HostOps *ops, const char *verb, JVal *entry)
+{
+    JVal *object = h_field(entry, "object");
+    JVal *subject = h_field(entry, "subject");
+    JVal *input = h_field(entry, "input");
+    const char *text;
+
+    if (strcmp(verb, "read") == 0) {
+        text = h_require_text(object);
+        if (text == 0) return h_verb_args("read 需要一个文件路径");
+        return ops->fs_read(ops->ctx, text);
+    }
+    if (strcmp(verb, "write") == 0) {
+        JVal *content;
+        text = h_require_text(object);
+        if (text == 0) return h_verb_args("write 需要一个文件路径");
+        content = subject != 0 ? subject : input;
+        if (content == 0 ||
+            (content->kind != J_STR && content->kind != J_BYTES)) {
+            return h_verb_args("write 的内容只接受文本或 Bytes");
+        }
+        return ops->fs_write(ops->ctx, text, content);
+    }
+    if (strcmp(verb, "run") == 0) {
+        text = h_require_text(object);
+        if (text == 0) return h_verb_args("run 需要一个命令字符串");
+        if (input != 0 && input->kind != J_STR && input->kind != J_BYTES) {
+            return h_verb_args("run 的 stdin 只接受文本或 Bytes");
+        }
+        return ops->process_run(ops->ctx, text, input);
+    }
+    if (strcmp(verb, "env") == 0) {
+        text = h_require_text(object);
+        if (text == 0) return h_verb_args("env 需要一个变量名");
+        return ops->env_get(ops->ctx, text);
+    }
+    if (strcmp(verb, "send") == 0) {
+        JVal *value = subject != 0 ? subject : (object != 0 ? object : input);
+        return ops->stdio_write(ops->ctx, value);
+    }
+    fail("run", "E-RUN-VERB-UNREGISTERED", 0, 0,
+         "动词 '%s' 没有真实宿主映射；已映射：env, read, run, send, write", verb);
+    {
+        HRes r;
+        hres_failure(&r, "E-RUN-VERB-UNREGISTERED", 0);
+        return r;
+    }
+}

@@ -124,6 +124,7 @@ pub enum JKind {
     J_BOOL,
     J_INT,
     J_STR,
+    J_BYTES,
     J_ARR,
     J_OBJ
 };
@@ -157,6 +158,20 @@ pub JVal *jbool(int b) { return jnew(J_BOOL, b, 0, 0); }
 pub JVal *jint(long long n) { return jnew(J_INT, n, 0, 0); }
 pub JVal *jstr(const char *s) { return jnew(J_STR, 0, s, -1); }
 pub JVal *jstrn(const char *s, int n) { return jnew(J_STR, 0, s, n); }
+
+/* PH-19：非法 UTF-8 不做有损替换，原样保留。len 存在 num，
+   数据存在 str（额外补 0 便于按 C 串调试）；写出时按 base64 包裹。 */
+pub JVal *jbytes(const char *data, int n)
+{
+    JVal *v = (JVal *)xmalloc(sizeof(JVal));
+    memset(v, 0, sizeof(*v));
+    v->kind = J_BYTES;
+    v->num = n;
+    v->str = (char *)xmalloc((size_t)n + 1);
+    if (n > 0) memcpy(v->str, data, (size_t)n);
+    v->str[n] = 0;
+    return v;
+}
 pub JVal *jarr(void) { return jnew(J_ARR, 0, 0, 0); }
 pub JVal *jobj(void) { return jnew(J_OBJ, 0, 0, 0); }
 
@@ -229,6 +244,167 @@ static void jwrite_string(FILE *out, const char *s)
     fputc('"', out);
 }
 
+/* 只读的伪宿主/能力清单 JSON。标准 JSON 子集：对象/数组/字符串/
+   整数/true/false/null。递归下降，深度由输入自身限制。
+   PH-19 从 eval 上移到 common：能力清单与 fakes 都要读 JSON。 */
+pub JVal *json_parse(const char *s, int *pos)
+{
+    JVal *v = 0;
+    char c;
+    int i;
+    while (s[*pos] == ' ' || s[*pos] == '\t' || s[*pos] == '\n' ||
+           s[*pos] == '\r') {
+        (*pos)++;
+    }
+    c = s[*pos];
+    if (c == '{') {
+        v = jobj();
+        (*pos)++;
+        for (;;) {
+            JVal *key;
+            JVal *val;
+            while (s[*pos] == ' ' || s[*pos] == '\t' || s[*pos] == '\n' ||
+                   s[*pos] == '\r') {
+                (*pos)++;
+            }
+            if (s[*pos] == '}') {
+                (*pos)++;
+                return v;
+            }
+            key = json_parse(s, pos);
+            while (s[*pos] == ' ' || s[*pos] == '\t' || s[*pos] == '\n' ||
+                   s[*pos] == '\r') {
+                (*pos)++;
+            }
+            if (s[*pos] == ':') (*pos)++;
+            val = json_parse(s, pos);
+            jput(v, key->str, val);
+            while (s[*pos] == ' ' || s[*pos] == '\t' || s[*pos] == '\n' ||
+                   s[*pos] == '\r') {
+                (*pos)++;
+            }
+            if (s[*pos] == ',') {
+                (*pos)++;
+                continue;
+            }
+            if (s[*pos] == '}') {
+                (*pos)++;
+                return v;
+            }
+            return v;
+        }
+    }
+    if (c == '[') {
+        v = jarr();
+        (*pos)++;
+        for (;;) {
+            while (s[*pos] == ' ' || s[*pos] == '\t' || s[*pos] == '\n' ||
+                   s[*pos] == '\r') {
+                (*pos)++;
+            }
+            if (s[*pos] == ']') {
+                (*pos)++;
+                return v;
+            }
+            jpush(v, json_parse(s, pos));
+            while (s[*pos] == ' ' || s[*pos] == '\t' || s[*pos] == '\n' ||
+                   s[*pos] == '\r') {
+                (*pos)++;
+            }
+            if (s[*pos] == ',') {
+                (*pos)++;
+                continue;
+            }
+            if (s[*pos] == ']') {
+                (*pos)++;
+                return v;
+            }
+            return v;
+        }
+    }
+    if (c == '"') {
+        int cap = 32;
+        int len = 0;
+        char *buf = (char *)xmalloc((size_t)cap);
+        (*pos)++;
+        while (s[*pos] && s[*pos] != '"') {
+            char ch = s[*pos];
+            if (ch == '\\') {
+                (*pos)++;
+                ch = s[*pos];
+                if (ch == 'n') ch = '\n';
+                else if (ch == 't') ch = '\t';
+                else if (ch == 'r') ch = '\r';
+                else if (ch == 'b') ch = '\b';
+                else if (ch == 'f') ch = '\f';
+                else if (ch == 'u') {
+                    ch = '?';
+                    for (i = 0; i < 4 && s[*pos + 1 + i]; i++) (*pos)++;
+                }
+            }
+            if (len + 1 >= cap) {
+                cap *= 2;
+                buf = (char *)xrealloc(buf, (size_t)cap);
+            }
+            buf[len++] = ch;
+            if (s[*pos]) (*pos)++;
+        }
+        if (s[*pos] == '"') (*pos)++;
+        v = jstrn(buf, len);
+        free(buf);
+        return v;
+    }
+    if (strncmp(s + *pos, "true", 4) == 0) {
+        *pos += 4;
+        return jbool(1);
+    }
+    if (strncmp(s + *pos, "false", 5) == 0) {
+        *pos += 5;
+        return jbool(0);
+    }
+    if (strncmp(s + *pos, "null", 4) == 0) {
+        *pos += 4;
+        return jnull();
+    }
+    {
+        long long num = 0;
+        int neg = 0;
+        if (s[*pos] == '-') {
+            neg = 1;
+            (*pos)++;
+        }
+        while (is_digit(s[*pos])) {
+            num = num * 10 + (s[*pos] - '0');
+            (*pos)++;
+        }
+        return jint(neg ? -num : num);
+    }
+}
+
+static void jwrite_base64(FILE *out, const unsigned char *data, int n)
+{
+    static const char *alphabet =
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    int i;
+    for (i = 0; i + 2 < n; i += 3) {
+        unsigned int v = ((unsigned)data[i] << 16) |
+                         ((unsigned)data[i + 1] << 8) |
+                         (unsigned)data[i + 2];
+        fputc(alphabet[(v >> 18) & 63], out);
+        fputc(alphabet[(v >> 12) & 63], out);
+        fputc(alphabet[(v >> 6) & 63], out);
+        fputc(alphabet[v & 63], out);
+    }
+    if (i < n) {
+        unsigned int v = (unsigned)data[i] << 16;
+        if (i + 1 < n) v |= (unsigned)data[i + 1] << 8;
+        fputc(alphabet[(v >> 18) & 63], out);
+        fputc(alphabet[(v >> 12) & 63], out);
+        fputc(i + 1 < n ? alphabet[(v >> 6) & 63] : '=', out);
+        fputc('=', out);
+    }
+}
+
 pub void jdump(FILE *out, JVal *v)
 {
     int i;
@@ -241,6 +417,11 @@ pub void jdump(FILE *out, JVal *v)
     case J_BOOL: fputs(v->boolean ? "true" : "false", out); break;
     case J_INT: fprintf(out, "%lld", v->num); break;
     case J_STR: jwrite_string(out, v->str); break;
+    case J_BYTES:
+        fputs("{\"$bytes\":\"", out);
+        jwrite_base64(out, (const unsigned char *)v->str, (int)v->num);
+        fputs("\"}", out);
+        break;
     case J_ARR:
         fputc('[', out);
         for (i = 0; i < v->len; i++) {

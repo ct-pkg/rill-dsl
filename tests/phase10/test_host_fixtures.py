@@ -6,14 +6,18 @@
 （真读文件 → 真起进程 → 真输出）。
 """
 
+import argparse
 import json
 import os
+import shlex
 import sys
 import tempfile
 
 sys.path.insert(0, os.path.dirname(__file__))
 
 from support import HOST_ROOT, ROOT, payload_of, run_cli
+
+SUT = []
 
 CAPABILITIES = ("process", "fs", "env", "stdio", "exit")
 PROFILES = {"min": "min.json", "full": "full.json", "no-stdio": "no-stdio.json"}
@@ -55,7 +59,7 @@ def materialize(directory, files):
 def check_ast(fixture, script):
     seen = {}
     for profile in ("shell", "agent"):
-        result = run_cli(["parse", "--dump-ast", script, "--profile", profile])
+        result = run_cli(["parse", "--dump-ast", script, "--profile", profile], sut=SUT)
         assert result.returncode == 0, (fixture, profile, result.stdout, result.stderr)
         seen[profile] = canonical(payload_of(result)["ast"])
     assert seen["shell"] == seen["agent"], "%s: AST 跨 profile 不一致" % fixture
@@ -79,7 +83,7 @@ def run_fixture(path):
             "--host-profile",
             profile_path(spec.get("profile", "min")),
         ]
-        result = run_cli(args, cwd=tmp, env=spec.get("env"))
+        result = run_cli(args, cwd=tmp, env=spec.get("env"), sut=SUT)
         payload = payload_of(result)
         expect = spec["expect"]
 
@@ -147,7 +151,8 @@ def case_e2e_real_script():
             "shell",
             "--host-profile",
             profile_path("full"),
-        ]
+        ],
+        sut=SUT,
     )
     assert result.returncode == 0, (result.returncode, result.stdout, result.stderr)
     payload = payload_of(result)
@@ -156,7 +161,14 @@ def case_e2e_real_script():
     assert result.stderr.strip() == "8080", result.stderr
 
 
-def main():
+def main(argv=None):
+    parser = argparse.ArgumentParser(description="PH-10 宿主 fixture 门禁")
+    parser.add_argument(
+        "--sut", default="", help="覆盖被测命令，如 './ct/bin/rill_ct'；缺省 python3 -m rill"
+    )
+    opts = parser.parse_args(argv)
+    global SUT
+    SUT = shlex.split(opts.sut) if opts.sut else []
     case_fixture_coverage()
     case_e2e_real_script()
     print("PASS phase10 fixtures: 12 例五类能力 + AST 一致 + e2e 真脚本")

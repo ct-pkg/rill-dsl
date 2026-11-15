@@ -8,6 +8,8 @@ import parser::parser;
 
 import loader::loader;
 
+import host::host;
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -39,6 +41,7 @@ pub struct EVar {
 pub struct Eval {
     JVal *program;
     JVal *tools;
+    HostOps *host;
     EVar *vars;
 };
 
@@ -74,141 +77,7 @@ pub void eout_break(EOut *o, JVal *v, const char *target)
     o->break_target = target;
 }
 
-/* 只读的伪宿主 JSON（fakes 目录）。标准 JSON 子集：对象/数组/字符串/
-   整数/true/false/null。递归下降，深度由 JSON offer 自身限制。 */
-pub JVal *json_parse(const char *s, int *pos)
-{
-    JVal *v = 0;
-    char c;
-    int i;
-    while (s[*pos] == ' ' || s[*pos] == '\t' || s[*pos] == '\n' ||
-           s[*pos] == '\r') {
-        (*pos)++;
-    }
-    c = s[*pos];
-    if (c == '{') {
-        v = jobj();
-        (*pos)++;
-        for (;;) {
-            JVal *key;
-            JVal *val;
-            while (s[*pos] == ' ' || s[*pos] == '\t' || s[*pos] == '\n' ||
-                   s[*pos] == '\r') {
-                (*pos)++;
-            }
-            if (s[*pos] == '}') {
-                (*pos)++;
-                return v;
-            }
-            key = json_parse(s, pos);
-            while (s[*pos] == ' ' || s[*pos] == '\t' || s[*pos] == '\n' ||
-                   s[*pos] == '\r') {
-                (*pos)++;
-            }
-            if (s[*pos] == ':') (*pos)++;
-            val = json_parse(s, pos);
-            jput(v, key->str, val);
-            while (s[*pos] == ' ' || s[*pos] == '\t' || s[*pos] == '\n' ||
-                   s[*pos] == '\r') {
-                (*pos)++;
-            }
-            if (s[*pos] == ',') {
-                (*pos)++;
-                continue;
-            }
-            if (s[*pos] == '}') {
-                (*pos)++;
-                return v;
-            }
-            return v;
-        }
-    }
-    if (c == '[') {
-        v = jarr();
-        (*pos)++;
-        for (;;) {
-            while (s[*pos] == ' ' || s[*pos] == '\t' || s[*pos] == '\n' ||
-                   s[*pos] == '\r') {
-                (*pos)++;
-            }
-            if (s[*pos] == ']') {
-                (*pos)++;
-                return v;
-            }
-            jpush(v, json_parse(s, pos));
-            while (s[*pos] == ' ' || s[*pos] == '\t' || s[*pos] == '\n' ||
-                   s[*pos] == '\r') {
-                (*pos)++;
-            }
-            if (s[*pos] == ',') {
-                (*pos)++;
-                continue;
-            }
-            if (s[*pos] == ']') {
-                (*pos)++;
-                return v;
-            }
-            return v;
-        }
-    }
-    if (c == '"') {
-        int cap = 32;
-        int len = 0;
-        char *buf = (char *)xmalloc((size_t)cap);
-        (*pos)++;
-        while (s[*pos] && s[*pos] != '"') {
-            char ch = s[*pos];
-            if (ch == '\\') {
-                (*pos)++;
-                ch = s[*pos];
-                if (ch == 'n') ch = '\n';
-                else if (ch == 't') ch = '\t';
-                else if (ch == 'r') ch = '\r';
-                else if (ch == 'b') ch = '\b';
-                else if (ch == 'f') ch = '\f';
-                else if (ch == 'u') {
-                    ch = '?';
-                    for (i = 0; i < 4 && s[*pos + 1 + i]; i++) (*pos)++;
-                }
-            }
-            if (len + 1 >= cap) {
-                cap *= 2;
-                buf = (char *)xrealloc(buf, (size_t)cap);
-            }
-            buf[len++] = ch;
-            if (s[*pos]) (*pos)++;
-        }
-        if (s[*pos] == '"') (*pos)++;
-        v = jstrn(buf, len);
-        free(buf);
-        return v;
-    }
-    if (strncmp(s + *pos, "true", 4) == 0) {
-        *pos += 4;
-        return jbool(1);
-    }
-    if (strncmp(s + *pos, "false", 5) == 0) {
-        *pos += 5;
-        return jbool(0);
-    }
-    if (strncmp(s + *pos, "null", 4) == 0) {
-        *pos += 4;
-        return jnull();
-    }
-    {
-        long long num = 0;
-        int neg = 0;
-        if (s[*pos] == '-') {
-            neg = 1;
-            (*pos)++;
-        }
-        while (is_digit(s[*pos])) {
-            num = num * 10 + (s[*pos] - '0');
-            (*pos)++;
-        }
-        return jint(neg ? -num : num);
-    }
-}
+/* json_parse 已上移到 common（PH-19）：能力清单与 fakes 共用同一份实现。 */
 
 /* set=1 时写入并返回；set=0 时读取，未定义直接报 run 诊断。 */
 static JVal *var_lookup(Eval *ev, const char *name, JVal *value, int set)
@@ -315,6 +184,8 @@ static int truthy(JVal *v)
     if (v->kind == J_BOOL) return v->boolean;
     if (v->kind == J_INT) return v->num != 0;
     if (v->kind == J_STR) return v->str != 0 && v->str[0] != 0;
+    /* 与 Python 一致：Bytes 是对象，默认 truthy（没有 __bool__）。 */
+    if (v->kind == J_BYTES) return 1;
     if (v->kind == J_ARR || v->kind == J_OBJ) return v->len > 0;
     return 1;
 }
@@ -421,11 +292,35 @@ static EOut run_block(Eval *ev, JVal *block, JVal *dollar, int last_value)
     return out;
 }
 
-/* 动词调用：fake 队列 / default；语句位与条件位共用这一份。 */
+/* 真实宿主：entry 形状与 Python ``Interpreter._call`` 一致。 */
+static JVal *host_entry(Eval *ev, JVal *call, JVal *dollar)
+{
+    JVal *entry = jobj();
+    JVal *post = jget(call, "post");
+    JVal *postv = jarr();
+    JVal *subject = jget(call, "subject");
+    JVal *object = jget(call, "object");
+    int i;
+
+    jput(entry, "verb", jstr(jget_str(call, "verb")));
+    jput(entry, "subject",
+         (subject != 0 && subject->kind != J_NULL)
+             ? eval_value(ev, subject, dollar)
+             : jnull());
+    jput(entry, "object", eval_value(ev, object, dollar));
+    for (i = 0; i < post->len; i++) {
+        jpush(postv, eval_value(ev, post->items[i], dollar));
+    }
+    jput(entry, "post", postv);
+    jput(entry, "input", dollar ? dollar : jnull());
+    return entry;
+}
+
+/* 动词调用：真实宿主 / fake 队列 / default；语句位与条件位共用这一份。 */
 static EOut eval_call_outcome(Eval *ev, JVal *call, JVal *dollar)
 {
     const char *verb = jget_str(call, "verb");
-    JVal *spec = jget(ev->tools, verb);
+    JVal *spec;
     JVal *queue;
     JVal *entry = 0;
     EOut out;
@@ -433,8 +328,18 @@ static EOut eval_call_outcome(Eval *ev, JVal *call, JVal *dollar)
     JVal *okb;
     int i;
 
-    (void)dollar;
     eout_success(&out, jnull());
+    if (ev->host != 0) {
+        HRes hr = host_call(ev->host, verb, host_entry(ev, call, dollar));
+        if (hr.ok) {
+            eout_success(&out, hr.value ? hr.value : jnull());
+        } else {
+            eout_failure(&out, hr.error ? hr.error : LOAD_DEFAULT_ERROR);
+        }
+        out.meta = hr.meta;
+        return out;
+    }
+    spec = jget(ev->tools, verb);
     if (spec == 0) {
         fail("run", "E-RUN-VERB-UNREGISTERED", 0, 0,
              "fake 动词 '%s' 未注册", verb);

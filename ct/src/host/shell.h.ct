@@ -1,0 +1,973 @@
+// shell — Shell 宿主能力（PH-19）：进程 / 文件 / env / stdio / 退出码
+//
+// 卡面原计划把实现放 shell.m.ct，但 `ct build` 的映射单元不能定义函数
+// （实测 `a .m.ct unit cannot define a function`），故实现与声明同在本单元；
+// 偏差已报，判据不动。能力派发经 host::host 的函数指针表，绕开 PH-51。
+
+import common::common;
+
+import host::host;
+
+import loader::loader;
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdarg.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <signal.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <time.h>
+
+#define SH_PROFILE_MAX 128
+#define SH_PROFILE_SCHEMA "rill.shell-profile/0"
+#define SH_TIMEOUT_MS 10000
+#define SH_IO_CHUNK 4096
+#define SH_TOKEN_MAX 4096
+
+/* ct 前端不展开 <errno.h> 的 errno 宏（实测 `use of an undeclared variable`）；
+   macOS 上 errno 是 (*__error())。见 workarounds 的 PH-19 条目。 */
+static int sh_errno(void)
+{
+    return (*__error());
+}
+
+pub struct ShellHost {
+    char profile[128];
+    char *cwd;
+    int proc_run;
+    int fs_read;
+    int fs_write;
+    int env_get;
+    int stdio_write;
+    int exit_ok;
+    int exit_unhandled;
+};
+
+/* ------------------------------------------------------------------ */
+/* policy                                                              */
+/* ------------------------------------------------------------------ */
+
+static char *sh_cwd(void)
+{
+    char *cwd = getcwd(0, 0);
+    return cwd != 0 ? cwd : xstrdup(".");
+}
+
+static void sh_profile_fail(const char *path, const char *fmt, ...)
+{
+    char msg[512];
+    va_list ap;
+    va_start(ap, fmt);
+    vsnprintf(msg, sizeof(msg), fmt, ap);
+    va_end(ap);
+    (void)path;
+    fail("run", "E-RUN-HOST-PROFILE", 0, 0, "%s", msg);
+}
+
+static int sh_slot_allowed(const char *name)
+{
+    return strcmp(name, "process") == 0 || strcmp(name, "fs") == 0 ||
+           strcmp(name, "env") == 0 || strcmp(name, "stdio") == 0;
+}
+
+static int sh_profile_field_allowed(const char *name)
+{
+    return strcmp(name, "schema") == 0 || strcmp(name, "name") == 0 ||
+           strcmp(name, "description") == 0 || strcmp(name, "allow") == 0 ||
+           strcmp(name, "exit_codes") == 0;
+}
+
+static int sh_list_has(JVal *list, const char *needle)
+{
+    int i;
+    if (list == 0 || list->kind != J_ARR) return 0;
+    for (i = 0; i < list->len; i++) {
+        JVal *item = list->items[i];
+        if (item->kind == J_STR && strcmp(item->str, needle) == 0) return 1;
+    }
+    return 0;
+}
+
+static void sh_slot_validate(const char *path, JVal *allow, const char *slot)
+{
+    JVal *list = jget(allow, slot);
+    int i;
+    if (list == 0) return;
+    if (list->kind != J_ARR) {
+        sh_profile_fail(path, "%s.allow.%s: 必须是非空字符串数组", path, slot);
+    }
+    for (i = 0; i < list->len; i++) {
+        JVal *item = list->items[i];
+        if (item->kind != J_STR || item->str[0] == 0) {
+            sh_profile_fail(path, "%s.allow.%s: 必须是非空字符串数组", path, slot);
+        }
+    }
+}
+
+static ShellHost *sh_alloc(void)
+{
+    ShellHost *h = (ShellHost *)xmalloc(sizeof(ShellHost));
+    memset(h, 0, sizeof(*h));
+    h->cwd = sh_cwd();
+    h->exit_ok = 0;
+    h->exit_unhandled = 1;
+    return h;
+}
+
+/* shell profile 的默认能力：只读文件、读 env、写 stdio；不起进程、不写文件。 */
+pub ShellHost *sh_default_host(void)
+{
+    ShellHost *h = sh_alloc();
+    snprintf(h->profile, SH_PROFILE_MAX, "%s", "builtin-shell");
+    h->fs_read = 1;
+    h->env_get = 1;
+    h->stdio_write = 1;
+    return h;
+}
+
+pub ShellHost *sh_load_host(const char *path)
+{
+    ShellHost *h = sh_alloc();
+    int n = 0;
+    int pos = 0;
+    char *text = read_source(path, &n);
+    JVal *doc;
+    JVal *allow;
+    JVal *codes;
+    JVal *name;
+    JVal *schema;
+    int i;
+
+    (void)n;
+    if (text == 0) {
+        int err = sh_errno();
+        char detail[512];
+        snprintf(detail, sizeof(detail), "[Errno %d] %s: '%s'", err,
+                 strerror(err), path);
+        sh_profile_fail(path, "%s: 无法读取能力清单（%s）", path, detail);
+    }
+    doc = json_parse(text, &pos);
+    if (doc == 0 || doc->kind != J_OBJ) {
+        sh_profile_fail(path, "%s: 顶层必须是对象", path);
+    }
+    for (i = 0; i < doc->len; i++) {
+        if (!sh_profile_field_allowed(doc->keys[i])) {
+            sh_profile_fail(path, "%s: 未知字段 '%s'", path, doc->keys[i]);
+        }
+    }
+    schema = jget(doc, "schema");
+    if (schema == 0 || schema->kind != J_STR ||
+        strcmp(schema->str, SH_PROFILE_SCHEMA) != 0) {
+        sh_profile_fail(path, "%s.schema: 必须是 %s", path, SH_PROFILE_SCHEMA);
+    }
+    name = jget(doc, "name");
+    if (name == 0 || name->kind != J_STR || name->str[0] == 0) {
+        sh_profile_fail(path, "%s.name: 必须是非空字符串", path);
+    }
+    allow = jget(doc, "allow");
+    if (allow == 0 || allow->kind != J_OBJ) {
+        sh_profile_fail(path, "%s.allow: 必须是对象", path);
+    }
+    for (i = 0; i < allow->len; i++) {
+        if (!sh_slot_allowed(allow->keys[i])) {
+            sh_profile_fail(path, "%s.allow: 未知槽位 '%s'", path, allow->keys[i]);
+        }
+    }
+    sh_slot_validate(path, allow, "process");
+    sh_slot_validate(path, allow, "fs");
+    sh_slot_validate(path, allow, "env");
+    sh_slot_validate(path, allow, "stdio");
+    h->proc_run = sh_list_has(jget(allow, "process"), "run");
+    h->fs_read = sh_list_has(jget(allow, "fs"), "read");
+    h->fs_write = sh_list_has(jget(allow, "fs"), "write");
+    h->env_get = sh_list_has(jget(allow, "env"), "get");
+    h->stdio_write = sh_list_has(jget(allow, "stdio"), "write");
+
+    codes = jget(doc, "exit_codes");
+    if (codes != 0 && codes->kind != J_NULL) {
+        if (codes->kind != J_OBJ) {
+            sh_profile_fail(path, "%s.exit_codes: 必须是对象", path);
+        }
+        for (i = 0; i < codes->len; i++) {
+            const char *key = codes->keys[i];
+            JVal *value = codes->items[i];
+            if (strcmp(key, "ok") != 0 && strcmp(key, "unhandled") != 0) {
+                sh_profile_fail(path, "%s.exit_codes: 未知字段 '%s'", path, key);
+            }
+            if (value->kind != J_INT) {
+                sh_profile_fail(path, "%s.exit_codes.%s: 必须是整数", path, key);
+            }
+            if (strcmp(key, "ok") == 0) h->exit_ok = (int)value->num;
+            else h->exit_unhandled = (int)value->num;
+        }
+    }
+    snprintf(h->profile, SH_PROFILE_MAX, "%s", name->str);
+    return h;
+}
+
+pub int sh_exit_code(ShellHost *h, int ok)
+{
+    return ok ? h->exit_ok : h->exit_unhandled;
+}
+
+/* 能力清单未声明该操作：与 Python 一样走 run 诊断（exit 2），不是 ok=false。 */
+static void sh_require(ShellHost *h, const char *slot, const char *op, int allowed)
+{
+    char msg[512];
+    if (allowed) return;
+    snprintf(msg, sizeof(msg),
+             "E-HOST-CAPABILITY-DENIED: Shell profile '%s' 未声明能力 %s.%s；"
+             "在 --host-profile 的 allow.%s 中加入 '%s'",
+             h->profile, slot, op, slot, op);
+    fail("run", "E-HOST-CAPABILITY-DENIED", 0, 0, "%s", msg);
+}
+
+/* ------------------------------------------------------------------ */
+/* bytes                                                               */
+/* ------------------------------------------------------------------ */
+
+static int sh_utf8_valid(const unsigned char *s, int n)
+{
+    int i = 0;
+    while (i < n) {
+        unsigned char c = s[i];
+        unsigned int cp;
+        int need;
+        int k;
+        if (c == 0) return 0;
+        if (c < 0x80) {
+            i++;
+            continue;
+        }
+        if ((c & 0xE0) == 0xC0) {
+            need = 1;
+            cp = c & 0x1F;
+            if (cp < 2) return 0;
+        } else if ((c & 0xF0) == 0xE0) {
+            need = 2;
+            cp = c & 0x0F;
+        } else if ((c & 0xF8) == 0xF0) {
+            need = 3;
+            cp = c & 0x07;
+        } else {
+            return 0;
+        }
+        if (i + need >= n) return 0;
+        for (k = 1; k <= need; k++) {
+            unsigned char cc = s[i + k];
+            if ((cc & 0xC0) != 0x80) return 0;
+            cp = (cp << 6) | (cc & 0x3F);
+        }
+        if (need == 2 && (cp < 0x800 || (cp >= 0xD800 && cp <= 0xDFFF))) {
+            return 0;
+        }
+        if (need == 3 && (cp < 0x10000 || cp > 0x10FFFF)) return 0;
+        i += need + 1;
+    }
+    return 1;
+}
+
+/* UTF-8 文本优先；非法 UTF-8 保留为 Bytes，不做有损替换。 */
+static JVal *sh_decode(const char *data, int n)
+{
+    if (sh_utf8_valid((const unsigned char *)data, n)) return jstrn(data, n);
+    return jbytes(data, n);
+}
+
+/* ------------------------------------------------------------------ */
+/* fs / env                                                            */
+/* ------------------------------------------------------------------ */
+
+static char *sh_resolve(ShellHost *h, const char *path)
+{
+    size_t n;
+    char *resolved;
+    if (path[0] == '/') return xstrdup(path);
+    n = strlen(h->cwd) + strlen(path) + 2;
+    resolved = (char *)xmalloc(n);
+    snprintf(resolved, n, "%s/%s", h->cwd, path);
+    return resolved;
+}
+
+/* 与 Python 的 ``"%s（%s）" % (path, OSError)`` 同形。 */
+static const char *sh_os_error(const char *code, const char *path,
+                               const char *resolved, int err)
+{
+    char detail[1024];
+    char *message;
+    size_t n;
+    snprintf(detail, sizeof(detail), "[Errno %d] %s: '%s'", err,
+             strerror(err), resolved);
+    n = strlen(path) + strlen(detail) + 8;
+    message = (char *)xmalloc(n);
+    snprintf(message, n, "%s（%s）", path, detail);
+    return host_error_text(code, message);
+}
+
+static HRes sh_fs_read(void *ctx, const char *path)
+{
+    ShellHost *h = (ShellHost *)ctx;
+    HRes r;
+    char *target;
+    FILE *f;
+    long size;
+    char *raw;
+    int n;
+
+    sh_require(h, "fs", "read", h->fs_read);
+    target = sh_resolve(h, path);
+    f = fopen(target, "rb");
+    if (f == 0) {
+        int err = sh_errno();
+        hres_failure(&r, sh_os_error("E-HOST-FS-READ", path, target, err),
+                     host_error_meta("E-HOST-FS-READ"));
+        return r;
+    }
+    if (fseek(f, 0, SEEK_END) != 0 || (size = ftell(f)) < 0 ||
+        fseek(f, 0, SEEK_SET) != 0) {
+        int err = sh_errno();
+        fclose(f);
+        hres_failure(&r, sh_os_error("E-HOST-FS-READ", path, target, err),
+                     host_error_meta("E-HOST-FS-READ"));
+        return r;
+    }
+    raw = (char *)xmalloc((size_t)size + 1);
+    n = (int)fread(raw, 1, (size_t)size, f);
+    fclose(f);
+    raw[n] = 0;
+    hres_success(&r, sh_decode(raw, n));
+    return r;
+}
+
+static HRes sh_fs_write(void *ctx, const char *path, JVal *content)
+{
+    ShellHost *h = (ShellHost *)ctx;
+    HRes r;
+    char *target;
+    FILE *f;
+    const char *raw;
+    int n;
+    JVal *meta;
+
+    sh_require(h, "fs", "write", h->fs_write);
+    raw = content->str;
+    n = content->kind == J_BYTES ? (int)content->num : (int)strlen(content->str);
+    target = sh_resolve(h, path);
+    f = fopen(target, "wb");
+    if (f == 0) {
+        int err = sh_errno();
+        hres_failure(&r, sh_os_error("E-HOST-FS-WRITE", path, target, err),
+                     host_error_meta("E-HOST-FS-WRITE"));
+        return r;
+    }
+    if (n > 0 && fwrite(raw, 1, (size_t)n, f) != (size_t)n) {
+        int err = sh_errno();
+        fclose(f);
+        hres_failure(&r, sh_os_error("E-HOST-FS-WRITE", path, target, err),
+                     host_error_meta("E-HOST-FS-WRITE"));
+        return r;
+    }
+    fclose(f);
+    meta = jobj();
+    jput(meta, "path", jstr(path));
+    hres_success(&r, jstr(path));
+    r.meta = jobj();
+    jput(r.meta, "fs", meta);
+    return r;
+}
+
+static HRes sh_env_get(void *ctx, const char *name)
+{
+    ShellHost *h = (ShellHost *)ctx;
+    HRes r;
+    const char *value;
+    char detail[512];
+
+    sh_require(h, "env", "get", h->env_get);
+    value = getenv(name);
+    if (value == 0) {
+        snprintf(detail, sizeof(detail), "环境变量 '%s' 未定义", name);
+        hres_failure(&r, host_error_text("E-HOST-ENV-MISSING", detail),
+                     host_error_meta("E-HOST-ENV-MISSING"));
+        return r;
+    }
+    hres_success(&r, jstr(value));
+    return r;
+}
+
+/* ------------------------------------------------------------------ */
+/* stdio                                                               */
+/* ------------------------------------------------------------------ */
+
+static void sh_json_quote(ShBuf *b, const char *s)
+{
+    const unsigned char *p = (const unsigned char *)s;
+    sh_buf_put(b, "\"", 1);
+    while (*p) {
+        unsigned char c = *p;
+        if (c == '"') sh_buf_put(b, "\\\"", 2);
+        else if (c == '\\') sh_buf_put(b, "\\\\", 2);
+        else if (c == '\b') sh_buf_put(b, "\\b", 2);
+        else if (c == '\f') sh_buf_put(b, "\\f", 2);
+        else if (c == '\n') sh_buf_put(b, "\\n", 2);
+        else if (c == '\r') sh_buf_put(b, "\\r", 2);
+        else if (c == '\t') sh_buf_put(b, "\\t", 2);
+        else if (c < 0x20) {
+            char esc[8];
+            snprintf(esc, sizeof(esc), "\\u%04x", (unsigned)c);
+            sh_buf_put(b, esc, (int)strlen(esc));
+        } else {
+            sh_buf_put(b, (const char *)p, 1);
+        }
+        p++;
+    }
+    sh_buf_put(b, "\"", 1);
+}
+
+/* Python json.dumps(..., ensure_ascii=False, sort_keys=True) 的形态。 */
+static void sh_json_text(ShBuf *b, JVal *v)
+{
+    int i;
+    if (v == 0) {
+        sh_buf_put(b, "null", 4);
+        return;
+    }
+    switch (v->kind) {
+    case J_NULL:
+        sh_buf_put(b, "null", 4);
+        break;
+    case J_BOOL:
+        sh_buf_put(b, v->boolean ? "true" : "false", v->boolean ? 4 : 5);
+        break;
+    case J_INT: {
+        char num[32];
+        snprintf(num, sizeof(num), "%lld", v->num);
+        sh_buf_put(b, num, (int)strlen(num));
+        break;
+    }
+    case J_STR:
+        sh_json_quote(b, v->str);
+        break;
+    case J_BYTES:
+        /* 不可达：sh_text_of 会先把 Bytes 按 replace 解码。 */
+        sh_json_quote(b, v->str);
+        break;
+    case J_ARR:
+        sh_buf_put(b, "[", 1);
+        for (i = 0; i < v->len; i++) {
+            if (i > 0) sh_buf_put(b, ", ", 2);
+            sh_json_text(b, v->items[i]);
+        }
+        sh_buf_put(b, "]", 1);
+        break;
+    case J_OBJ: {
+        int order[256];
+        int n = v->len < 256 ? v->len : 256;
+        for (i = 0; i < n; i++) order[i] = i;
+        for (i = 1; i < n; i++) {
+            int j = i;
+            int key = order[i];
+            while (j > 0 && strcmp(v->keys[order[j - 1]], v->keys[key]) > 0) {
+                order[j] = order[j - 1];
+                j--;
+            }
+            order[j] = key;
+        }
+        sh_buf_put(b, "{", 1);
+        for (i = 0; i < n; i++) {
+            if (i > 0) sh_buf_put(b, ", ", 2);
+            sh_json_quote(b, v->keys[order[i]]);
+            sh_buf_put(b, ": ", 2);
+            sh_json_text(b, v->items[order[i]]);
+        }
+        sh_buf_put(b, "}", 1);
+        break;
+    }
+    }
+}
+
+/* ``Bytes.data.decode("utf-8", "replace")`` 的近似：坏字节逐字节替换。 */
+static char *sh_bytes_replace(JVal *v)
+{
+    const unsigned char *s = (const unsigned char *)v->str;
+    int n = (int)v->num;
+    int i = 0;
+    ShBuf b;
+    memset(&b, 0, sizeof(b));
+    while (i < n) {
+        unsigned char c = s[i];
+        int need;
+        int valid = 1;
+        int k;
+        if (c < 0x80) need = 0;
+        else if ((c & 0xE0) == 0xC0) need = 1;
+        else if ((c & 0xF0) == 0xE0) need = 2;
+        else if ((c & 0xF8) == 0xF0) need = 3;
+        else {
+            need = 0;
+            valid = 0;
+        }
+        if (valid) {
+            if (i + need >= n) {
+                valid = 0;
+            } else {
+                for (k = 1; k <= need; k++) {
+                    if ((s[i + k] & 0xC0) != 0x80) {
+                        valid = 0;
+                        break;
+                    }
+                }
+            }
+        }
+        if (valid) {
+            sh_buf_put(&b, (const char *)(s + i), need + 1);
+            i += need + 1;
+        } else {
+            sh_buf_put(&b, "\xEF\xBF\xBD", 3);
+            i++;
+        }
+    }
+    return b.data != 0 ? b.data : xstrdup("");
+}
+
+static char *sh_text_of(JVal *v)
+{
+    ShBuf b;
+    if (v == 0 || v->kind == J_NULL) return xstrdup("");
+    if (v->kind == J_STR) return xstrdup(v->str);
+    if (v->kind == J_BYTES) return sh_bytes_replace(v);
+    memset(&b, 0, sizeof(b));
+    sh_json_text(&b, v);
+    return b.data;
+}
+
+static HRes sh_stdio_write(void *ctx, JVal *value)
+{
+    ShellHost *h = (ShellHost *)ctx;
+    HRes r;
+    char *text;
+    JVal *info;
+    JVal *meta;
+
+    sh_require(h, "stdio", "write", h->stdio_write);
+    text = sh_text_of(value);
+    fputs(text, stderr);
+    fputc('\n', stderr);
+    fflush(stderr);
+    info = jobj();
+    jput(info, "channel", jstr("stderr"));
+    jput(info, "text", jstr(text));
+    meta = jobj();
+    jput(meta, "stdio", info);
+    hres_success(&r, jstr(text));
+    r.meta = meta;
+    return r;
+}
+
+/* ------------------------------------------------------------------ */
+/* process                                                             */
+/* ------------------------------------------------------------------ */
+
+typedef struct {
+    char *data;
+    int len;
+    int cap;
+} ShBuf;
+
+static void sh_buf_put(ShBuf *b, const char *data, int n)
+{
+    if (b->len + n + 1 > b->cap) {
+        int cap = b->cap ? b->cap : 256;
+        while (cap < b->len + n + 1) cap *= 2;
+        b->data = (char *)xrealloc(b->data, (size_t)cap);
+        b->cap = cap;
+    }
+    if (n > 0) memcpy(b->data + b->len, data, (size_t)n);
+    b->len += n;
+    b->data[b->len] = 0;
+}
+
+static void sh_buf_drain(int fd, ShBuf *b)
+{
+    char chunk[SH_IO_CHUNK];
+    for (;;) {
+        ssize_t got = read(fd, chunk, sizeof(chunk));
+        if (got > 0) {
+            sh_buf_put(b, chunk, (int)got);
+            continue;
+        }
+        if (got < 0 && sh_errno() == EINTR) continue;
+        break;
+    }
+}
+
+static long sh_now_ms(void)
+{
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return (long)ts.tv_sec * 1000L + (long)(ts.tv_nsec / 1000000L);
+}
+
+static void sh_tok_add(char **tok, int *len, int *cap, char c)
+{
+    if (*len + 1 >= *cap) {
+        *cap *= 2;
+        *tok = (char *)xrealloc(*tok, (size_t)*cap);
+    }
+    (*tok)[(*len)++] = c;
+}
+
+static void sh_push_arg(char ***argv, int *argc, int *cap, const char *tok, int len)
+{
+    if (*argc + 1 >= *cap) {
+        *cap *= 2;
+        *argv = (char **)xrealloc(*argv, sizeof(char *) * (size_t)*cap);
+    }
+    (*argv)[*argc] = xstrndup(tok, len);
+    (*argc)++;
+}
+
+/* shlex.split 的 POSIX 子集：单引号字面、双引号可转义、反斜杠转义。 */
+static char **sh_split(const char *command, int *out_argc)
+{
+    int cap = 8;
+    int argc = 0;
+    int tcap = 32;
+    int tlen = 0;
+    int have = 0;
+    int quote = 0;
+    int i;
+    char *tok = (char *)xmalloc((size_t)tcap);
+    char **argv = (char **)xmalloc(sizeof(char *) * (size_t)cap);
+
+    for (i = 0; ; i++) {
+        char c = command[i];
+        if (c == 0) {
+            if (have) sh_push_arg(&argv, &argc, &cap, tok, tlen);
+            break;
+        }
+        if (quote == 0) {
+            if (c == ' ' || c == '\t' || c == '\n' || c == '\r') {
+                if (have) {
+                    sh_push_arg(&argv, &argc, &cap, tok, tlen);
+                    tlen = 0;
+                    have = 0;
+                }
+                continue;
+            }
+            if (c == '\'') {
+                quote = '\'';
+                have = 1;
+                continue;
+            }
+            if (c == '"') {
+                quote = '"';
+                have = 1;
+                continue;
+            }
+            if (c == '\\' && command[i + 1] != 0) {
+                i++;
+                sh_tok_add(&tok, &tlen, &tcap, command[i]);
+                have = 1;
+                continue;
+            }
+            sh_tok_add(&tok, &tlen, &tcap, c);
+            have = 1;
+        } else if (quote == '\'') {
+            if (c == '\'') {
+                quote = 0;
+                continue;
+            }
+            sh_tok_add(&tok, &tlen, &tcap, c);
+        } else {
+            if (c == '"') {
+                quote = 0;
+                continue;
+            }
+            if (c == '\\' && command[i + 1] != 0) {
+                i++;
+                sh_tok_add(&tok, &tlen, &tcap, command[i]);
+                continue;
+            }
+            sh_tok_add(&tok, &tlen, &tcap, c);
+        }
+    }
+    argv[argc] = 0;
+    *out_argc = argc;
+    free(tok);
+    return argv;
+}
+
+static int sh_can_exec(const char *cmd)
+{
+    char candidate[SH_TOKEN_MAX];
+    const char *path;
+    const char *at;
+    if (strchr(cmd, '/') != 0) return access(cmd, X_OK) == 0;
+    path = getenv("PATH");
+    if (path == 0) path = "/usr/bin:/bin";
+    at = path;
+    for (;;) {
+        const char *colon = strchr(at, ':');
+        int len = colon != 0 ? (int)(colon - at) : (int)strlen(at);
+        if (len == 0) {
+            snprintf(candidate, sizeof(candidate), "%s", cmd);
+        } else {
+            snprintf(candidate, sizeof(candidate), "%.*s/%s", len, at, cmd);
+        }
+        if (access(candidate, X_OK) == 0) return 1;
+        if (colon == 0) break;
+        at = colon + 1;
+    }
+    return 0;
+}
+
+static JVal *sh_argv_json(char **argv, int argc)
+{
+    JVal *list = jarr();
+    int i;
+    for (i = 0; i < argc; i++) jpush(list, jstr(argv[i]));
+    return list;
+}
+
+/* Python ``%r`` 对 list[str] 的常见形态。 */
+static const char *sh_argv_repr(char **argv, int argc)
+{
+    int i;
+    ShBuf b;
+    memset(&b, 0, sizeof(b));
+    sh_buf_put(&b, "[", 1);
+    for (i = 0; i < argc; i++) {
+        if (i > 0) sh_buf_put(&b, ", ", 2);
+        sh_buf_put(&b, "'", 1);
+        sh_buf_put(&b, argv[i], (int)strlen(argv[i]));
+        sh_buf_put(&b, "'", 1);
+    }
+    sh_buf_put(&b, "]", 1);
+    return b.data;
+}
+
+static HRes sh_process_run(void *ctx, const char *command, JVal *stdin_value)
+{
+    ShellHost *h = (ShellHost *)ctx;
+    HRes r;
+    char **argv;
+    int argc = 0;
+    int in_pipe[2] = {-1, -1};
+    int out_pipe[2] = {-1, -1};
+    int err_pipe[2] = {-1, -1};
+    ShBuf outbuf;
+    ShBuf errbuf;
+    const char *raw_in = 0;
+    int in_len = 0;
+    int in_off = 0;
+    int in_open = 0;
+    int out_open = 0;
+    int err_open = 0;
+    int timed_out = 0;
+    int have_code = 0;
+    int code = 0;
+    int status = 0;
+    pid_t pid;
+    long deadline;
+    JVal *meta;
+    JVal *stdoutv;
+    JVal *stderrv;
+    const char *spawn_error = 0;
+    char spawn_msg[512];
+
+    sh_require(h, "process", "run", h->proc_run);
+    signal(SIGPIPE, SIG_IGN);
+    argv = sh_split(command, &argc);
+    memset(&outbuf, 0, sizeof(outbuf));
+    memset(&errbuf, 0, sizeof(errbuf));
+    if (argc == 0) {
+        spawn_error = "进程命令为空";
+    } else if (!sh_can_exec(argv[0])) {
+        snprintf(spawn_msg, sizeof(spawn_msg),
+                 "[Errno 2] No such file or directory: '%s'", argv[0]);
+        spawn_error = spawn_msg;
+    }
+
+    if (stdin_value != 0 && stdin_value->kind == J_STR) {
+        raw_in = stdin_value->str;
+        in_len = (int)strlen(stdin_value->str);
+    } else if (stdin_value != 0 && stdin_value->kind == J_BYTES) {
+        raw_in = stdin_value->str;
+        in_len = (int)stdin_value->num;
+    }
+
+    if (spawn_error == 0) {
+        if (pipe(in_pipe) != 0 || pipe(out_pipe) != 0 || pipe(err_pipe) != 0) {
+            spawn_error = "无法创建管道";
+        } else {
+            pid = fork();
+            if (pid < 0) {
+                spawn_error = "无法创建进程";
+            } else if (pid == 0) {
+                dup2(in_pipe[0], 0);
+                dup2(out_pipe[1], 1);
+                dup2(err_pipe[1], 2);
+                close(in_pipe[0]);
+                close(in_pipe[1]);
+                close(out_pipe[0]);
+                close(out_pipe[1]);
+                close(err_pipe[0]);
+                close(err_pipe[1]);
+                if (h->cwd != 0 && chdir(h->cwd) != 0) _exit(127);
+                execvp(argv[0], argv);
+                _exit(127);
+            } else {
+                close(in_pipe[0]);
+                close(out_pipe[1]);
+                close(err_pipe[1]);
+                fcntl(out_pipe[0], F_SETFL, O_NONBLOCK);
+                fcntl(err_pipe[0], F_SETFL, O_NONBLOCK);
+                in_open = 1;
+                if (in_len == 0) {
+                    close(in_pipe[1]);
+                    in_open = 0;
+                }
+                out_open = 1;
+                err_open = 1;
+                deadline = sh_now_ms() + SH_TIMEOUT_MS;
+                while (out_open || err_open || in_open) {
+                    int progress = 0;
+                    char chunk[SH_IO_CHUNK];
+                    ssize_t got;
+                    if (out_open) {
+                        got = read(out_pipe[0], chunk, sizeof(chunk));
+                        if (got > 0) {
+                            sh_buf_put(&outbuf, chunk, (int)got);
+                            progress = 1;
+                        } else if (got == 0) {
+                            out_open = 0;
+                            progress = 1;
+                        } else if (sh_errno() != EAGAIN &&
+                                   sh_errno() != EWOULDBLOCK &&
+                                   sh_errno() != EINTR) {
+                            out_open = 0;
+                            progress = 1;
+                        }
+                    }
+                    if (err_open) {
+                        got = read(err_pipe[0], chunk, sizeof(chunk));
+                        if (got > 0) {
+                            sh_buf_put(&errbuf, chunk, (int)got);
+                            progress = 1;
+                        } else if (got == 0) {
+                            err_open = 0;
+                            progress = 1;
+                        } else if (sh_errno() != EAGAIN &&
+                                   sh_errno() != EWOULDBLOCK &&
+                                   sh_errno() != EINTR) {
+                            err_open = 0;
+                            progress = 1;
+                        }
+                    }
+                    if (in_open) {
+                        ssize_t put = write(in_pipe[1], raw_in + in_off,
+                                            (size_t)(in_len - in_off));
+                        if (put > 0) {
+                            in_off += (int)put;
+                            progress = 1;
+                            if (in_off >= in_len) {
+                                close(in_pipe[1]);
+                                in_open = 0;
+                            }
+                        } else if (put < 0 && sh_errno() != EAGAIN &&
+                                   sh_errno() != EWOULDBLOCK &&
+                                   sh_errno() != EINTR) {
+                            close(in_pipe[1]);
+                            in_open = 0;
+                            progress = 1;
+                        }
+                    }
+                    if (!out_open && !err_open && !in_open) break;
+                    if (sh_now_ms() >= deadline) {
+                        timed_out = 1;
+                        kill(pid, SIGKILL);
+                        break;
+                    }
+                    if (!progress) usleep(1000);
+                }
+                if (in_open) close(in_pipe[1]);
+                waitpid(pid, &status, 0);
+                sh_buf_drain(out_pipe[0], &outbuf);
+                sh_buf_drain(err_pipe[0], &errbuf);
+                close(out_pipe[0]);
+                close(err_pipe[0]);
+                if (!timed_out) {
+                    have_code = 1;
+                    if (WIFEXITED(status)) code = WEXITSTATUS(status);
+                    else if (WIFSIGNALED(status)) code = -WTERMSIG(status);
+                    else have_code = 0;
+                }
+            }
+        }
+    }
+
+    stdoutv = sh_decode(outbuf.data ? outbuf.data : "", outbuf.len);
+    stderrv = sh_decode(errbuf.data ? errbuf.data : "", errbuf.len);
+    meta = jobj();
+    {
+        JVal *inner = jobj();
+        jput(inner, "argv", sh_argv_json(argv, argc));
+        jput(inner, "code", have_code ? jint(code) : jnull());
+        jput(inner, "stdout", stdoutv);
+        jput(inner, "stderr", stderrv);
+        jput(inner, "timed_out", jbool(timed_out));
+        jput(meta, "process", inner);
+    }
+
+    if (timed_out) {
+        const char *prefix = "E-HOST-PROCESS-TIMEOUT: 进程超时（argv=";
+        const char *repr = sh_argv_repr(argv, argc);
+        ShBuf tmsg;
+        memset(&tmsg, 0, sizeof(tmsg));
+        sh_buf_put(&tmsg, prefix, (int)strlen(prefix));
+        sh_buf_put(&tmsg, repr, (int)strlen(repr));
+        sh_buf_put(&tmsg, "）", (int)strlen("）"));
+        hres_failure(&r, tmsg.data, meta);
+        return r;
+    }
+    if (spawn_error != 0) {
+        hres_failure(&r, host_error_text("E-HOST-PROCESS-SPAWN", spawn_error),
+                     meta);
+        return r;
+    }
+    if (have_code && code == 0) {
+        hres_success(&r, stdoutv);
+        r.meta = meta;
+        return r;
+    }
+    {
+        char detail[128];
+        const char *message;
+        if (stderrv->kind == J_STR && stderrv->str[0] != 0) {
+            message = stderrv->str;
+        } else {
+            snprintf(detail, sizeof(detail), "进程退出码 %d", code);
+            message = host_error_text("E-HOST-PROCESS-EXIT", detail);
+        }
+        hres_failure(&r, message, meta);
+        return r;
+    }
+}
+
+pub HostOps *sh_ops(ShellHost *h)
+{
+    HostOps *ops = (HostOps *)xmalloc(sizeof(HostOps));
+    memset(ops, 0, sizeof(*ops));
+    ops->ctx = h;
+    ops->fs_read = sh_fs_read;
+    ops->fs_write = sh_fs_write;
+    ops->env_get = sh_env_get;
+    ops->process_run = sh_process_run;
+    ops->stdio_write = sh_stdio_write;
+    return ops;
+}

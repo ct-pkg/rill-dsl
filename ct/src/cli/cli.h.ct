@@ -12,6 +12,8 @@ import eval::eval;
 
 import formatter::formatter;
 
+import host::shell;
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -190,22 +192,25 @@ pub int cmd_run(int argc, char **argv)
     const char *profile = "shell";
     const char *path = 0;
     const char *fakes_path = 0;
+    const char *host_profile_path = 0;
     int count = 0;
     int i = 0;
     int n = 0;
     int fn = 0;
     int pos = 0;
+    int code;
     char *source;
-    char *fake_src;
+    char *fake_src = 0;
     Lexer lexer;
     Parser parser;
     JVal *program;
     JVal *doc;
-    JVal *tools;
+    JVal *tools = 0;
     JVal *body;
     JVal *root;
     JVal *principal;
     JVal *host;
+    ShellHost *shell = 0;
     Eval ev;
     EOut out;
 
@@ -223,6 +228,12 @@ pub int cmd_run(int argc, char **argv)
             fakes_path = argv[i];
         } else if (strncmp(arg, "--fakes=", 8) == 0) {
             fakes_path = arg + 8;
+        } else if (strcmp(arg, "--host-profile") == 0) {
+            i++;
+            if (i >= argc) usage_fail("--host-profile 缺参数");
+            host_profile_path = argv[i];
+        } else if (strncmp(arg, "--host-profile=", 15) == 0) {
+            host_profile_path = arg + 15;
         } else if (arg[0] == '-') {
             usage_fail("run 不认识的参数 %s", arg);
         } else {
@@ -235,14 +246,18 @@ pub int cmd_run(int argc, char **argv)
     if (strcmp(profile, "shell") != 0 && strcmp(profile, "agent") != 0) {
         usage_fail("未知 profile %s（只允许 shell / agent）", profile);
     }
-    if (fakes_path == 0) {
-        usage_fail("run 需要 --fakes（本相只实现伪宿主）");
+    /* PH-19 只落 Shell 宿主；agent 真实宿主留给 PH-20。 */
+    if (fakes_path == 0 && strcmp(profile, "agent") == 0) {
+        fail("run", "E-RUN-HOST-PROFILE", 0, 0,
+             "agent 宿主不在 PH-19 范围（本相只实现 Shell）");
     }
 
     source = read_source(path, &n);
     if (source == 0) usage_fail("无法读取 %s", path);
-    fake_src = read_source(fakes_path, &fn);
-    if (fake_src == 0) usage_fail("无法读取 fakes %s", fakes_path);
+    if (fakes_path != 0) {
+        fake_src = read_source(fakes_path, &fn);
+        if (fake_src == 0) usage_fail("无法读取 fakes %s", fakes_path);
+    }
 
     memset(&lexer, 0, sizeof(lexer));
     lexer.src = source;
@@ -256,14 +271,22 @@ pub int cmd_run(int argc, char **argv)
     parser.ntok = lexer.ntoks;
     program = p_parse_program(&parser);
 
-    doc = json_parse(fake_src, &pos);
-    tools = jget(doc, "tools");
-    if (tools == 0 || tools->kind != J_OBJ) {
-        fail("run", "E-RUN-FAKES", 0, 0, "fakes 缺少 tools 对象");
+    /* 顺序对齐 Python `_run_verbs`：有 --fakes 时 fake 优先，能力清单不参与。 */
+    if (fakes_path != 0) {
+        doc = json_parse(fake_src, &pos);
+        tools = jget(doc, "tools");
+        if (tools == 0 || tools->kind != J_OBJ) {
+            fail("run", "E-RUN-FAKES", 0, 0, "fakes 缺少 tools 对象");
+        }
+    } else if (host_profile_path != 0) {
+        shell = sh_load_host(host_profile_path);
+    } else {
+        shell = sh_default_host();
     }
 
     ev.program = program;
     ev.tools = tools;
+    ev.host = shell != 0 ? sh_ops(shell) : 0;
     ev.vars = 0;
     eout_success(&out, jnull());
     body = jget(program, "body");
@@ -286,17 +309,29 @@ pub int cmd_run(int argc, char **argv)
          out.ok ? jnull() : jstr(out.error ? out.error : LOAD_DEFAULT_ERROR));
     jput(root, "host_meta",
          (out.meta != 0 && out.meta->kind == J_OBJ) ? out.meta : jobj());
-    principal = jobj();
-    jput(principal, "kind", jstr("test-transport"));
-    jput(principal, "name", jstr("--fakes"));
     host = jobj();
-    jput(host, "profile", jstr("fakes"));
+    principal = jobj();
+    if (fakes_path != 0) {
+        jput(host, "profile", jstr("fakes"));
+        jput(principal, "kind", jstr("test-transport"));
+        jput(principal, "name", jstr("--fakes"));
+    } else {
+        const char *user = getenv("USER");
+        jput(host, "profile", jstr("shell"));
+        jput(principal, "kind", jstr("os-user"));
+        jput(principal, "name", jstr(user != 0 ? user : ""));
+    }
     jput(host, "principal", principal);
     jput(root, "host", host);
     jdump(stdout, root);
     fputc('\n', stdout);
     fflush(stdout);
-    return out.ok ? 0 : 1;
+    if (shell != 0) {
+        code = sh_exit_code(shell, out.ok);
+    } else {
+        code = out.ok ? 0 : 1;
+    }
+    return code;
 }
 
 /* fmt 的 stdout 是纯文本，不是 JSON；词法错误仍走 fail 的 JSON 信封。 */
