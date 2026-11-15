@@ -3,7 +3,7 @@
 RILL 0.1.x 的实现：一个把工具调用写成句子的小语言，带 lexer、parser、加载期校验、
 运行时、最小格式化器（两端往返），以及 Shell / Agent 两个宿主 profile。
 
-产品实现位于 `ct/`（自举实现，构建产物 `ct/bin/rill_ct`）。`src/rill/` 是 Python
+产品实现位于 `ct/`（自举实现，构建产物 `ct/bin/rill`）。`src/rill/` 是 Python
 参考实现，**只用于内部对拍与测试**，不是对外入口，也不在文档里作为语法或用法示例。
 
 当前产品版本 **0.22.0**（`src/rill/__init__.py#__version__`；2026-11-15 重编号点）。语言规范正文在
@@ -16,7 +16,7 @@ RILL 0.1.x 的实现：一个把工具调用写成句子的小语言，带 lexer
 ## 1. 环境
 
 - macOS 或 Linux；需要 ct 工具链（`ct` 在 `PATH`）与 C 编译器（`cc`）。
-- 构建：`bash ct/build.sh`，产物是 `ct/bin/rill_ct`。运行脚本不需要 Python。
+- 构建：`bash ct/build.sh`，产物是 `ct/bin/rill`。运行脚本不需要 Python。
 - 只有内部对拍与测试才需要 Python 3.8+（`src/rill`、`tools/rill_harness`）；
   没有 `pyproject.toml` / `setup.py`。
 - 两个 profile 的 manifest 都是普通 JSON，路径由 `--host-profile` 给出。
@@ -26,7 +26,7 @@ RILL 0.1.x 的实现：一个把工具调用写成句子的小语言，带 lexer
 ```console
 $ cd <repo>
 $ bash ct/build.sh          # 需要 ct 工具链与 cc；已构建可跳过
-$ ./ct/bin/rill_ct run examples/quickstart/shell.ri \
+$ ./ct/bin/rill run examples/quickstart/shell.ri \
     --profile shell --host-profile examples/quickstart/profiles/shell.json
 region=cn
 env=prod
@@ -43,7 +43,7 @@ stdout，退出码 0 表示脚本成功。上面的 JSON 是实测输出，只�
 ## 3. 第一个脚本（Agent 宿主）
 
 ```console
-$ ./ct/bin/rill_ct run examples/quickstart/agent.ri \
+$ ./ct/bin/rill run examples/quickstart/agent.ri \
     --profile agent --host-profile examples/quickstart/profiles/agent.json
 {"ok":true,"value":"region=cn\nenv=prod\n","error":null,"host_meta":{"stdio":{"tool":"send","channel":"tool","text":"region=cn\nenv=prod\n"},"tool_meta":{"transport":{"kind":"process","tool":"send","pid":<子进程 pid>,"argv":["python3","../../testdata/0.1.0/host/agent/tools/tool_server.py"],"code":0}}},"host":{"profile":"agent","principal":{"kind":"role","name":"engineer"}}}
 $ echo $?
@@ -59,7 +59,7 @@ agent.json` 写的是 `examples/quickstart`，所以请从仓库根目录运行�
 
 | 位置 | 内容 | 怎么跑 |
 | --- | --- | --- |
-| [examples/tour/](examples/tour/) | 16 个按能力编号的样例：`send`/管道/`[into]`/`[map]`、`if`/`each`/`break`/`parallel`/`//fn`、错误路径、`fmt`、宿主能力与 `host_meta` | `cd examples/tour` 后按 [索引](examples/README.md) 里的命令逐条跑 |
+| [examples/tour/](examples/tour/) | 17 个按能力编号的样例：`send`/管道/`[into]`/`[map]`、`if`/`each`/`break`/`parallel`/`//fn`、错误路径、`fmt`、宿主能力、`host_meta` 与 shebang | `cd examples/tour` 后按 [索引](examples/README.md) 里的命令逐条跑 |
 | [examples/quickstart/](examples/quickstart/) | Shell / Agent 各一个最小脚本 + profile | 见本文 §2、§3 |
 
 每个样例都配有同名 `.md`，写明演示什么、需要哪条语法，并贴了实测输出。索引见
@@ -69,9 +69,9 @@ agent.json` 写的是 `examples/quickstart`，所以请从仓库根目录运行�
 
 | 路径 | 作用 |
 | --- | --- |
-| `ct/` | 产品实现（自举）；`ct/bin/rill_ct` 是 CLI |
+| `ct/` | 产品实现（自举）；`ct/bin/rill` 是 CLI |
 | `src/rill/` | Python 参考实现，仅供内部对拍/测试，不对外 |
-| `examples/tour/` | 16 个可跑样例与说明 |
+| `examples/tour/` | 17 个可跑样例与说明 |
 | `examples/quickstart/shell.ri` | Shell 版：`<read> … |> <send> $ [to] user` |
 | `examples/quickstart/agent.ri` | Agent 版：`engineer <read> file:config.txt …` |
 | `examples/quickstart/profiles/shell.json` | Shell 能力清单：只读文件、读 env、写 stdio |
@@ -85,10 +85,10 @@ agent.json` 写的是 `examples/quickstart`，所以请从仓库根目录运行�
 ## 6. 其他命令
 
 ```console
-$ ./ct/bin/rill_ct tokenize examples/quickstart/shell.ri
-$ ./ct/bin/rill_ct parse --dump-ast examples/quickstart/agent.ri
-$ ./ct/bin/rill_ct check examples/quickstart/agent.ri --profile agent
-$ ./ct/bin/rill_ct fmt --display examples/quickstart/agent.ri
+$ ./ct/bin/rill tokenize examples/quickstart/shell.ri
+$ ./ct/bin/rill parse --dump-ast examples/quickstart/agent.ri
+$ ./ct/bin/rill check examples/quickstart/agent.ri --profile agent
+$ ./ct/bin/rill fmt --display examples/quickstart/agent.ri
 ```
 
 `parse` / `check` / `run` 成功退出 0；诊断退出 2（stdout 是
@@ -98,7 +98,7 @@ $ ./ct/bin/rill_ct fmt --display examples/quickstart/agent.ri
 
 ## 7. 内部对拍（仅维护者）
 
-对拍把 Python 参考实现与 `ct/bin/rill_ct` 放在同一批 fixture 上比结果，
+对拍把 Python 参考实现与 `ct/bin/rill` 放在同一批 fixture 上比结果，
 用于验证两种实现没有漂移；它不是用户入口，也不产生对外示例：
 
 ```console
@@ -129,7 +129,7 @@ $ bash tools/check.sh all              # 文档/phase 卡/版本落点门禁
 | 层 | 位置 | 内容 |
 | --- | --- | --- |
 | 语言规范 | [docs/RILL-0.1.0.md](docs/RILL-0.1.0.md) | 0.1.1 正文（只读） |
-| 样例 | [examples/README.md](examples/README.md) | 16 个可跑样例的索引与实测输出 |
+| 样例 | [examples/README.md](examples/README.md) | 17 个可跑样例的索引与实测输出 |
 | 阶段账 | [docs/phases/README.md](docs/phases/README.md) | PH-1…PH-21 卡与收口体系 |
 | 能力矩阵 | [host-matrix](docs/planning/rill-0.1.0-host-matrix.md) | Shell / Agent 五槽差异 |
 | 验收 | [acceptance](docs/planning/rill-0.1.0-acceptance.md) | 通过/失败/pending/host-specific |

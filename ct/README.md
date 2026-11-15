@@ -46,7 +46,7 @@ ct build src/lexer/lexer.h.ct src/parser/parser.h.ct src/loader/loader.h.ct \
 # 二：宿主与入口 -> 可执行文件
 ct build src/main.ct -I src --outdir <tmp> \
   --cflags '-Wall -Wextra -O2 -Ibuild/gen-lib -Isrc/host' \
-  --ldflags build/librill_core.a -o bin/rill_ct
+  --ldflags build/librill_core.a -o bin/rill
 ```
 
 分两次的原因不是「单元切分」，而是 ct 前端的「已解析调用点」表全局 1024 条：

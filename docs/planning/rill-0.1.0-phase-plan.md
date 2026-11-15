@@ -22,7 +22,8 @@
 **工作项**：
 
 1. 从 0.1.1 正文逐节抽取样例清单：header、simple_stmt、if、each、parallel、break、call、map、fn、quotes、display。
-2. 重写样例，不复用 `docs/examples/` 的旧语法（旧样例使用 `let`/`fn`/`|?`/`# allow:`，不是 0.1.1）。
+2. 重写样例，不复用旧 `v0.1 rev.1` 语法（`let` / `fn` / `|?` / `# allow:`，不是 0.1.1）；
+   旧样例目录已下线，现行样例在 `examples/tour/`。
 3. 固定 AST 序列化（节点类型、字段、span 是否入 golden）；固定 token 格式。
 4. 建 fake 工具的最小契约：`read` / `write` / `search` / `parse` / `send` / `replace`，只返回可编程的 `{value, ok}`。
 5. `pending/` 目录保留为空；A2/B1 已裁定，不再登记裸词或 `<` 标记用例。

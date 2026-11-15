@@ -4,7 +4,8 @@
 >
 > 依据：[RILL 语言规范 0.1.1](../RILL-0.1.0.md)、[修订简报](../RILL-0.1.0-brief.md)、`docs/review/` 下评审记录。
 > 适用范围：0.1.0 系列（当前 0.1.1）。仓库现有 [planning/roadmap.md](roadmap.md) 面向 `docs/spec/dsl/` 的 `v0.1 rev.1`，两套不混用；本文件不改旧路线图，也不改 0.1.1 正文。
-> 资源假设：单人；每阶段按约一周工作量切分；这里只排工作量和依赖，不承诺日历。
+> 资源假设：单人；每阶段按约一周工作量切分；这里只排工作量和依赖，不承诺日历。另：§0 是立项时快照，当前入口与样例见 [README](../../README.md)。
+>
 
 ## 编号说明
 
@@ -192,8 +193,6 @@ Parser 和 Runtime 只认 `HostCapabilities` 接口；Shell 与 Agent 各自实�
 | §4.6 | `\|>` 是 DSL 值管道 | Shell 用户会误以为是 OS 管道；两者语义不同 | 文档与 phase 10 明确：`\|>` 只传 DSL value；OS 管道由 `ProcessCapability` 的 stdin/stdout 表达 |
 | §4.16–§4.17 | 值只有 STRING/NUMBER/数组/对象/null；映射与展示按文本处理 | Shell 的二进制/流没有值形态 | phase 6 预留 `Bytes/Opaque`；phase 5 只对文本值做格式化，二进制走 host 值 |
 | §4.14 | `parallel` 是语言结构，调度未定义 | Shell 需要进程并发；Agent 需要工具并发/限流 | 语义保持 logical parallel；调度放 `HostCapabilities`，phase 10/11 各自实现 |
-
-
 
 ## 4. 依赖图
 

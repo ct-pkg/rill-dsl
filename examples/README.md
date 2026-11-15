@@ -1,7 +1,7 @@
 # RILL 样例
 
 这里是可以**直接跑通**的 RILL 样例：每个 `.ri` 都配一份同名 `.md`，写清它演示什么能力、
-需要知道哪条语法，并贴了实测输出。建议按编号从 01 跑到 16。
+需要知道哪条语法，并贴了实测输出。建议按编号从 01 跑到 17。
 
 样例只使用当前实现真正支持的写法。清单来自 `ct/src/` 的 lexer / parser / loader / eval /
 formatter 与 `testdata/0.1.0/` 的夹具，不是按规范想象出来的。
@@ -13,7 +13,7 @@ formatter 与 `testdata/0.1.0/` 的夹具，不是按规范想象出来的。
 
 ```console
 $ cd <repo>
-$ bash ct/build.sh          # 需要 ct-ast 主线 `ct`（v0.44.1+）与一个 C 编译器
+$ bash ct/build.sh          # 需要 `ct` 工具链与一个 C 编译器
 $ ls ct/bin/rill
 $ cd examples/tour
 ```
