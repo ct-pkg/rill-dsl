@@ -53,21 +53,34 @@ LSP 的常驻索引会更省。当前仓库规模（对拍覆盖 129 个 `.ri`/`
 第二层是主题覆盖：`entity.name.function.verb.rill` 这类非标准后缀不保证被主题
 命中。插件不再依赖主题碰巧覆盖，改为在 `package.json` 的
 `contributes.configurationDefaults["editor.tokenColorCustomizations"]`
-里固定四组 TextMate 规则：
+里固定五组 TextMate 规则：
 
 | 语法元素 | 作用域 | 颜色 | 字重 | 深色背景对比度 |
 | --- | --- | --- | --- | --- |
 | 注释 | `comment.line.double-slash.rill`、`comment.block.map.rill` | `#8B949E` 灰 | 常规 | 5.42:1 |
+| 变量/标识符 | `variable.other.rill`、`variable.other.identifier.rill`、`variable.language.self.rill` | `#2A9D8F` 青绿 | 常规 | 5.02:1 |
 | 动词 `<read>` | `entity.name.function.verb.rill` | `#3B82F6` 蓝 | 粗体 | 4.53:1 |
 | 介词 `[to]` | `support.type.preposition.rill` | `#BA68C8` 紫 | 常规 | 4.69:1 |
 | 块标记 `[ok]` | `keyword.control.block-marker.rill` | `#EA580C` 橙 | 粗体 | 4.68:1 |
 
-方括号 `[` `]` 仍用主题的标点色，不进入上述规则；四组颜色互不相同，深色主题
+方括号 `[` `]` 仍用主题的标点色，不进入上述规则；五组颜色互不相同，深色主题
 下均高于 WCAG AA 的 4.5:1，浅色主题下均不低于 3.0:1。`//map{}` 按用户口径从
 header 到第一个行首 `}` 整段灰显，内部不再嵌代码作用域；词法上它是
 `MAP_HEADER`/`MAP_*`/`RBRACE`，不是注释 token，这里只是显示层处理。
 `//fn{}` 是函数代码块，仍保留代码配色。这里是 TextMate 主题覆盖问题，不是
 语义 token 覆盖：本插件没有注册 semantic tokens provider。
+
+变量分档以 `ct/bin/rill tokenize` 能拿到的信息为限：
+
+- `$name` 全部是 `VARIABLE`，词法不区分声明处与使用处；函数参数、`each`
+  绑定、赋值目标都是同一类，所以共用一个 `variable.other.rill`。
+- `BARE` 是普通标识符/角色/默认值（`user`、`world`、`data`），统一用
+  `variable.other.identifier.rill`，与 `$name` 同色但保留独立作用域名。
+- 单独的 `$`（self）是 `variable.language.self.rill`，同色。
+- `MAP_SHORT`（map 声明）与 `MAP_REF`（map 引用）词法可以区分，但
+  `//map{}` 已按上一条要求整段当注释灰显，所以块内 `cfg` 不单独上变量色；
+  正文的反引号引用仍是 `string.quoted.other.mapping-reference.rill`。
+- `[into]` 没有绑定名 token，只有块标记，不硬造变量作用域。
 
 ## 4. 符号解析规则
 
@@ -118,10 +131,10 @@ header 到第一个行首 `}` 整段灰显，内部不再嵌代码作用域；�
 
 ```text
 oracle: 129 个文件对拍通过，10 个 lex 错误文件跳过
-checks: 598, failed: 0
+checks: 610, failed: 0
 PASS
 
-scopes: 34, failed: 0
+scopes: 41, failed: 0
 PASS
 ```
 

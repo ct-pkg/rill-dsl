@@ -11,7 +11,6 @@ const grammarPath = path.join(
   root,
   'editors/vscode/syntaxes/rill.tmLanguage.json',
 );
-const examplePath = path.join(root, 'examples/tour/04-map.ri');
 
 const candidates = [
   process.env.RILL_TEXTMATE_ROOT,
@@ -117,7 +116,8 @@ function expectNoScope(tokenized, lineIndex, scopes, label) {
   ok(hits.length === 0, `${label}: 第 ${lineIndex + 1} 行不应出现代码作用域`);
 }
 
-function dump(tokenized) {
+function dump(tokenized, label) {
+  console.log(`=== ${label}`);
   tokenized.forEach((item, index) => {
     console.log(`L${index + 1}: ${item.line}`);
     for (const token of item.tokens) {
@@ -156,9 +156,20 @@ async function main() {
     process.exit(1);
   }
 
-  const example = fs.readFileSync(examplePath, 'utf8').split(/\r?\n/);
-  const tokenized = tokenizeLines(example);
-  dump(tokenized);
+  const fileNames = [
+    'examples/tour/04-map.ri',
+    'examples/tour/09-fn.ri',
+    'examples/tour/06-each.ri',
+  ];
+  const tokenizedByFile = fileNames.map((fileName) =>
+    tokenizeLines(
+      fs.readFileSync(path.join(root, fileName), 'utf8').split(/\r?\n/),
+    ),
+  );
+  tokenizedByFile.forEach((item, index) => dump(item, fileNames[index]));
+  const tokenized = tokenizedByFile[0];
+  const fnExample = tokenizedByFile[1];
+  const eachExample = tokenizedByFile[2];
 
   // 词法把 //map{ ... } 识别为 MAP_HEADER + MAP_SHORT/MAP_LONG + RBRACE；
   // 高亮按用户口径把整段当区块注释灰显，内部不再嵌代码作用域。
@@ -174,6 +185,8 @@ async function main() {
       lineIndex,
       [
         'variable.other.mapping-key.rill',
+        'variable.other.rill',
+        'variable.other.identifier.rill',
         'keyword.operator.mapping-marker.rill',
         'string.quoted.other.mapping-reference.rill',
         'entity.name.function.verb.rill',
@@ -205,6 +218,59 @@ async function main() {
     'user',
     'variable.other.identifier.rill',
     '裸词标识符',
+  );
+
+  // 09-fn：$ 后跟的名字是 VARIABLE；默认值/角色是 BARE。
+  expectScope(
+    fnExample,
+    1,
+    '$who',
+    'variable.other.rill',
+    '函数参数变量 $who',
+  );
+  expectScope(
+    fnExample,
+    1,
+    'world',
+    'variable.other.identifier.rill',
+    '参数默认值裸词 world',
+  );
+  expectScope(
+    fnExample,
+    4,
+    '$left',
+    'variable.other.rill',
+    '函数参数变量 $left',
+  );
+  expectScope(
+    fnExample,
+    4,
+    '$right',
+    'variable.other.rill',
+    '函数参数变量 $right',
+  );
+  expectScope(
+    fnExample,
+    4,
+    'right-default',
+    'variable.other.identifier.rill',
+    '参数默认值裸词 right-default',
+  );
+
+  // 06-each：循环绑定 $f 也是 VARIABLE，括号里的 data 是 BARE。
+  expectScope(
+    eachExample,
+    3,
+    '$f',
+    'variable.other.rill',
+    'each 绑定变量 $f',
+  );
+  expectScope(
+    eachExample,
+    3,
+    'data',
+    'variable.other.identifier.rill',
+    '括号内裸词 data',
   );
 
   // 词法边界：//map 后没有 { 只到行尾；块内 { 只是长词数据，不嵌套；

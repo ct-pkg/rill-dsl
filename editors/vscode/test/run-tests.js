@@ -290,6 +290,11 @@ const VERB_SCOPE = 'entity.name.function.verb.rill';
 const PREPOSITION_SCOPE = 'support.type.preposition.rill';
 const BLOCK_MARKER_SCOPE = 'keyword.control.block-marker.rill';
 const COMMENT_SCOPES = ['comment.line.double-slash.rill', 'comment.block.map.rill'];
+const VARIABLE_SCOPES = [
+  'variable.other.rill',
+  'variable.other.identifier.rill',
+  'variable.language.self.rill',
+];
 const textMateRules =
   packageJson.contributes.configurationDefaults[
     'editor.tokenColorCustomizations'
@@ -312,6 +317,9 @@ ok(Boolean(ruleFor(PREPOSITION_SCOPE)), '插件为介词作用域提供默认配
 ok(Boolean(ruleFor(BLOCK_MARKER_SCOPE)), '插件为块标记作用域提供默认配色');
 for (const scope of COMMENT_SCOPES) {
   ok(Boolean(ruleFor(scope)), `插件为 ${scope} 提供灰色默认配色`);
+}
+for (const scope of VARIABLE_SCOPES) {
+  ok(Boolean(ruleFor(scope)), `插件为 ${scope} 提供变量默认配色`);
 }
 ok(
   textMateRules.every((rule) =>
@@ -340,6 +348,7 @@ for (const scope of [
   PREPOSITION_SCOPE,
   BLOCK_MARKER_SCOPE,
   ...COMMENT_SCOPES,
+  ...VARIABLE_SCOPES,
 ]) {
   const rule = ruleFor(scope);
   if (!rule) {
@@ -359,18 +368,22 @@ for (const scope of [
   );
 }
 
-const foregrounds = [VERB_SCOPE, PREPOSITION_SCOPE, BLOCK_MARKER_SCOPE].map(
-  (scope) => ruleFor(scope) && ruleFor(scope).settings.foreground,
+const configuredColors = textMateRules.map(
+  (rule) => rule.settings && rule.settings.foreground,
 );
-ok(new Set(foregrounds).size === 3, '动词、介词、块标记三种颜色互不相同');
+ok(
+  new Set(configuredColors).size === textMateRules.length,
+  '注释、变量、动词、介词、块标记五类颜色互不相同',
+);
 ok(
   ruleFor(VERB_SCOPE).settings.fontStyle === 'bold' &&
     ruleFor(BLOCK_MARKER_SCOPE).settings.fontStyle === 'bold',
-  '动词与块标记加粗，介词保持常规字重',
+  '动词与块标记加粗，介词/变量保持常规字重',
 );
 ok(
-  !ruleFor(COMMENT_SCOPES[0]).settings.fontStyle,
-  '注释不加粗，保持灰色正文之外的弱化观感',
+  !ruleFor(COMMENT_SCOPES[0]).settings.fontStyle &&
+    !ruleFor('variable.other.identifier.rill').settings.fontStyle,
+  '注释与变量不加粗，避免和动词/块标记混淆',
 );
 
 function matchGroup(ruleName, text, group) {

@@ -13,13 +13,13 @@
 仓库内已生成可离线安装的包：
 
 ```text
-editors/vscode/dist/rill-dsl-0.1.2.vsix
+editors/vscode/dist/rill-dsl-0.1.3.vsix
 ```
 
 VS Code 命令行安装：
 
 ```console
-$ code --install-extension editors/vscode/dist/rill-dsl-0.1.2.vsix
+$ code --install-extension editors/vscode/dist/rill-dsl-0.1.3.vsix
 $ # 安装后 Reload Window
 ```
 
@@ -27,7 +27,7 @@ $ # 安装后 Reload Window
 VS Code 兼容编辑器（如 Trae CN）同样走“从 VSIX 安装”。
 
 > 文件关联与配色都写在扩展清单/语法文件里，**只重载窗口不会让已安装的旧版本生效**；
-> 需要重新安装 0.1.2 的 VSIX，再 Reload Window。
+> 需要重新安装 0.1.3 的 VSIX，再 Reload Window。
 
 安装不需要 node/npm；插件本身没有 npm 运行期依赖。
 
@@ -54,16 +54,17 @@ VS Code 兼容编辑器（如 Trae CN）同样走“从 VSIX 安装”。
 
 ## 3. 语法配色
 
-插件自带四组默认 TextMate 颜色，不依赖当前主题碰巧覆盖这些作用域：
+插件自带五组默认 TextMate 颜色，不依赖当前主题碰巧覆盖这些作用域：
 
 | 元素 | 示例 | 颜色 | 字重 |
 | --- | --- | --- | --- |
 | 注释 | `// 行注释`、`//map{ ... }` 区块 | 灰色 `#8B949E` | 常规 |
+| 变量/标识符 | `$who`、`$f`、`user`、`data` | 青绿色 `#2A9D8F` | 常规 |
 | 动词 | `<read>`、`<write>`、`<send>`、`<run>`、`<env>` | 蓝色 `#3B82F6` | 粗体 |
 | 介词 | `[to]`、`[with]`、`[from]`、`[in]`、`[on]` | 紫色 `#BA68C8` | 常规 |
 | 块标记 | `[into]`、`[ok]`、`[error]`、`[results]` | 橙色 `#EA580C` | 粗体 |
 
-方括号 `[` `]` 本身保持主题标点色，只给括号内的词上色。深色主题下四组颜色
+方括号 `[` `]` 本身保持主题标点色，只给括号内的词上色。深色主题下五组颜色
 对比度均不低于 4.5:1；浅色主题下不低于 3.0:1（动词与块标记为粗体）。
 `//map{ ... }` 从 header 到第一个行首 `}` 整段按 `comment.block.map.rill`
 灰显，内部不再当代码上色；`//fn{ ... }` 仍是函数代码块，保留代码配色。
@@ -73,14 +74,14 @@ VS Code 兼容编辑器（如 Trae CN）同样走“从 VSIX 安装”。
 ```console
 $ cd editors/vscode
 $ python3 tools/package_vsix.py
-已生成 dist/rill-dsl-0.1.2.vsix
-VSIX 校验通过：dist/rill-dsl-0.1.2.vsix（11 个条目，解压后 40152 字节）
+已生成 dist/rill-dsl-0.1.3.vsix
+VSIX 校验通过：dist/rill-dsl-0.1.3.vsix（11 个条目，解压后 41496 字节）
 ```
 
 只校验已有包：
 
 ```console
-$ python3 tools/package_vsix.py --check dist/rill-dsl-0.1.2.vsix
+$ python3 tools/package_vsix.py --check dist/rill-dsl-0.1.3.vsix
 ```
 
 ## 5. 自测
@@ -89,10 +90,10 @@ $ python3 tools/package_vsix.py --check dist/rill-dsl-0.1.2.vsix
 $ cd editors/vscode
 $ bash test/run-tests.sh
 oracle: 129 个文件对拍通过，10 个 lex 错误文件跳过
-checks: 598, failed: 0
+checks: 610, failed: 0
 PASS
 
-scopes: 34, failed: 0
+scopes: 41, failed: 0
 PASS
 ```
 
