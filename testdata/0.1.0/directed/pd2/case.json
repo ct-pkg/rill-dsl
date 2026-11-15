@@ -1,0 +1,46 @@
+{
+  "expected_diff": {
+    "layers": ["ast", "error", "eval"],
+    "side": "py",
+    "reason": "PD-2（A 案）：Python 参考实现冻结，仍报 E-PARSE-UNEXPECTED；CT 按 §4.16 把 \"n=\"$v 解析为拼接",
+    "anchor": "docs/planning/rill-0.1.0-parser-defects.md §2.3 / §2.5",
+    "expect": {
+      "ast": {
+        "py": {
+          "exit": 2,
+          "error": {
+            "stage": "parse",
+            "code": "E-PARSE-UNEXPECTED",
+            "line": 2,
+            "col": 12
+          }
+        },
+        "ct": {"exit": 0, "error": null}
+      },
+      "error": {
+        "py": {
+          "exit": 2,
+          "error": {
+            "stage": "parse",
+            "code": "E-PARSE-UNEXPECTED",
+            "line": 2,
+            "col": 12
+          }
+        },
+        "ct": {"exit": 0, "error": null}
+      },
+      "eval": {
+        "py": {
+          "exit": 2,
+          "error": {
+            "stage": "parse",
+            "code": "E-PARSE-UNEXPECTED",
+            "line": 2,
+            "col": 12
+          }
+        },
+        "ct": {"exit": 0, "error": null}
+      }
+    }
+  }
+}

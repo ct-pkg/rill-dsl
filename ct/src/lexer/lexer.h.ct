@@ -57,6 +57,7 @@ pub struct Token {
     char *text;
     int line;
     int col;
+    int raw_len;
 };
 
 /* ------------------------------------------------------------------ */
@@ -99,22 +100,50 @@ static void lx_advance(Lexer *l, int count)
     }
 }
 
-static void lx_push(Lexer *l, TokKind kind, char *text, int line, int col)
+static int cp_len_range(const char *s, int n)
 {
+    int i;
+    int count = 0;
+    for (i = 0; i < n; i++) {
+        if (!is_utf8_cont((unsigned char)s[i])) count++;
+    }
+    return count;
+}
+
+static void lx_push(Lexer *l, TokKind kind, char *text, int raw_len, int line, int col)
+{
+    Token *slot;
     if (l->ntoks >= l->cap) {
         l->cap = l->cap ? l->cap * 2 : 64;
         l->toks = (Token *)xrealloc(l->toks, sizeof(Token) * (size_t)l->cap);
     }
-    l->toks[l->ntoks].kind = kind;
-    l->toks[l->ntoks].text = text;
-    l->toks[l->ntoks].line = line;
-    l->toks[l->ntoks].col = col;
+    slot = &l->toks[l->ntoks];
+    slot->kind = kind;
+    slot->text = text;
+    slot->line = line;
+    slot->col = col;
+    slot->raw_len = raw_len;
     l->ntoks++;
 }
 
-#define lx_emit(l, kind, text, line, col) lx_push((l), (kind), xstrdup(text), (line), (col))
-#define lx_emit_slice(l, kind, start, end, line, col) lx_push((l), (kind), xstrndup((l)->src + (start), (end) - (start)), (line), (col))
-#define lx_emit_text_len(l, kind, text, len, line, col) lx_push((l), (kind), ((text)[(len)] = 0, (text)), (line), (col))
+static void lx_emit(Lexer *l, TokKind kind, const char *text, int line, int col)
+{
+    lx_push(l, kind, xstrdup(text), cp_len(text), line, col);
+}
+
+static void lx_emit_slice(Lexer *l, TokKind kind, int start, int end, int line, int col)
+{
+    int n = end - start;
+    lx_push(l, kind, xstrndup(l->src + start, n),
+            cp_len_range(l->src + start, n), line, col);
+}
+
+static void lx_emit_raw(Lexer *l, TokKind kind, char *text, int raw, int len,
+                        int line, int col)
+{
+    text[len] = 0;
+    lx_push(l, kind, text, raw, line, col);
+}
 
 #define is_short_char(c) (is_alnum(c) || (c) == '_' || (c) == '-')
 #define is_ident_start(c) ((c) == '_' || is_alpha(c))
@@ -176,7 +205,7 @@ static void lx_bare(Lexer *l)
     {
         char *text = xstrndup(l->src + start, l->i - start);
         TokKind kind = is_keyword(text) ? TK_KEYWORD : TK_BARE;
-        lx_push(l, kind, text, line, col);
+        lx_push(l, kind, text, l->col - col, line, col);
     }
 }
 
@@ -221,7 +250,7 @@ static void lx_string(Lexer *l)
         buf[len++] = (char)ch;
         lx_advance(l, 1);
     }
-    lx_emit_text_len(l, TK_STRING, buf, len, line, col);
+    lx_emit_raw(l, TK_STRING, buf, l->col - col, len, line, col);
 }
 
 static void lx_verb(Lexer *l)
@@ -244,6 +273,7 @@ static void lx_verb(Lexer *l)
     }
     lx_emit_slice(l, TK_VERB, start, l->i, line, col);
     lx_advance(l, 1);
+    l->toks[l->ntoks - 1].raw_len = l->col - col;
 }
 
 static void lx_map_ref(Lexer *l)
@@ -261,6 +291,7 @@ static void lx_map_ref(Lexer *l)
     }
     lx_emit_slice(l, TK_MAP_REF, start, l->i, line, col);
     lx_advance(l, 1);
+    l->toks[l->ntoks - 1].raw_len = l->col - col;
 }
 
 static void lx_comment_or_header(Lexer *l)
@@ -490,6 +521,7 @@ static void lx_normal(Lexer *l)
             lx_emit(l, TK_DOLLAR, "$", line, col);
         } else {
             lx_emit_slice(l, TK_VARIABLE, start, l->i, line, col);
+            l->toks[l->ntoks - 1].raw_len += 1;
         }
         return;
     }
@@ -509,6 +541,7 @@ static void lx_normal(Lexer *l)
         start = l->i;
         while (l->i < l->n && is_ident_char(lx_peek(l, 0))) lx_advance(l, 1);
         lx_emit_slice(l, TK_FIELD, start, l->i, line, col);
+        l->toks[l->ntoks - 1].raw_len += 1;
         return;
     }
     if (!wordish_prev(l->prev)) {

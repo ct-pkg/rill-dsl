@@ -148,37 +148,12 @@ static int f_cp_len_n(const char *s, int n)
     return count;
 }
 
-/* token 在源码里的原始宽度；相邻判定与 parser 的 _adjacent 同口径。 */
+/* token 在源码里的原始宽度；PD-1 / PD-2 后与 parser 共用 lexer 的 raw_len
+   一个口径，不再回扫源码行。 */
 static int f_raw_width(FLines *fl, const Token *t)
 {
-    int len;
-    const char *line;
-    int start;
-    int i;
-
-    if (t->kind == TK_STRING) {
-        int b;
-        char quote;
-        line = fl_line(fl, t->line, &len);
-        start = t->col - 1;
-        if (start >= cp_len(line)) return cp_len(t->text);
-        b = fl_cp_to_byte(line, len, start);
-        quote = line[b];
-        i = b + 1;
-        while (i < len) {
-            if (quote == '"' && line[i] == '\\') {
-                i += 2;
-                continue;
-            }
-            if (line[i] == quote) return f_cp_len_n(line + b, i + 1 - b);
-            i++;
-        }
-        return cp_len(line) - start;
-    }
-    if (t->kind == TK_MAP_REF || t->kind == TK_VERB) return cp_len(t->text) + 2;
-    if (t->kind == TK_VARIABLE || t->kind == TK_FIELD) return cp_len(t->text) + 1;
-    if (t->kind == TK_DOLLAR) return 1;
-    return cp_len(t->text);
+    (void)fl;
+    return t->raw_len;
 }
 
 static int f_adjacent(FLines *fl, const Token *prev, const Token *cur)

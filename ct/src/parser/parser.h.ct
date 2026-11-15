@@ -29,18 +29,37 @@ static JVal *ast_node(const char *kind)
 #define ast_field(name) jput(ast_node("Field"), "name", jstr(name))
 #define ast_default(name, value) jput(jput(ast_node("Default"), "name", jstr(name)), "value", (value))
 #define ast_concat(parts) jput(ast_node("Concat"), "parts", (parts))
-#define ast_verb_call(s, v, o, p) jput(jput(jput(jput(ast_node("VerbCall"), "subject", (s) ? (s) : jnull()), "verb", jstr(v)), "object", (o)), "post", (p))
+static JVal *ast_span(int line, int col)
+{
+    JVal *o = jobj();
+    jput(o, "line", jint(line));
+    jput(o, "col", jint(col));
+    return o;
+}
+
+static JVal *ast_verb_call(JVal *s, const char *v, JVal *o, JVal *p,
+                           int line, int col)
+{
+    JVal *node = ast_node("VerbCall");
+    jput(node, "subject", (s) ? (s) : jnull());
+    jput(node, "verb", jstr(v));
+    jput(node, "object", o);
+    jput(node, "post", p);
+    jput(node, "span", ast_span(line, col));
+    return node;
+}
 #define ast_adverb(items) jput(ast_node("Adverb"), "items", (items))
 #define ast_prep_phrase(prep, object) jput(jput(ast_node("PrepPhrase"), "prep", jstr(prep)), "object", (object))
 #define ast_pipe(stages) jput(ast_node("Pipe"), "stages", (stages))
 #define ast_simple_stmt(call, tail, pipe) jput(jput(jput(ast_node("SimpleStmt"), "call", (call)), "tail", (tail)), "pipe", (pipe) ? (pipe) : jnull())
-static JVal *ast_call_stmt(const char *name, JVal *args, JVal *tail, JVal *pipe)
+static JVal *ast_call_stmt(JVal *call, JVal *tail, JVal *pipe, int line,
+                           int col)
 {
     JVal *o = ast_node("CallStmt");
-    jput(o, "name", jstr(name));
-    jput(o, "args", args);
+    jput(o, "call", call);
     jput(o, "tail", tail);
     jput(o, "pipe", pipe ? pipe : jnull());
+    jput(o, "span", ast_span(line, col));
     return o;
 }
 #define ast_prep_block_stmt(prep, subject, block) jput(jput(jput(ast_node("PrepBlockStmt"), "prep", jstr(prep)), "subject", (subject)), "block", (block))
@@ -71,7 +90,15 @@ static JVal *ast_parallel_stmt(JVal *branches, JVal *results, JVal *pipe)
 #define ast_map_entry(sh, marker, lw) jput(jput(jput(ast_node("MapEntry"), "short", jstr(sh)), "marker", jstr(marker)), "long", jstr(lw))
 #define ast_map_block(entries) jput(ast_node("MapBlock"), "entries", (entries))
 #define ast_fn_block(defs) jput(ast_node("FnBlock"), "defs", (defs))
-#define ast_fn_def(name, tmpl, body) jput(jput(jput(ast_node("FnDef"), "name", jstr(name)), "template", (tmpl)), "body", (body))
+static JVal *ast_fn_def(JVal *shape, JVal *tmpl, JVal *body, int line, int col)
+{
+    JVal *o = ast_node("FnDef");
+    jput(o, "shape", shape);
+    jput(o, "template", tmpl);
+    jput(o, "body", body);
+    jput(o, "span", ast_span(line, col));
+    return o;
+}
 #define ast_program(headers, body) jput(jput(ast_node("Program"), "headers", (headers)), "body", (body))
 
 /* ------------------------------------------------------------------ */
@@ -393,33 +420,39 @@ static JVal *p_parse_expr(Parser *p)
 
 static JVal *p_parse_call_stmt(Parser *p)
 {
-    Token *at = p_take(p);
-    Token *name = p_expect(p, TK_STRING, "函数名（@ 后必须是字符串）",
-                           "E-PARSE-UNEXPECTED");
-    JVal *args = jarr();
+    JVal *call;
     JVal *tail;
     JVal *pipe;
-    if (p_at(p, TK_VERB) ||
-        (p_is_word_kind(p_kind(p, 0)) && p_kind(p, 1) == TK_VERB)) {
-        p_error_at(p, "E-PARSE-FN-DEF-BODY", at,
-                   "函数定义只能在 //fn{} 区块内");
+    Token *at = p_take(p); /* @ */
+    if (p_at(p, TK_STRING)) {
+        Token *t = p_peek(p, 0);
+        fail_hint("parse", "E-07", t->line, t->col,
+                  "旧形态 @ \"name\" 已移除；删除字符串名字，形状相同的定义会按形状匹配",
+                  "@ 后不再写函数名；请直接写 verb_call（如 @ <read> \"a.yml\"）");
     }
-    while (p_is_word_kind(p_kind(p, 0))) {
-        jpush(args, p_parse_word(p, 1));
+    if (!(p_at(p, TK_VERB) ||
+          (p_is_word_kind(p_kind(p, 0)) && p_kind(p, 1) == TK_VERB))) {
+        p_error_at(p, "E-PARSE-UNEXPECTED", p_peek(p, 0),
+                   "@ 后必须是函数调用 verb_call");
     }
+    call = p_parse_verb_call(p);
     tail = p_parse_statement_tail(p, 1);
     pipe = p_parse_pipe(p, p_parse_simple_stmt);
-    return ast_call_stmt(name->text, args, tail, pipe);
+    return ast_call_stmt(call, tail, pipe, at->line, at->col);
 }
 
 static JVal *p_parse_fn_def(Parser *p)
 {
-    Token *at = p_take(p);
-    Token *name = p_expect(p, TK_STRING, "函数名（@ 后必须是字符串）",
-                           "E-PARSE-UNEXPECTED");
     JVal *template_ = jarr();
+    JVal *shape;
     JVal *body;
-    (void)at;
+    Token *at = p_take(p); /* @ */
+    if (p_at(p, TK_STRING)) {
+        Token *t = p_peek(p, 0);
+        fail_hint("parse", "E-07", t->line, t->col,
+                  "旧形态 @ \"name\" 已移除；签名由模板形状导出",
+                  "@ 后不再写函数名；请直接写 verb_call（如 @ <read> $path）");
+    }
     p->template_mode = 1;
     if (!(p_at(p, TK_VERB) || p_kind(p, 1) == TK_VERB ||
           p_default_subject_ahead(p))) {
@@ -432,8 +465,9 @@ static JVal *p_parse_fn_def(Parser *p)
         jpush(template_, p_parse_verb_call(p));
     }
     p->template_mode = 0;
+    shape = shape_of_call(template_->items[0], 1);
     body = p_parse_block(p, "函数体");
-    return ast_fn_def(name->text, template_, body);
+    return ast_fn_def(shape, template_, body, at->line, at->col);
 }
 
 static JVal *p_parse_fn_block(Parser *p)
@@ -604,10 +638,8 @@ static JVal *p_word_node(Parser *p, Token *token, int bare_as_string)
 
 static int p_raw_len(Token *t)
 {
-    if (t->kind == TK_MAP_REF) return cp_len(t->text) + 2;
-    if (t->kind == TK_VARIABLE || t->kind == TK_FIELD) return cp_len(t->text) + 1;
-    if (t->kind == TK_DOLLAR) return cp_len(t->text) + 1;
-    return cp_len(t->text);
+    /* PD-1 / PD-2：只在 lexer 算一次，parser 与 formatter 共用。 */
+    return t->raw_len;
 }
 pub int p_adjacent(Token *prev, Token *nxt)
 {
@@ -682,6 +714,7 @@ static JVal *p_parse_word(Parser *p, int bare_as_string)
 static JVal *p_parse_verb_call(Parser *p)
 {
     JVal *subject = 0;
+    Token *start = p_peek(p, 0);
     Token *verb;
     const char *verb_name;
     JVal *obj;
@@ -761,5 +794,5 @@ static JVal *p_parse_verb_call(Parser *p)
         }
         break;
     }
-    return ast_verb_call(subject, verb_name, obj, post);
+    return ast_verb_call(subject, verb_name, obj, post, start->line, start->col);
 }

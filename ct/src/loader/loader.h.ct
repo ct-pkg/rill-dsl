@@ -12,26 +12,22 @@ import parser::parser;
 
 
 /* ------------------------------------------------------------------ */
-/* load-time checks (token stream)                                      */
+/* load-time checks                                                     */
 /* ------------------------------------------------------------------ */
 
-/* PH-15：加载期只看 token，不给 AST 加 span。Token 自带 line/col，错误位置
-   与 Python 的 loader 一致（调用点取 `@`，动词取 VerbCall 的起点）。 */
-typedef struct {
-    char *name;
-    char **params;
-    unsigned char *has_default;
-    int nparams;
-    int capparams;
-    int line;
-    int col;
-} LoadFn;
-
+/* PH-22：函数没有名字，加载期按形状键校验。map 与 W-01 仍走 token；
+   函数形状与调用选型走 AST（与 Python loader 同序）。 */
 typedef struct {
     char *short_name;
     char marker;
     char *long_name;
 } LoadMap;
+
+typedef struct {
+    JVal **items;
+    int len;
+    int cap;
+} FnList;
 
 /* Python loader：SHELL_VERBS == AGENT_VERBS，profile 不改变动词集。 */
 static const char *LOAD_VERBS[] = {
@@ -39,6 +35,293 @@ static const char *LOAD_VERBS[] = {
     "review", "env", "run"
 };
 
+static void fn_list_push(FnList *list, JVal *definition)
+{
+    if (list->len >= list->cap) {
+        list->cap = list->cap ? list->cap * 2 : 8;
+        list->items = (JVal **)xrealloc(list->items,
+                                        sizeof(JVal *) * (size_t)list->cap);
+    }
+    list->items[list->len++] = definition;
+}
+
+/* Python `_check_nodes` 的等价遍历：先看当前节点，再按字段顺序递归。 */
+static void load_walk(JVal *node, FnList *fns);
+
+static int load_position_count(JVal *call)
+{
+    JVal *post = jget(call, "post");
+    JVal *subject = jget(call, "subject");
+    int count = 1; /* 宾语位始终存在 */
+    int i;
+    if (subject != 0 && subject->kind != J_NULL) count++;
+    if (post != 0) {
+        for (i = 0; i < post->len; i++) {
+            if (strcmp(jget_str(post->items[i], "kind"), "PrepPhrase") == 0) {
+                count++;
+            }
+        }
+    }
+    return count;
+}
+
+static void load_check_call(JVal *node, FnList *fns)
+{
+    JVal *span = jget(node, "span");
+    int line = span != 0 ? (int)jget(span, "line")->num : 0;
+    int col = span != 0 ? (int)jget(span, "col")->num : 0;
+    JVal *call = jget(node, "call");
+    JVal *call_shape = shape_of_call(call, 0);
+    JVal *exact[64];
+    int nexact = 0;
+    JVal *arity = 0;
+    int i;
+
+    for (i = 0; i < fns->len; i++) {
+        int status = shape_classify(fns->items[i], call_shape);
+        if (status == 1) {
+            if (nexact < 64) exact[nexact] = fns->items[i];
+            nexact++;
+        } else if (status == 2 && arity == 0) {
+            arity = fns->items[i];
+        }
+    }
+    if (nexact > 1) {
+        char hint[256];
+        int off = 0;
+        off += snprintf(hint + off, sizeof(hint) - (size_t)off, "候选定义行：");
+        for (i = 0; i < nexact && i < 64; i++) {
+            JVal *def_span = jget(exact[i], "span");
+            off += snprintf(hint + off, sizeof(hint) - (size_t)off,
+                            "%s%lld", i == 0 ? "" : ", ",
+                            def_span != 0 ? jget(def_span, "line")->num : 0);
+        }
+        fail_hint("load", "E-05", line, col, hint,
+                  "函数形状二义：%s", shape_describe(call_shape));
+    }
+    if (nexact == 1) return;
+    if (arity != 0) {
+        JVal *template_ = jget(arity, "template");
+        fail("load", "E-LOAD-FN-ARITY", line, col,
+             "函数形状 %s 需要 %d 个位置，实际 %d 个",
+             shape_describe(jget(arity, "shape")),
+             load_position_count(template_->items[0]),
+             load_position_count(call));
+    }
+    {
+        char hint[1024];
+        int off = 0;
+        int any = 0;
+        const char *verb = jget_str(call_shape, "verb");
+        off += snprintf(hint + off, sizeof(hint) - (size_t)off,
+                        "同动词已定义形状：");
+        for (i = 0; i < fns->len; i++) {
+            JVal *def_shape = jget(fns->items[i], "shape");
+            if (strcmp(jget_str(def_shape, "verb"), verb) != 0) continue;
+            off += snprintf(hint + off, sizeof(hint) - (size_t)off, "%s%s",
+                            any ? "；" : "", shape_describe(def_shape));
+            any = 1;
+        }
+        if (!any) {
+            snprintf(hint, sizeof(hint), "同动词没有已定义形状");
+        }
+        fail_hint("load", "E-04", line, col, hint,
+                  "未声明的函数形状：%s", shape_describe(call_shape));
+    }
+}
+
+typedef struct {
+    char **names;
+    unsigned char *has_default;
+    int len;
+    int cap;
+} ParamList;
+
+static void param_add(ParamList *list, const char *name, int is_default)
+{
+    int i;
+    for (i = 0; i < list->len; i++) {
+        if (strcmp(list->names[i], name) == 0) {
+            if (is_default) list->has_default[i] = 1;
+            return;
+        }
+    }
+    if (list->len >= list->cap) {
+        list->cap = list->cap ? list->cap * 2 : 8;
+        list->names = (char **)xrealloc(list->names,
+                                        sizeof(char *) * (size_t)list->cap);
+        list->has_default = (unsigned char *)xrealloc(
+            list->has_default, sizeof(unsigned char) * (size_t)list->cap);
+    }
+    list->names[list->len] = xstrdup(name);
+    list->has_default[list->len] = (unsigned char)(is_default ? 1 : 0);
+    list->len++;
+}
+
+/* 只递归 Python `_collect_params` 覆盖的节点，顺序一致。 */
+static void load_collect_params(JVal *node, ParamList *list)
+{
+    const char *kind;
+    int i;
+    if (node == 0 || node->kind != J_OBJ) return;
+    kind = jget_str(node, "kind");
+    if (strcmp(kind, "Variable") == 0) {
+        param_add(list, jget_str(node, "name"), 0);
+        return;
+    }
+    if (strcmp(kind, "Default") == 0) {
+        param_add(list, jget_str(node, "name"), 1);
+        return;
+    }
+    if (strcmp(kind, "VerbCall") == 0) {
+        JVal *post;
+        load_collect_params(jget(node, "subject"), list);
+        load_collect_params(jget(node, "object"), list);
+        post = jget(node, "post");
+        if (post != 0) {
+            for (i = 0; i < post->len; i++) {
+                load_collect_params(post->items[i], list);
+            }
+        }
+        return;
+    }
+    if (strcmp(kind, "Adverb") == 0) {
+        JVal *items = jget(node, "items");
+        if (items != 0) {
+            for (i = 0; i < items->len; i++) {
+                load_collect_params(items->items[i], list);
+            }
+        }
+        return;
+    }
+    if (strcmp(kind, "PrepPhrase") == 0) {
+        load_collect_params(jget(node, "object"), list);
+    }
+}
+
+static void load_check_defaults(FnList *fns)
+{
+    int i;
+    for (i = 0; i < fns->len; i++) {
+        JVal *definition = fns->items[i];
+        JVal *template_ = jget(definition, "template");
+        JVal *span = jget(definition, "span");
+        ParamList params;
+        int tail = 0;
+        int j;
+        memset(&params, 0, sizeof(params));
+        if (template_ != 0) {
+            for (j = 0; j < template_->len; j++) {
+                load_collect_params(template_->items[j], &params);
+            }
+        }
+        for (j = 0; j < params.len; j++) {
+            if (params.has_default[j]) {
+                tail = 1;
+            } else if (tail) {
+                fail("load", "E-LOAD-FN-DEFAULT-NOT-TAIL",
+                     span != 0 ? (int)jget(span, "line")->num : 0,
+                     span != 0 ? (int)jget(span, "col")->num : 0,
+                     "函数形状 %s 的默认值只能出现在尾部；$%s 缺少默认值",
+                     shape_describe(jget(definition, "shape")),
+                     params.names[j]);
+            }
+        }
+    }
+}
+
+static void load_walk(JVal *node, FnList *fns)
+{
+    const char *kind;
+    int i;
+    if (node == 0) return;
+    if (node->kind == J_ARR) {
+        for (i = 0; i < node->len; i++) load_walk(node->items[i], fns);
+        return;
+    }
+    if (node->kind != J_OBJ) return;
+    kind = jget_str(node, "kind");
+    if (strcmp(kind, "CallStmt") == 0) load_check_call(node, fns);
+    if (strcmp(kind, "VerbCall") == 0) {
+        const char *verb = jget_str(node, "verb");
+        int known = 0;
+        for (i = 0; i < (int)(sizeof(LOAD_VERBS) / sizeof(LOAD_VERBS[0])); i++) {
+            if (strcmp(LOAD_VERBS[i], verb) == 0) {
+                known = 1;
+                break;
+            }
+        }
+        if (!known) {
+            JVal *span = jget(node, "span");
+            fail("load", "E-LOAD-VERB-UNKNOWN",
+                 span != 0 ? (int)jget(span, "line")->num : 0,
+                 span != 0 ? (int)jget(span, "col")->num : 0,
+                 "未知动词 '%s'；0.1.0 动词集见 PH-4 卡 §8", verb);
+        }
+    }
+    for (i = 0; i < node->len; i++) {
+        if (strcmp(node->keys[i], "kind") == 0) continue;
+        if (strcmp(node->keys[i], "span") == 0) continue;
+        load_walk(node->items[i], fns);
+    }
+}
+
+/* PH-22：函数形状表、同块冲突、arity 与调用选型。 */
+pub void load_shapes(JVal *tree)
+{
+    FnList fns;
+    JVal *headers = jget(tree, "headers");
+    int i;
+    int j;
+    memset(&fns, 0, sizeof(fns));
+
+    if (headers != 0) {
+        for (i = 0; i < headers->len; i++) {
+            JVal *header = headers->items[i];
+            JVal *defs;
+            if (strcmp(jget_str(header, "kind"), "FnBlock") != 0) continue;
+            defs = jget(header, "defs");
+            for (j = 0; j < defs->len; j++) {
+                JVal *definition = defs->items[j];
+                fn_list_push(&fns, definition);
+            }
+            /* 块内同形检查：只在本次块新收进来的定义之间比较。 */
+            {
+                int start = fns.len - defs->len;
+                int a;
+                for (a = start; a < fns.len; a++) {
+                    int b;
+                    for (b = start; b < a; b++) {
+                        if (!jval_equal(jget(fns.items[a], "shape"),
+                                        jget(fns.items[b], "shape"))) {
+                            continue;
+                        }
+                        {
+                            JVal *span = jget(fns.items[a], "span");
+                            JVal *first = jget(fns.items[b], "span");
+                            char hint[512];
+                            snprintf(hint, sizeof(hint),
+                                     "首个同形定义在第 %lld 行；两份形状均为 %s",
+                                     first != 0 ? jget(first, "line")->num : 0,
+                                     shape_describe(jget(fns.items[a], "shape")));
+                            fail_hint("load", "E-03",
+                                      span != 0
+                                          ? (int)jget(span, "line")->num
+                                          : 0,
+                                      span != 0 ? (int)jget(span, "col")->num : 0,
+                                      hint, "函数形状重复：%s",
+                                      shape_describe(jget(fns.items[a], "shape")));
+                        }
+                    }
+                }
+            }
+        }
+    }
+    load_check_defaults(&fns);
+    load_walk(tree, &fns);
+}
+
+/* PH-15：map 同块重复短词与 W-01 仍按 token 扫；函数相关校验见 load_shapes。 */
 pub void load_scan(Lexer *lx, JVal *warnings)
 {
     Token *toks = lx->toks;
@@ -46,16 +329,8 @@ pub void load_scan(Lexer *lx, JVal *warnings)
     LoadMap *maps = 0;
     int nmaps = 0;
     int capmaps = 0;
-    LoadFn *fns = 0;
-    int nfns = 0;
-    int capfns = 0;
-    int *defs = 0;
-    int ndefs = 0;
-    int capdefs = 0;
     int i;
-    int j;
     int k;
-    int m;
 
     /* 第一遍：//map{} 块。同块重复短词是加载错误；表供动词别名解析。 */
     for (i = 0; i < ntok; i++) {
@@ -85,199 +360,11 @@ pub void load_scan(Lexer *lx, JVal *warnings)
         }
     }
 
-    /* 第二遍：//fn{}。同名以首个定义为准（Python setdefault 语义）。 */
+    /* W-01：只提示，不影响退出码。 */
     for (i = 0; i < ntok; i++) {
-        if (toks[i].kind != TK_FN_HEADER) continue;
-        i++;
-        for (;;) {
-            int fi;
-            int first_def;
-            if (i >= ntok) break;
-            if (toks[i].kind == TK_RBRACE) break;
-            if (toks[i].kind != TK_AT) {
-                i++;
-                continue;
-            }
-            if (ndefs >= capdefs) {
-                capdefs = capdefs ? capdefs * 2 : 8;
-                defs = (int *)xrealloc(defs,
-                                       sizeof(int) * (size_t)capdefs);
-            }
-            defs[ndefs++] = i;
-            fi = -1;
-            for (k = 0; k < nfns; k++) {
-                if (strcmp(fns[k].name, toks[i + 1].text) == 0) {
-                    fi = k;
-                    break;
-                }
-            }
-            first_def = 0;
-            if (fi < 0) {
-                if (nfns >= capfns) {
-                    capfns = capfns ? capfns * 2 : 8;
-                    fns = (LoadFn *)xrealloc(fns,
-                                             sizeof(LoadFn) * (size_t)capfns);
-                }
-                memset(&fns[nfns], 0, sizeof(LoadFn));
-                fns[nfns].name = xstrdup(toks[i + 1].text);
-                fns[nfns].line = toks[i].line;
-                fns[nfns].col = toks[i].col;
-                fi = nfns++;
-                first_def = 1;
-            }
-            j = i + 2;
-            while (j < ntok && toks[j].kind != TK_LBRACE) {
-                if (toks[j].kind == TK_VARIABLE) {
-                    int has_def =
-                        (j + 1 < ntok && toks[j + 1].kind == TK_QUESTION);
-                    int pi = -1;
-                    for (k = 0; k < fns[fi].nparams; k++) {
-                        if (strcmp(fns[fi].params[k], toks[j].text) == 0) {
-                            pi = k;
-                            break;
-                        }
-                    }
-                    if (pi < 0 && first_def) {
-                        if (fns[fi].nparams >= fns[fi].capparams) {
-                            fns[fi].capparams = fns[fi].capparams
-                                                    ? fns[fi].capparams * 2
-                                                    : 4;
-                            fns[fi].params = (char **)xrealloc(
-                                fns[fi].params,
-                                sizeof(char *) * (size_t)fns[fi].capparams);
-                            fns[fi].has_default = (unsigned char *)xrealloc(
-                                fns[fi].has_default,
-                                sizeof(unsigned char) *
-                                    (size_t)fns[fi].capparams);
-                        }
-                        pi = fns[fi].nparams++;
-                        fns[fi].params[pi] = xstrdup(toks[j].text);
-                        fns[fi].has_default[pi] = 0;
-                    }
-                    if (pi >= 0 && has_def) fns[fi].has_default[pi] = 1;
-                    if (has_def) {
-                        /* 默认值里的 $变量不算模板参数（Python 不递归 Default）。 */
-                        j += 2;
-                        if (j < ntok && p_is_word_kind(toks[j].kind)) {
-                            j++;
-                            while (j < ntok &&
-                                   p_adjacent(&toks[j - 1], &toks[j])) {
-                                j++;
-                            }
-                        }
-                        continue;
-                    }
-                }
-                j++;
-            }
-            if (j < ntok && toks[j].kind == TK_LBRACE) {
-                int depth = 1;
-                j++;
-                while (j < ntok && depth > 0) {
-                    if (toks[j].kind == TK_LBRACE) depth++;
-                    else if (toks[j].kind == TK_RBRACE) depth--;
-                    j++;
-                }
-            }
-            i = j;
-        }
-    }
-
-    /* §4.18：默认值只允许尾部连续省略。 */
-    for (k = 0; k < nfns; k++) {
-        int tail = 0;
-        for (m = 0; m < fns[k].nparams; m++) {
-            if (fns[k].has_default[m]) {
-                tail = 1;
-            } else if (tail) {
-                fail("load", "E-LOAD-FN-DEFAULT-NOT-TAIL", fns[k].line,
-                     fns[k].col,
-                     "函数 '%s' 的默认值只能出现在尾部；$%s 缺少默认值",
-                     fns[k].name, fns[k].params[m]);
-            }
-        }
-    }
-
-    /* 第三遍：文档顺序。调用名/实参、动词、W-01 与 Python 的 AST 遍历同序。 */
-    for (i = 0; i < ntok; i++) {
-        TokKind kind = toks[i].kind;
-        if (kind == TK_AT) {
-            const char *name;
-            int given = 0;
-            int fi = -1;
-            int missing = 0;
-            for (k = 0; k < ndefs; k++) {
-                if (defs[k] == i) break;
-            }
-            if (k < ndefs) continue; /* FnDef 头不是 CallStmt */
-            name = toks[i + 1].text;
-            j = i + 2;
-            while (j < ntok && p_is_word_kind(toks[j].kind)) {
-                given++;
-                j++;
-                while (j < ntok && p_adjacent(&toks[j - 1], &toks[j])) j++;
-            }
-            for (k = 0; k < nfns; k++) {
-                if (strcmp(fns[k].name, name) == 0) {
-                    fi = k;
-                    break;
-                }
-            }
-            if (fi < 0) {
-                fail("load", "E-LOAD-FN-UNDECLARED", toks[i].line, toks[i].col,
-                     "未声明的函数 '%s'；只能调用 //fn{} 内定义的名字", name);
-            }
-            if (given < fns[fi].nparams) {
-                for (m = given; m < fns[fi].nparams; m++) {
-                    if (!fns[fi].has_default[m]) missing = 1;
-                }
-            }
-            if (given > fns[fi].nparams || missing) {
-                fail("load", "E-LOAD-FN-ARITY", toks[i].line, toks[i].col,
-                     "函数 '%s' 需要 %d 个实参，实际 %d 个",
-                     fns[fi].name, fns[fi].nparams, given);
-            }
-        } else if (kind == TK_VERB) {
-            const char *verb = toks[i].text;
-            int start = i;
-            int known = 0;
-            for (k = 0; k < nmaps; k++) {
-                if (maps[k].marker == '<' &&
-                    strcmp(maps[k].short_name, verb) == 0) {
-                    verb = maps[k].long_name;
-                    break;
-                }
-            }
-            for (k = 0; k < (int)(sizeof(LOAD_VERBS) / sizeof(LOAD_VERBS[0]));
-                 k++) {
-                if (strcmp(LOAD_VERBS[k], verb) == 0) {
-                    known = 1;
-                    break;
-                }
-            }
-            if (!known) {
-                /* VerbCall 的 span 从主语开始（若有）。 */
-                if (i > 0 && p_is_word_kind(toks[i - 1].kind)) {
-                    start = i - 1;
-                    while (start > 0 &&
-                           p_is_word_kind(toks[start - 1].kind) &&
-                           p_adjacent(&toks[start - 1], &toks[start])) {
-                        start--;
-                    }
-                    if (start >= 2 && toks[start - 1].kind == TK_QUESTION &&
-                        toks[start - 2].kind == TK_VARIABLE) {
-                        start -= 2;
-                    }
-                }
-                fail("load", "E-LOAD-VERB-UNKNOWN", toks[start].line,
-                     toks[start].col,
-                     "未知动词 '%s'；0.1.0 动词集见 PH-4 卡 §8", verb);
-            }
-        } else if (kind == TK_KEYWORD && strcmp(toks[i].text, "each") == 0 &&
-                   i + 5 < ntok && toks[i + 1].kind == TK_VARIABLE &&
-                   toks[i + 2].kind == TK_LBRACKET &&
-                   toks[i + 4].kind == TK_RBRACKET) {
-            /* §4.20 W-01：只提示，不影响退出码。 */
+        if (toks[i].kind == TK_KEYWORD && strcmp(toks[i].text, "each") == 0 &&
+            i + 5 < ntok && toks[i + 1].kind == TK_VARIABLE &&
+            toks[i + 2].kind == TK_LBRACKET && toks[i + 4].kind == TK_RBRACKET) {
             Token *src = &toks[i + 5];
             Token *nxt = (i + 6 < ntok) ? &toks[i + 6] : &toks[ntok - 1];
             if (src->kind == TK_BARE && nxt->kind != TK_VERB &&

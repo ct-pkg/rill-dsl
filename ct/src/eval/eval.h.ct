@@ -537,43 +537,76 @@ static EOut eval_parallel_stmt(Eval *ev, JVal *stmt, JVal *dollar)
     return base;
 }
 
-/* §4.18：模板参数首次出现去重；默认值只在缺实参时于调用方作用域求值。 */
+/* §4.18（PH-22）：按形状选中定义，参数位按位置绑定；同名多位必须相等。 */
+static int eval_param_index(char **pname, int np, const char *name)
+{
+    int i;
+    for (i = 0; i < np; i++) {
+        if (strcmp(pname[i], name) == 0) return i;
+    }
+    return -1;
+}
+
+static void eval_bind_position(Eval *ev, const char *name, JVal *value_node,
+                               JVal *dollar, char **pname, int np, JVal **bind,
+                               int *has, int line, int col)
+{
+    int idx = eval_param_index(pname, np, name);
+    JVal *value;
+    if (idx < 0) return;
+    value = eval_value(ev, value_node, dollar);
+    if (has[idx]) {
+        if (!jval_equal(bind[idx], value)) {
+            fail("run", "E-06", line, col,
+                 "参数 $%s 在模板多个位上的值不相等", name);
+        }
+        return;
+    }
+    bind[idx] = value;
+    has[idx] = 1;
+}
+
 static EOut eval_fn_call(Eval *ev, JVal *stmt, JVal *dollar)
 {
-    const char *name = jget_str(stmt, "name");
-    JVal *args = jget(stmt, "args");
+    JVal *call = jget(stmt, "call");
+    JVal *span = jget(stmt, "span");
+    int line = span != 0 ? (int)jget(span, "line")->num : 0;
+    int col = span != 0 ? (int)jget(span, "col")->num : 0;
+    JVal *call_shape = shape_of_call(call, 0);
     JVal *def = 0;
     JVal *headers = jget(ev->program, "headers");
     JVal *body;
     char *pname[64];
     JVal *pdef[64];
     JVal *bind[64];
+    int has[64];
     JVal *stack[512];
     EVar *saved;
     EOut out;
     int np = 0;
     int sp = 0;
-    int na;
     int i;
+    int a;
+    int b;
 
-    for (i = 0; i < headers->len; i++) {
+    for (i = 0; i < headers->len && def == 0; i++) {
         JVal *header = headers->items[i];
         JVal *defs;
         int d;
         if (strcmp(jget_str(header, "kind"), "FnBlock") != 0) continue;
         defs = jget(header, "defs");
         for (d = 0; d < defs->len; d++) {
-            JVal *cand = defs->items[d];
-            if (strcmp(jget_str(cand, "name"), name) == 0) {
-                def = cand;
+            if (shape_classify(defs->items[d], call_shape) == 1) {
+                def = defs->items[d];
                 break;
             }
         }
-        if (def != 0) break;
     }
     if (def == 0) {
-        fail("run", "E-RUN-FN-UNDECLARED", 0, 0, "未声明的函数 '%s'", name);
+        fail("run", "E-RUN-FN-UNDECLARED", line, col,
+             "未声明的函数形状：%s", shape_describe(call_shape));
     }
+
     stack[sp++] = jget(def, "template");
     while (sp > 0) {
         JVal *n = stack[--sp];
@@ -590,13 +623,7 @@ static EOut eval_fn_call(Eval *ev, JVal *stmt, JVal *dollar)
         nk = jget_str(n, "kind");
         if (strcmp(nk, "Variable") == 0 || strcmp(nk, "Default") == 0) {
             const char *pn = jget_str(n, "name");
-            int idx = -1;
-            for (k = 0; k < np; k++) {
-                if (strcmp(pname[k], pn) == 0) {
-                    idx = k;
-                    break;
-                }
-            }
+            int idx = eval_param_index(pname, np, pn);
             if (idx < 0 && np < 64) {
                 idx = np;
                 pname[np] = xstrdup(pn);
@@ -613,18 +640,64 @@ static EOut eval_fn_call(Eval *ev, JVal *stmt, JVal *dollar)
             }
         }
     }
-    na = args->len;
-    if (na > np) {
-        fail("run", "E-RUN-FN-ARITY", 0, 0,
-             "函数 '%s' 需要 %d 个实参，实际 %d 个", name, np, na);
+    for (i = 0; i < np; i++) {
+        bind[i] = 0;
+        has[i] = 0;
     }
-    for (i = 0; i < na; i++) {
-        bind[i] = eval_value(ev, args->items[i], dollar);
+    {
+        JVal *template0 = jget(def, "template")->items[0];
+        JVal *ts = jget(template0, "subject");
+        JVal *to = jget(template0, "object");
+        JVal *tpost = jget(template0, "post");
+        JVal *cpost = jget(call, "post");
+        if (ts != 0 && ts->kind == J_OBJ) {
+            const char *tk = jget_str(ts, "kind");
+            if (strcmp(tk, "Variable") == 0 || strcmp(tk, "Default") == 0) {
+                eval_bind_position(ev, jget_str(ts, "name"), jget(call, "subject"),
+                                   dollar, pname, np, bind, has, line, col);
+            }
+        }
+        if (to != 0 && to->kind == J_OBJ) {
+            const char *tk = jget_str(to, "kind");
+            if (strcmp(tk, "Variable") == 0 || strcmp(tk, "Default") == 0) {
+                eval_bind_position(ev, jget_str(to, "name"), jget(call, "object"),
+                                   dollar, pname, np, bind, has, line, col);
+            }
+        }
+        a = 0;
+        b = 0;
+        while (a < tpost->len && b < cpost->len) {
+            JVal *titem = tpost->items[a];
+            JVal *citem = cpost->items[b];
+            int tprep = strcmp(jget_str(titem, "kind"), "PrepPhrase") == 0;
+            int cprep = strcmp(jget_str(citem, "kind"), "PrepPhrase") == 0;
+            if (!tprep) {
+                a++;
+                continue;
+            }
+            if (!cprep) {
+                b++;
+                continue;
+            }
+            {
+                JVal *tobj = jget(titem, "object");
+                const char *tk = jget_str(tobj, "kind");
+                if (strcmp(tk, "Variable") == 0 || strcmp(tk, "Default") == 0) {
+                    eval_bind_position(ev, jget_str(tobj, "name"),
+                                       jget(citem, "object"), dollar, pname, np,
+                                       bind, has, line, col);
+                }
+            }
+            a++;
+            b++;
+        }
     }
-    for (; i < np; i++) {
+    for (i = 0; i < np; i++) {
+        if (has[i]) continue;
         if (pdef[i] == 0) {
-            fail("run", "E-RUN-FN-ARITY", 0, 0,
-                 "函数 '%s' 需要 %d 个实参，实际 %d 个", name, np, na);
+            fail("run", "E-RUN-FN-ARITY", line, col,
+                 "函数形状 %s 缺少参数 $%s", shape_describe(jget(def, "shape")),
+                 pname[i]);
         }
         bind[i] = eval_value(ev, pdef[i], dollar);
     }

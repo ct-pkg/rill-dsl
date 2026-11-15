@@ -462,12 +462,73 @@ def args_for(layer, root, source):
     return ["parse", "--dump-ast", source, "--profile", "shell"]
 
 
+def directed_sources(root):
+    """定向用例：testdata/0.1.0/directed/**/source.ri，不进入 harness 桶。"""
+    base = os.path.join(root, "testdata", "0.1.0", "directed")
+    found = []
+    if not os.path.isdir(base):
+        return found
+    for dirpath, _dirnames, filenames in os.walk(base):
+        if "source.ri" in filenames:
+            rel = os.path.relpath(
+                os.path.join(dirpath, "source.ri"),
+                os.path.join(root, "testdata", "0.1.0"),
+            )
+            found.append(rel.replace(os.sep, "/"))
+    found.sort()
+    return found
+
+
+def layer_summary(layer, rc, payload):
+    """对拍摘要：退出码 + 诊断四元组。expected_diff 只认这份精确摘要。"""
+    item = {"exit": rc}
+    err = payload.get("error") if isinstance(payload, dict) else None
+    if isinstance(err, dict):
+        item["error"] = {
+            key: err.get(key) for key in ("stage", "code", "line", "col")
+        }
+    else:
+        item["error"] = None
+    return item
+
+
+def load_case_doc(root, source):
+    path = os.path.join(root, "testdata", "0.1.0", os.path.dirname(source), "case.json")
+    try:
+        with open(path, encoding="utf-8") as fh:
+            return json.load(fh)
+    except (OSError, ValueError):
+        return {}
+
+
+def expected_diff_hit(root, source, layer, py_rc, py_payload, ct_rc, ct_payload):
+    """``case.json.expected_diff`` 精确匹配：用例 + 层 + 两侧摘要，无通配。"""
+    spec = load_case_doc(root, source).get("expected_diff")
+    if not isinstance(spec, dict):
+        return False
+    if layer not in (spec.get("layers") or []):
+        return False
+    for key in ("side", "reason", "anchor"):
+        if not spec.get(key):
+            return False
+    expect = (spec.get("expect") or {}).get(layer)
+    if not isinstance(expect, dict):
+        return False
+    if layer_summary(layer, py_rc, py_payload) != expect.get("py"):
+        return False
+    if layer_summary(layer, ct_rc, ct_payload) != expect.get("ct"):
+        return False
+    return True
+
+
 def compare_source(layer, py_sut, ct_sut, root, source):
     args = args_for(layer, root, os.path.join("testdata", "0.1.0", source))
     py_rc, py_payload, py_err = run(py_sut, root, args)
     ct_rc, ct_payload, ct_err = run(ct_sut, root, args)
     if py_err or ct_err:
         return "执行失败：py=%s ct=%s" % (py_err or "ok", ct_err or "ok"), ""
+    if expected_diff_hit(root, source, layer, py_rc, py_payload, ct_rc, ct_payload):
+        return "", "expected"
     if py_rc != ct_rc:
         return "退出码不一致：py=%s ct=%s" % (py_rc, ct_rc), ""
     if layer == "eval":
@@ -888,8 +949,12 @@ def main(argv):
     parser.add_argument("--bucket", choices=("positive", "negative", "all"), default="all")
     parser.add_argument("--python-sut", default="")
     parser.add_argument("--ct-sut", default="")
+    parser.add_argument("--all", action="store_true", help="等价于 --layer all（PH-22 卡面写法）")
+    parser.add_argument("--filter", default="", help="只跑路径包含该子串的用例")
     parser.add_argument("--verbose", action="store_true", help="逐用例打印 PASS")
     opts = parser.parse_args(argv)
+    if opts.all:
+        opts.layer = "all"
 
     root = repo_root()
     py_path = opts.python_sut or os.path.join(root, "testdata", "0.1.0", "sut.json")
@@ -935,6 +1000,7 @@ def run_source_layers(layers, opts, py_sut, ct_sut, root, positive, negative):
         sources = positive
     elif opts.bucket == "negative":
         sources = negative
+    directed = directed_sources(root) if opts.bucket == "all" else []
 
     total_diffs = 0
     for layer in layers:
@@ -955,19 +1021,26 @@ def run_source_layers(layers, opts, py_sut, ct_sut, root, positive, negative):
             layer_sources = [s for s in positive if s.startswith(prefixes)]
         else:
             layer_sources = sources
+        if opts.bucket == "all":
+            layer_sources = layer_sources + directed
+        if opts.filter:
+            layer_sources = [s for s in layer_sources if opts.filter in s]
         print("== layer=%s" % layer)
         print("   python: %s" % " ".join(py_sut["command"]))
         print("   ct    : %s" % " ".join(ct_sut["command"]))
         diffs = 0
         ok_compared = 0
         err_compared = 0
+        expected = 0
         for source in layer_sources:
             problem, status = compare_source(layer, py_sut, ct_sut, root, source)
             if problem:
                 diffs += 1
                 print("   DIFF %s: %s" % (source, problem))
                 continue
-            if status == "diagnostic":
+            if status == "expected":
+                expected += 1
+            elif status == "diagnostic":
                 err_compared += 1
             else:
                 ok_compared += 1
@@ -975,8 +1048,8 @@ def run_source_layers(layers, opts, py_sut, ct_sut, root, positive, negative):
                 print("   PASS %s" % source)
         total_diffs += diffs
         print(
-            "   sources=%d ok=%d diagnostics=%d diffs=%d"
-            % (len(layer_sources), ok_compared, err_compared, diffs)
+            "   sources=%d ok=%d diagnostics=%d expected=%d diffs=%d"
+            % (len(layer_sources), ok_compared, err_compared, expected, diffs)
         )
         print("   RESULT: %s" % ("PASS" if diffs == 0 else "FAIL"))
     return total_diffs

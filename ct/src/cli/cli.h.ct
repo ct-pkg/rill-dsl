@@ -139,6 +139,7 @@ pub int cmd_check(int argc, char **argv)
     char *source;
     Lexer lexer;
     Parser parser;
+    JVal *program;
     JVal *warnings;
     StdoutEmitter out;
 
@@ -177,10 +178,11 @@ pub int cmd_check(int argc, char **argv)
     memset(&parser, 0, sizeof(parser));
     parser.toks = lexer.toks;
     parser.ntok = lexer.ntoks;
-    (void)p_parse_program(&parser);
+    program = p_parse_program(&parser);
 
     warnings = jarr();
     load_scan(&lexer, warnings);
+    load_shapes(program);
 
     out.failed = 0;
     emitter_emit(&out, "warnings", warnings);
@@ -271,6 +273,13 @@ pub int cmd_run(int argc, char **argv)
     parser.toks = lexer.toks;
     parser.ntok = lexer.ntoks;
     program = p_parse_program(&parser);
+
+    /* 与 Python `run` 一致：map 与函数形状的加载期校验先于求值。 */
+    {
+        JVal *warnings = jarr();
+        load_scan(&lexer, warnings);
+        load_shapes(program);
+    }
 
     /* 顺序对齐 Python `_run_verbs`：有 --fakes 时 fake 优先，能力清单不参与。 */
     if (fakes_path != 0) {

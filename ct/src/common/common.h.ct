@@ -40,6 +40,8 @@ pub struct Diag {
 /* `ct build --lib` 拒绝导出 pub 全局量，这两个值改成本单元私有，
    跨层只经 `fail_jmp_slot()` 取地址（main 的 setjmp 仍落在 main 帧）。 */
 static Diag g_diag;
+static char g_hint[512];
+static int g_has_hint;
 static jmp_buf g_fail_jmp;
 
 pub jmp_buf *fail_jmp_slot(void) { return &g_fail_jmp; }
@@ -59,6 +61,19 @@ pub void fail(const char *stage, const char *code, int line, int col,
               const char *fmt, ...)
 {
     va_list ap;
+    g_has_hint = 0;
+    va_start(ap, fmt);
+    failv(stage, code, line, col, fmt, ap);
+    va_end(ap);
+}
+
+/* PH-22：带 Hint 的诊断。旧错误不走这里，信封字段集保持不变。 */
+pub void fail_hint(const char *stage, const char *code, int line, int col,
+                   const char *hint, const char *fmt, ...)
+{
+    va_list ap;
+    snprintf(g_hint, sizeof(g_hint), "%s", hint ? hint : "");
+    g_has_hint = 1;
     va_start(ap, fmt);
     failv(stage, code, line, col, fmt, ap);
     va_end(ap);
@@ -230,6 +245,341 @@ pub const char *jget_str(JVal *obj, const char *key)
 {
     JVal *v = jget(obj, key);
     return (v != 0 && v->kind == J_STR) ? v->str : "";
+}
+
+/* ------------------------------------------------------------------ */
+/* PH-22：函数形状键（D-022），parser / loader / eval 共用              */
+/* ------------------------------------------------------------------ */
+
+pub int jval_equal(JVal *a, JVal *b)
+{
+    int i;
+    if (a == 0 || b == 0) return a == b;
+    if (a->kind != b->kind) return 0;
+    switch (a->kind) {
+    case J_NULL:
+        return 1;
+    case J_BOOL:
+        return a->boolean == b->boolean;
+    case J_INT:
+        return a->num == b->num;
+    case J_STR:
+        return strcmp(a->str, b->str) == 0;
+    case J_ARR:
+        if (a->len != b->len) return 0;
+        for (i = 0; i < a->len; i++) {
+            if (!jval_equal(a->items[i], b->items[i])) return 0;
+        }
+        return 1;
+    case J_OBJ:
+        if (a->len != b->len) return 0;
+        for (i = 0; i < a->len; i++) {
+            JVal *other = jget(b, a->keys[i]);
+            if (other == 0 || !jval_equal(a->items[i], other)) return 0;
+        }
+        return 1;
+    default:
+        return a->num == b->num && a->dbl == b->dbl;
+    }
+}
+
+/* P-025 未裁定前：常量位的 ``类型:值`` 前缀不进形状键。 */
+static char *shape_strip_type(const char *text)
+{
+    const char *colon = strchr(text, ':');
+    const char *p;
+    if (colon == 0 || colon == text || colon[1] == 0) return xstrdup(text);
+    if (!(is_alpha((unsigned char)text[0]) || text[0] == '_')) return xstrdup(text);
+    for (p = text; p < colon; p++) {
+        unsigned char c = (unsigned char)*p;
+        if (!(is_alnum(c) || c == '_' || c == '-')) return xstrdup(text);
+    }
+    return xstrdup(colon + 1);
+}
+
+static char *shape_const_value(JVal *node)
+{
+    const char *kind;
+    if (node == 0 || node->kind != J_OBJ) return 0;
+    kind = jget_str(node, "kind");
+    if (strcmp(kind, "String") == 0) return shape_strip_type(jget_str(node, "value"));
+    if (strcmp(kind, "Bare") == 0) return shape_strip_type(jget_str(node, "text"));
+    if (strcmp(kind, "Number") == 0) {
+        JVal *v = jget(node, "value");
+        char buf[64];
+        snprintf(buf, sizeof(buf), "%lld", v != 0 ? v->num : 0);
+        return xstrdup(buf);
+    }
+    return 0;
+}
+
+pub JVal *shape_slot(JVal *node, int template_side)
+{
+    JVal *o = jobj();
+    const char *kind;
+    char *value;
+    if (node == 0 || node->kind == J_NULL) {
+        jput(o, "role", jstr("none"));
+        return o;
+    }
+    kind = jget_str(node, "kind");
+    if (strcmp(kind, "Variable") == 0 || strcmp(kind, "Default") == 0) {
+        jput(o, "role", jstr(template_side ? "param" : "value"));
+        return o;
+    }
+    value = shape_const_value(node);
+    if (value != 0) {
+        jput(o, "role", jstr("const"));
+        jput(o, "value", jstr(value));
+        return o;
+    }
+    jput(o, "role", jstr("value"));
+    return o;
+}
+
+static char *shape_before_colon(const char *text)
+{
+    const char *colon = strchr(text, ':');
+    if (colon == 0) return xstrdup(text);
+    return xstrndup(text, (int)(colon - text));
+}
+
+static char *shape_adverb_name(JVal *node)
+{
+    const char *kind;
+    if (node == 0 || node->kind != J_OBJ) return xstrdup("");
+    kind = jget_str(node, "kind");
+    if (strcmp(kind, "Bare") == 0) return shape_before_colon(jget_str(node, "text"));
+    if (strcmp(kind, "String") == 0) return shape_before_colon(jget_str(node, "value"));
+    if (strcmp(kind, "Number") == 0) {
+        JVal *v = jget(node, "value");
+        char buf[64];
+        snprintf(buf, sizeof(buf), "%lld", v != 0 ? v->num : 0);
+        return shape_before_colon(buf);
+    }
+    return xstrdup("");
+}
+
+static JVal *shape_adverbs(JVal *post)
+{
+    JVal *arr = jarr();
+    char **names = 0;
+    int n = 0;
+    int cap = 0;
+    int i;
+    int j;
+    int k;
+    if (post == 0) return arr;
+    for (i = 0; i < post->len; i++) {
+        JVal *item = post->items[i];
+        JVal *items;
+        if (strcmp(jget_str(item, "kind"), "Adverb") != 0) continue;
+        items = jget(item, "items");
+        if (items == 0) continue;
+        for (j = 0; j < items->len; j++) {
+            char *name = shape_adverb_name(items->items[j]);
+            int seen = 0;
+            for (k = 0; k < n; k++) {
+                if (strcmp(names[k], name) == 0) {
+                    seen = 1;
+                    break;
+                }
+            }
+            if (!seen) {
+                if (n >= cap) {
+                    cap = cap ? cap * 2 : 4;
+                    names = (char **)xrealloc(names, sizeof(char *) * (size_t)cap);
+                }
+                names[n++] = name;
+            }
+        }
+    }
+    for (i = 0; i < n; i++) {
+        for (j = i + 1; j < n; j++) {
+            if (strcmp(names[i], names[j]) > 0) {
+                char *tmp = names[i];
+                names[i] = names[j];
+                names[j] = tmp;
+            }
+        }
+    }
+    for (i = 0; i < n; i++) jpush(arr, jstr(names[i]));
+    return arr;
+}
+
+pub JVal *shape_of_call(JVal *call, int template_side)
+{
+    JVal *o = jobj();
+    JVal *preps = jarr();
+    JVal *post = jget(call, "post");
+    int i;
+    jput(o, "verb", jstr(jget_str(call, "verb")));
+    jput(o, "subject", shape_slot(jget(call, "subject"), template_side));
+    jput(o, "object", shape_slot(jget(call, "object"), template_side));
+    if (post != 0) {
+        for (i = 0; i < post->len; i++) {
+            JVal *item = post->items[i];
+            JVal *p;
+            if (strcmp(jget_str(item, "kind"), "PrepPhrase") != 0) continue;
+            p = jobj();
+            jput(p, "prep", jstr(jget_str(item, "prep")));
+            jput(p, "object", shape_slot(jget(item, "object"), template_side));
+            jpush(preps, p);
+        }
+    }
+    jput(o, "preps", preps);
+    jput(o, "adverbs", shape_adverbs(post));
+    return o;
+}
+
+static int shape_slot_accepts(JVal *def_slot, JVal *call_slot)
+{
+    const char *dr = jget_str(def_slot, "role");
+    const char *cr = jget_str(call_slot, "role");
+    if (strcmp(dr, "none") == 0) return strcmp(cr, "none") == 0;
+    if (strcmp(dr, "const") == 0) {
+        return strcmp(cr, "const") == 0 &&
+               strcmp(jget_str(def_slot, "value"), jget_str(call_slot, "value")) == 0;
+    }
+    return strcmp(cr, "none") != 0;
+}
+
+/* 第 index 个介宾的参数位是否带默认值（可整段省略）。 */
+pub int shape_prep_optional(JVal *definition, int index)
+{
+    JVal *tmpl = jget(definition, "template");
+    JVal *post;
+    int i;
+    int seen = 0;
+    if (tmpl == 0 || tmpl->len == 0) return 0;
+    post = jget(tmpl->items[0], "post");
+    if (post == 0) return 0;
+    for (i = 0; i < post->len; i++) {
+        JVal *item = post->items[i];
+        if (strcmp(jget_str(item, "kind"), "PrepPhrase") != 0) continue;
+        if (seen == index) {
+            return strcmp(jget_str(jget(item, "object"), "kind"), "Default") == 0;
+        }
+        seen++;
+    }
+    return 0;
+}
+
+static int shape_subsequence(JVal *needle, JVal *haystack)
+{
+    int pos = 0;
+    int i;
+    for (i = 0; i < haystack->len && pos < needle->len; i++) {
+        if (strcmp(jget_str(needle->items[pos], "prep"),
+                   jget_str(haystack->items[i], "prep")) == 0) {
+            pos++;
+        }
+    }
+    return pos == needle->len;
+}
+
+/* 错误 Hint 用的一行形状文本；不含参数名。 */
+static void shape_desc_slot(JVal *slot, char *buf, size_t n)
+{
+    const char *role = jget_str(slot, "role");
+    if (strcmp(role, "none") == 0) snprintf(buf, n, "-");
+    else if (strcmp(role, "param") == 0) snprintf(buf, n, "$?");
+    else if (strcmp(role, "const") == 0) {
+        snprintf(buf, n, "'%s'", jget_str(slot, "value"));
+    } else {
+        snprintf(buf, n, "$");
+    }
+}
+
+pub char *shape_describe(JVal *shape)
+{
+    char buf[1024];
+    char tmp[256];
+    JVal *preps;
+    JVal *adverbs;
+    int off = 0;
+    int i;
+    buf[0] = 0;
+    if (strcmp(jget_str(jget(shape, "subject"), "role"), "none") != 0) {
+        shape_desc_slot(jget(shape, "subject"), tmp, sizeof(tmp));
+        off += snprintf(buf + off, sizeof(buf) - (size_t)off, "%s ", tmp);
+    }
+    off += snprintf(buf + off, sizeof(buf) - (size_t)off, "<%s>",
+                    jget_str(shape, "verb"));
+    shape_desc_slot(jget(shape, "object"), tmp, sizeof(tmp));
+    off += snprintf(buf + off, sizeof(buf) - (size_t)off, " %s", tmp);
+    preps = jget(shape, "preps");
+    if (preps != 0) {
+        for (i = 0; i < preps->len && off < (int)sizeof(buf) - 1; i++) {
+            shape_desc_slot(jget(preps->items[i], "object"), tmp, sizeof(tmp));
+            off += snprintf(buf + off, sizeof(buf) - (size_t)off, " [%s] %s",
+                            jget_str(preps->items[i], "prep"), tmp);
+        }
+    }
+    adverbs = jget(shape, "adverbs");
+    if (adverbs != 0 && adverbs->len > 0) {
+        off += snprintf(buf + off, sizeof(buf) - (size_t)off, " (");
+        for (i = 0; i < adverbs->len && off < (int)sizeof(buf) - 1; i++) {
+            off += snprintf(buf + off, sizeof(buf) - (size_t)off, "%s%s",
+                            i == 0 ? "" : ",", adverbs->items[i]->str);
+        }
+        off += snprintf(buf + off, sizeof(buf) - (size_t)off, ")");
+    }
+    return xstrdup(buf);
+}
+
+/* 0 = 无候选，1 = 精确相等，2 = 只有参数位个数/省略不符。 */
+pub int shape_classify(JVal *definition, JVal *call_shape)
+{
+    JVal *def_shape = jget(definition, "shape");
+    JVal *def_preps = jget(def_shape, "preps");
+    JVal *call_preps = jget(call_shape, "preps");
+    int status = 1;
+    int i;
+    if (strcmp(jget_str(def_shape, "verb"), jget_str(call_shape, "verb")) != 0) {
+        return 0;
+    }
+    if (!shape_slot_accepts(jget(def_shape, "subject"),
+                            jget(call_shape, "subject"))) {
+        return 0;
+    }
+    if (!shape_slot_accepts(jget(def_shape, "object"),
+                            jget(call_shape, "object"))) {
+        return 0;
+    }
+    if (!jval_equal(jget(def_shape, "adverbs"), jget(call_shape, "adverbs"))) {
+        return 0;
+    }
+    if (call_preps->len > def_preps->len) return 0;
+    {
+        int prefix = 1;
+        for (i = 0; i < call_preps->len; i++) {
+            if (strcmp(jget_str(call_preps->items[i], "prep"),
+                       jget_str(def_preps->items[i], "prep")) != 0) {
+                prefix = 0;
+                break;
+            }
+        }
+        if (prefix) {
+            for (i = call_preps->len; i < def_preps->len; i++) {
+                if (!shape_prep_optional(definition, i)) {
+                    status = 2;
+                    break;
+                }
+            }
+        } else if (shape_subsequence(call_preps, def_preps)) {
+            status = 2;
+        } else {
+            return 0;
+        }
+    }
+    for (i = 0; i < call_preps->len; i++) {
+        if (!shape_slot_accepts(jget(def_preps->items[i], "object"),
+                                jget(call_preps->items[i], "object"))) {
+            return 0;
+        }
+    }
+    return status;
 }
 
 static void jwrite_string(FILE *out, const char *s)
@@ -590,6 +940,7 @@ pub void emitter_emit(StdoutEmitter *self, const char *field, JVal *value)
         jput(err, "line", jint(g_diag.line));
         jput(err, "col", jint(g_diag.col));
         jput(err, "message", jstr(g_diag.message));
+        if (g_has_hint) jput(err, "hint", jstr(g_hint));
         jput(root, "error", err);
         self->failed = 1;
     } else {
