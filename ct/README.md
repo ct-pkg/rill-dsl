@@ -40,21 +40,25 @@ CLI 形状与 Python 版对齐：
 ```bash
 ct/bin/rill_ct tokenize testdata/0.1.0/positive/tokens/compact/source.rill
 ct/bin/rill_ct parse --dump-ast testdata/0.1.0/positive/simple/read-write/source.rill --profile shell
+ct/bin/rill_ct check testdata/0.1.0/positive/check/each-bareword-w01/source.rill
 ```
 
-退出码：`0` 成功（stdout 为 `{"tokens":[...]}` 或 `{"ast":...}`）；`2` 诊断（stdout 为
-`{"error":{"stage","code","line","col","message"}}`）。`stage` 取 `tokenize` / `parse`；
-CLI 用法错误取 `cli` / `E_USAGE`，与 Python 版一致。`--profile` 接受 `shell|agent`，
-但 AST 与 profile 无关，两个值输出相同（harness 的 `host-ast-equal` 也依赖这一点）。
+退出码：`0` 成功（stdout 为 `{"tokens":[...]}`、`{"ast":...}` 或 `{"warnings":[...]}`）；
+`2` 诊断（stdout 为 `{"error":{"stage","code","line","col","message"}}`）。`stage` 取
+`tokenize` / `parse` / `load`；CLI 用法错误取 `cli` / `E_USAGE`，与 Python 版一致。
+`--profile` 接受 `shell|agent`，但 AST 与 profile 无关，两个值输出相同；`check` 的动词集
+在 0.1.0 两个 profile 下相同（harness 的 `host-ast-equal` 也依赖这一点）。
 
 `tokenize` 输出覆盖 `positive/**` 与 `negative/tokenize/**`；`parse` 输出覆盖
-`positive/**` 与 `negative/parse/**`。
+`positive/**` 与 `negative/parse/**`；`check` 覆盖 `positive/check/**` 与
+`negative/load/**`。
 
 对拍入口（PH-13 起的回归门禁）：
 
 ```bash
 python3 tools/diff/diff.py --layer token    # PH-13：82 源，0 差异
 python3 tools/diff/diff.py --layer ast      # PH-14 预演（忽略 span）
+python3 tools/diff/diff.py --layer error    # PH-15：negative/** 26 源，0 差异
 ```
 
 ## 规则到 CT 写法的映射
@@ -214,13 +218,14 @@ clang 直接报 `error: member reference type 'struct S *' is a pointer`，`ct b
 
 ## 明确没做
 
-- 求值、宿主调用、`--fakes`、`shell/agent` 双 profile 行为（仅接受参数，不改变 AST）。
-- `check` / `run` / `fmt` 子命令；`negative/load/**` 的加载期错误码。
-- `each [in]` 的 `W-01` 裸词警告（`check` 才消费）。
+- 求值、宿主调用、`--fakes`、`shell/agent` 双 profile 行为（仅接受参数，不改变 token/AST）。
+- `run` / `fmt` 子命令。
 - AST 的 `span`：golden 与 harness canonical 都不含 span，Python 版有 span 但比对时被剥离。
 - 释放 AST/JSON 内存：进程即退，未做回收；若第二层要长驻，需要补生命周期管理。
 
 ## 第二层需要的准备
+
+PH-15 已完成第 3、4 项里的加载期校验与 `W-01`；求值与真实宿主仍在后续相。
 
 1. 用 `ct build` 多单元替代单文件 `ctc`，把词法、语法、CLI 拆开；同时获得 `lib/std` 的
    `Vec`/`Map`（或继续用自建数组，避免容器语义差异）。
