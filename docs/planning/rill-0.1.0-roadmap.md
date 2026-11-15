@@ -73,6 +73,10 @@ RILL 的早期目标有两个宿主：
 - 因此 0.1.0 的准确口径是：**12 张 phase 卡已交付，但 PH-5 记 4/6，不是全绿**。
 - 本记录只补状态与去向，不改 phase 1–12 的编号、依赖与并行结论。
 
+## 0.4 PH-22 追加（2026-11-15）
+- 触发/编号：用户裁定去掉 `@ "name"`，签名 = 动词 + 状语 + 介词形状键（[D-022](../decisions/D-022.md)）；PH-22 接 PH-21，`version-minor=22`。当前产品 0.12.0，`d=10`，收敛方式待用户三选一（[PH-22 卡](../phases/PH-22/card.md) §9），本路线图不代替裁定。
+- 范围/依赖：规范正文、Python/CT 实现、语料与编辑器；不改宿主能力，不裁定 P-025/P-026。Python 基线 PH-12；CT 以 PH-21 收口为准；不改变 phase 1–12 的编号与并行结论。
+
 ## 1. 完成定义
 
 本路线图的“可运行实现”指：
@@ -102,6 +106,7 @@ RILL 的早期目标有两个宿主：
 | phase 10 | Host | Shell 宿主能力层：进程/文件路径/env/stdio/退出码 | phase 6、phase 1 host contract | 与 phase 7/8/9、phase 11 | 五类能力各有 golden；同一 AST 在 shell profile 可执行 |
 | phase 11 | Host | 智能体宿主能力层：工具/角色/limits 映射到同一 HostCapabilities | phase 10、phase 4 | 与 phase 7/8/9 | agent profile 与 shell profile 共用 AST；能力差异只在结果 |
 | phase 12 | 集成 | 双宿主集成：CLI + 全样例 + golden + 双 profile 一致性 | phase 4、phase 5、phase 9、phase 11 | 无 | 非 pending 样例全通过；pending 列 xfail；双 profile AST 相等；round-trip 通过 |
+| PH-22（追加） | 语言变更 | 函数签名去名：签名 = 动词 + 状语 + 介词构成的形状键，见 D-022 | PH-12；CT 以 PH-21 收口状态为准 | 无 | PH-22 卡 E-1…E-28 全绿；Python/CT 对拍 0 未解释差异；旧 `@ "name"` 清零 |
 
 ## 3. 两条横切主线
 
