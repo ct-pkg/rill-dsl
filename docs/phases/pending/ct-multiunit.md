@@ -87,10 +87,10 @@ PH-17 §2 列出的 `eval_control.m.ct` / `eval_parallel.m.ct` / `eval_fn.m.ct` 
 | M-2 | token 层 82 源、ast 层 82 源、error 层 26 源全部 0 差异 | 三个 `--layer` 命令退出 0 |
 | M-3 | eval 层 PH-16 的 10 例先回到 0 差异 | `--layer eval` 退出 0（PH-17 再扩到 19） |
 | M-4 | `ct/test.sh` 与 `tools/check.sh all` 通过 | 末行 PASS |
-| M-5 | 单文件 `ct/rill_ct.ct` 删除后仓库仍可从零构建 | 删除提交单独可回滚 |
+| M-5 | 单文件 `ct/rill_ct.ct` 删除后仓库仍可从零构建 | **待授权**：删除动作需用户明确同意；当前文件保留、不参与构建（`ct/build.sh` 只走 `ct/src/main.ct`） |
 | M-6 | 无判据被降级：E-3/E-5 等「缺能力」项仍如实记为未通过 | 收口对照表 |
 
 ## 7. 回滚
 
 迁移与删除分两次提交；`git revert <sha>` 可分别回到「单文件 + `ctc`」与「多单元 + `ct build`」。
-`ctc` 路径在删除提交前始终可用。
+`ctc` 路径在删除提交前始终可用。删除提交尚未发生（M-5 待授权），当前 `ctc` 路径仍可手动跑通。

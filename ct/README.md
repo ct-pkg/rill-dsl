@@ -1,39 +1,47 @@
-# RILL 0.1.0 — CT 侧第一层（token / parse）
+# RILL 0.1.0 — CT 侧实现（token / parse / check / run）
 
 独立的 CT 实现，不碰 `src/rill/` 的 Python 对照实现，也不改 `testdata/` 的既有 golden。
-范围只有：读 `.rill` → 词法 → 语法 → 可 diff 的 JSON；不求值、不碰宿主、不做双 profile。
+范围：读 `.rill` → 词法 → 语法 → 加载期校验 → 伪宿主求值；不含真实宿主与格式化。
 
 ```
 ct/
-├── rill_ct.ct     单文件 CT 实现（词法 + 语法 + CLI + JSON 写出）
-├── build.sh       从零构建出 ct/bin/rill_ct
-├── test.sh        跑本层覆盖的门禁用例
-└── README.md      本文件（构建、规则映射、CT 限制、验证记录）
+├── src/main.ct          入口（CLI 分派）
+├── src/common/          Diag/longjmp、JVal/JSON、内存与字符类（pub 全局量）
+├── src/lexer/           词法
+├── src/parser/          AST 与语法（31 条产生式）
+├── src/loader/          加载期校验（三遍）与源码读入
+├── src/eval/            求值：核心 / 控制流 / 并行 / 函数（文件内分区）
+├── src/cli/             tokenize/parse/check/run 四个子命令
+├── rill_ct.ct           单文件旧实现（PH-17 起不参与构建，保留作历史锚点，待授权删除）
+├── build.sh             从零构建出 ct/bin/rill_ct（ct build 多单元）
+├── test.sh              跑本层覆盖的门禁用例
+└── README.md            本文件（构建、规则映射、CT 限制、验证记录）
 ```
 
 ## 构建与运行
 
-依赖：`ctc`（CT source-to-source 编译器，本机为 v0.44.1）+ `cc`。
+依赖：`ct`（ct-ast 主线多单元编译器，v0.44.1+）+ `cc`。切分理由与对拍口径见
+`docs/phases/pending/ct-multiunit.md`。
 
 ```bash
 cd /Users/samxx/trae-ws/rill-dsl
-./ct/build.sh                       # ctc 依次找 $CTC、../ct-lang/ctc、PATH
+./ct/build.sh                       # 依次找 $CT、PATH 上的 ct、~/.local/bin/ct
 ./ct/test.sh                        # 对 12 tokens + 23 ast + 19 error 跑 harness
 
-# ctc 不在默认位置时
-CTC=/path/to/ctc ./ct/build.sh
+# ct 不在默认位置时
+CT=/path/to/ct ./ct/build.sh
 ```
 
-`build.sh` 展开后就是两条命令：
+`build.sh` 展开后就是一条 `ct build`：
 
 ```bash
-ctc ct/rill_ct.ct -o /tmp/rill_ct.c
-cc -std=c99 -Wall -Wextra -O2 /tmp/rill_ct.c -o ct/bin/rill_ct
+cd ct && ct build src/main.ct -I src --outdir <tmp> \
+  --cflags '-Wall -Wextra -O2' -o ct/bin/rill_ct
 ```
 
-`ctc` 有两种来源：仓库根 `../ct-lang/ctc` 是 L0 种子，只做单文件，`build` 会显式拒绝；
-`~/.local/bin/ct` 是 ct-ast 主线（`ctc -> ct` 兼容别名），提供 `ct build` 多单元入口。
-本层是单文件，用前者即可；多单元复核见“撞到的 CT 限制”第 2 条。
+单文件 `ctc` 上限 64 个函数，PH-17 起已触顶；多单元后上限是 256/单元。
+`ct build` 不读 `CT_STD_DIR` 也能编（本实现不用 `Vec`/`Map` 泛型），四个已知阻塞的绕法
+见“撞到的 CT 限制”第 1 条。
 
 CLI 形状与 Python 版对齐：
 
@@ -55,7 +63,7 @@ ct/bin/rill_ct run testdata/0.1.0/positive/run/segment/success-plain/source.rill
 
 `tokenize` 输出覆盖 `positive/**` 与 `negative/tokenize/**`；`parse` 输出覆盖
 `positive/**` 与 `negative/parse/**`；`check` 覆盖 `positive/check/**` 与
-`negative/load/**`；`run` 覆盖 `positive/run/{segment,into,pipe,call}/**`（10 例）。
+`negative/load/**`；`run` 覆盖 `positive/run/{segment,into,pipe,call,control,parallel}/**`（19 例）。
 
 对拍入口（PH-13 起的回归门禁）：
 
@@ -63,7 +71,7 @@ ct/bin/rill_ct run testdata/0.1.0/positive/run/segment/success-plain/source.rill
 python3 tools/diff/diff.py --layer token    # PH-13：82 源，0 差异
 python3 tools/diff/diff.py --layer ast      # PH-14 预演（忽略 span）
 python3 tools/diff/diff.py --layer error    # PH-15：negative/** 26 源，0 差异
-python3 tools/diff/diff.py --layer eval     # PH-16：run 10 例，0 差异
+python3 tools/diff/diff.py --layer eval     # PH-17：run 19 例，0 差异
 ```
 
 ## 规则到 CT 写法的映射
@@ -77,7 +85,12 @@ python3 tools/diff/diff.py --layer eval     # PH-16：run 10 例，0 差异
 | §4.10 尾随块 | `p_parse_trailing_block` | 语句尾巴循环识别 `[ok]/[error]/[into]{`，每条语句用 `ok_count/err_count` 做重复判定 |
 | §4.14 `[results]` | `p_reject_results` / `p_parse_parallel` | 只有 `parallel` 的块尾允许；其余方括号入口先调用同一拒绝函数 |
 | §4.16 token 位置 | `lx_advance` + `Token` | 1 基行列；换行重置 col；UTF-8 连续字节不增 col，等价于按码点计数 |
-| §4.17 AST 等价 | `ast_*` 宏 | 只写 `kind` 与字段，不写 `span`；golden 与 harness 的 canonical 都不含 span |
+| §4.17 AST 等价 | `ast_*` 函数/宏 | 只写 `kind` 与字段，不写 `span`；golden 与 harness 的 canonical 都不含 span |
+| §4.12 控制流 | `eval_if_stmt` / `truthy` | `if` 用 truthy；`[ok]` 只看 `ok`，两条通道不混 |
+| §4.13 each 三态 | `eval_each_stmt` | null 0 轮；数组逐项；非数组 1 次；失败轮占 null 并继续 |
+| §4.15 break 场域 | `eval_break_stmt` + `EOut.is_break` | 管道/块/program 各自截住；无异常机制，用返回值逐层早退 |
+| §4.14 parallel | `eval_parallel_stmt` | 分支按源序串行模拟；`$` 是进入值；`[results]` 的 `$` 是结果数组 |
+| §4.18 `//fn` | `eval_fn_call` | 首次出现去重；默认值只在缺实参时于调用方求值；返回最后一条语句段输出 |
 | §4.18 `//fn` 默认值 | `template_mode` + `Default` | 只在 fn 模板内把 `$x?` 识别为 `Default`，出模板即关闭 |
 | §4.19 词类判定 | `lx_bare` / `match_number` / `lx_field` | 裸词按停止符与 `\` 转义推进；数字要求前后不粘连词字符；`.` 后接标识符且前一字符非词字符时出 `FIELD` |
 | §4.20 错误码 | `fail()` + `Diag` | 统一 `stage/code/line/col/message`，`longjmp` 回到 `main` 写诊断并退 2 |
@@ -88,7 +101,9 @@ AST 字段顺序按 Python 的 `FIELDS` 表；JSON 里键顺序不影响 harness
 ### 语句产生式 → 代码位置（PH-14-T4，31 条）
 
 规范 §三 EBNF 共 27 条命名产生式；另有 4 条在 EBNF 中内联、由 §3.1 / §3.2 / §4.4 /
-§4.14 定义，合计 31 条。行号为 PH-14 收口时 `ct/rill_ct.ct` 的位置。
+§4.14 定义，合计 31 条。`L####` 是 PH-14 收口时单文件 `ct/rill_ct.ct` 的行号（已随 PH-17
+迁移删除，仅作历史锚点）；现在这些函数都在 `ct/src/parser/parser.h.ct`，
+`lx_map_line` 在 `ct/src/lexer/lexer.h.ct`。
 
 | # | 产生式 | 代码位置 | 说明 |
 | --- | --- | --- | --- |
@@ -126,14 +141,14 @@ AST 字段顺序按 Python 的 `FIELDS` 表；JSON 里键顺序不影响 harness
 
 ## 验证记录
 
-2026-11-15，`ctc v0.44.1`，macOS arm64：
+2026-11-15，`ct build`（ct-ast 主线 v0.44.1）+ `cc -Wall -Wextra -O2`，macOS arm64：
 
 - `positive/tokens`：12/12 PASS。
 - `positive/ast`：23/23 PASS（harness 按 §4.17 忽略 span）。
-- `negative/tokenize` + `negative/parse`：19/19 PASS，断言到 `stage/code/line/col`。
-- 全量差分（仓库资产）：`python3 tools/diff/diff.py --layer token` 对比 Python 版，
-  `positive` + `negative` 共 82 个 `source.rill`：73 个成功 token 序列 + 9 个词法诊断，
-  **0 差异**；`--layer ast` 亦为 0 差异（不计入 PH-13 判据）。
+- `negative/tokenize` + `negative/parse` + `negative/load`：PASS，断言到 `stage/code/line/col`。
+- 全量差分（仓库资产）：`--layer token` 82 源（73 成功 + 9 诊断）0 差异；
+  `--layer ast` 82 源 0 差异；`--layer error` 26 源 0 差异；
+  `--layer eval` 19 例 0 差异（PH-17 起）。
 - 边界：空文件、CRLF、无行尾换行三种输入的 token 序列与 Python 版相同。
 
 复跑：
@@ -144,7 +159,7 @@ AST 字段顺序按 Python 的 `FIELDS` 表；JSON 里键顺序不影响 harness
 
 ## 撞到的 CT 限制与绕法
 
-### 1. 单文件上限 64 个函数（实际撞上）
+### 1. 单文件上限 64 个函数（PH-17 已用多单元解决）
 
 最小复现：65 个 `static int fN(void)` + `main`。
 
@@ -155,10 +170,12 @@ ctc /tmp/ctprobe/many.ct -o /tmp/ctprobe/many.c
 ```
 
 第一版把词法器、JSON 构造器、AST 构造器、语法器都写成独立函数，直接超过上限。
-绕法：把所有只做字段拼装的 AST 构造器、JSON 单值构造器、字符分类与谓词改成宏，
-并把 `jnull/jbool/jint/jstr/jstrn/jarr/jobj` 收敛到一个 `jnew(kind, num, s, n)`。
-代价：宏没有类型检查、调试时看不到独立栈帧；且必须继续单文件，不能按模块拆。
-第二层若要用 `ct build` 多单元，应把词法、语法、CLI 拆成独立 `.ct` 单元，绕开该上限。
+PH-13..PH-16 的绕法：AST/JSON 单值构造器、字符分类与谓词改成宏。
+代价：宏没有类型检查、`p_take`/`jget_str` 有重复求值/重复查键，且不能按模块拆。
+
+PH-17 起改走 `ct build` 多单元（`docs/phases/pending/ct-multiunit.md`）：
+单单元上限 256，`pub` 声明即跨单元可见；同时把这批省槽宏还原成函数。
+四个已知阻塞的绕法：结构体按序定义、`impl` 不写尾分号、宏压单行、>159 字符宏改函数。
 
 ### 2. 单文件 `ctc` 不提供 `Vec` / `Map` 预解析层（绕开）
 
@@ -224,25 +241,19 @@ clang 直接报 `error: member reference type 'struct S *' is a pointer`，`ct b
 ## 明确没做
 
 - 真实宿主：`run` 只认 `--fakes`；没有真实进程/文件/网络（PH-19/PH-20）。
-- `if` / `each` / `break` / `parallel` 求值（PH-17）；`fmt` 子命令。
+- `fmt` 子命令（PH-18）；真实并发调度、取消、超时（本层按源序串行模拟）。
+- `Bytes` / `Opaque` 的 truthy 与透传：没有 fake 注入通道，未建立单测
+  （见 `closeout-16.md` §6、`diff/PH-17.md` §5）。
 - `Value` 的 arena / retain / release：求值器直接消费 JSON 树，进程即退，未做回收。
-  `Bytes` / `Opaque` 也没有可注入的 fake 通道，未建立单测（见 `closeout-16.md` §6）。
 - AST 的 `span`：golden 与 harness canonical 都不含 span，Python 版有 span 但比对时被剥离；
   运行时错误因此只有 `stage=run` 与 `line/col=0`。
+- `break` 值不是字符串时：Python 会把该值当错误串，本层只支持字符串。
 - 释放 AST/JSON 内存：进程即退，未做回收；若第二层要长驻，需要补生命周期管理。
 
-## 第二层需要的准备
+## 后续相的准备
 
-PH-15 已完成加载期校验与 `W-01`；PH-16 已完成求值核心的 10 个 run 用例；真实宿主与控制流
-仍在后续相。
+PH-15 加载期校验、PH-16 求值核心、PH-17 控制流与函数均已完成；剩余是格式化与真实宿主。
 
-1. 用 `ct build` 多单元替代单文件 `ctc`，把词法、语法、CLI 拆开；同时获得 `lib/std` 的
-   `Vec`/`Map`（或继续用自建数组，避免容器语义差异）。
-2. AST 从「直接写 JSON」升级为可复用的节点结构（或让求值器直接消费同一棵 JSON 树），
-   并补 `span` 以便运行时错误定位。
-3. 加载期能力：`//map` / `//fn` 表的查重、函数名精确匹配与按位置绑定、未知动词/函数错误码
-   （`negative/load/**`）。
-4. 求值器与宿主动词注册表：沿用本层的 `stage/code/line/col` 诊断信封；`check` 的
-   `W-01` 需要把 `each [in]` 右值的来源信息从解析期带出来。
-5. 对拍入口已入库：`python3 tools/diff/diff.py --layer token`（PH-13 起作为回归门禁；
-   PH-14 用 `--layer ast` 扩到 AST 层）。
+1. PH-18 直接往 `ct/src/` 加单元即可，单单元上限 256，不再需要宏化省槽。
+2. PH-19/PH-20 的宿主能力按 `.h.ct` 接口落，复用 `Diag` 的 `stage/code/line/col` 信封。
+3. 运行时定位若要精确到行列，需要把 `span` 带进 AST（当前被 golden 剥离）。

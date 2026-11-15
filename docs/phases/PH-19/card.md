@@ -58,7 +58,7 @@
 | E-2 | `ProcessResult.code/stdout/stderr` 可观察；stdin 文本与二进制各 1 例 | 字段断言 |
 | E-3 | 顶层未处理失败非 0 退出；`[error]` 后按 profile 策略 | 退出码逐例断言 |
 | E-4 | 同一 fixture 在 shell/agent 的 AST 相等 | `--bucket host` AST 比对 |
-| E-5 | 没有 parser/lexer 改动 | `git diff --quiet v0.14.0 -- ct/rill_ct.ct` 退出 0 |
+| E-5 | 没有 parser/lexer 改动 | `git diff --quiet v0.14.0 -- ct/src/lexer ct/src/parser` 退出 0 |
 | E-6 | 能力派发只用函数指针表；无指针接收者方法链 | `test -z "$(grep -nE '\.get\(\)\.get\(' ct/src/host/*.ct)"` |
 | E-7 | 任务清单每项可独立验收（T-6） | 收口对照表逐项贴 `verify` 原始输出 |
 

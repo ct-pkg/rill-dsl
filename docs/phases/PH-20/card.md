@@ -59,7 +59,7 @@
 | E-2 | 同源 fixture 的 AST 与 Shell 相等；差异只允许结果层并登记 | `--bucket host` + registry |
 | E-3 | `[error]` 的 `$` 仍是字符串；结构化错误走 `host_meta`/工具值 | `$` 类型断言 |
 | E-4 | JSON 输出可被标准解析器接受（转义/UTF-8/数字） | `python3 -m json.tool` 退出 0 |
-| E-5 | 没有 parser/lexer 改动 | `git diff --quiet v0.14.0 -- ct/rill_ct.ct` 退出 0 |
+| E-5 | 没有 parser/lexer 改动 | `git diff --quiet v0.14.0 -- ct/src/lexer ct/src/parser` 退出 0 |
 | E-6 | host 层对拍 14/14，0 未解释差异 | `docs/reviews/diff/PH-20.md` |
 | E-7 | 任务清单每项可独立验收（T-6） | 收口对照表逐项贴 `verify` 原始输出 |
 

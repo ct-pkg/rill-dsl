@@ -9,7 +9,7 @@
 | 实现 | 定位 | 目录 | 状态 | 去留 |
 | --- | --- | --- | --- | --- |
 | Python | **参考实现 / 对拍基准** | `src/rill/` | 0.12.0，12 个 phase 已收口 | **永久保留**，不随 CT 版淘汰 |
-| CT | **正式实现** | `ct/` | 词法与 AST 在途（`ct/rill_ct.ct`，2030 行，另一会话所有）；其余未开始 | 对外默认实现 |
+| CT | **正式实现** | `ct/` | PH-17 收口：token/parse/check/run 全链路，7 个多单元（`ct/src/**`，`ct build`） | 对外默认实现 |
 
 - CT 的编译产物是**纯 C**（`ctc` 生成 C，再用 `cc -std=c99` 编译），运行时不依赖 CT 工具链。
 - 两版共用同一份 `testdata/0.1.0/` fixture 与 golden；golden 是**第三方基准**，
@@ -135,7 +135,8 @@ P6 可在 P2 后与 P3/P4 并行，P7/P8 在同一 `HostCapabilities` 上顺序�
   （只需把 SUT 指向 CT）；39 个 Python 单测文件 0 个可原样复用，8 个黑盒型改 SUT。
 - CT 生产代码估计 8,200–14,000 行；含 `.h.ct`/`.m.ct` 声明 10,000–19,000 行、约 40–48 个文件；
   测试另计 2,000–8,000 行。
-- 当前在途 `ct/rill_ct.ct` 2,030 行，覆盖 tokenize + parse + JSON，是 PH-13/PH-14 的起点。
+- 单文件 `ct/rill_ct.ct`（2,030 行）是 PH-13/PH-14 的起点；PH-17 起改为
+  `ct/src/**` 多单元（7 个单元，`ct build`），详见 `docs/phases/pending/ct-multiunit.md`。
 
 ## 9. 风险与开放项
 
