@@ -260,10 +260,10 @@ AI_ENGINEERING_SPEC=<主规范路径> ...          # 覆盖默认主规范位置
 
 | 项 | 值 |
 | --- | --- |
-| 对话清单 | 未建（需求池、技术池、评审三类常驻对话均无登记；phase 对话按 9.3 命名：`[rill-dsl] P<nn> · <目标一句话>`） |
+| 对话清单 | 已建登记（`docs/session-map.md`）；当前 0 个常驻对话，phase 对话尚未开设（按 9.3 命名 `[rill-dsl] P<nn> · <目标一句话>`） |
 | 任务-对话映射 | 已建（`docs/session-map.md`，按 phase 登记） |
 | 门禁入口 | 已建（`tools/check.sh`；g0/g1/g4/g6/g8/g9 启用，g2/g3/g5/g7 按未实现 DISABLED） |
-| 文档 snippet | 未建（`docs/snippets/` 缺失；`tools/check-docs.sh` 缺失） |
+| 文档 snippet | 已建（`docs/snippets/README.md`；当前 0 个 snippet；准入校验由 `tools/checks/snippets.py` 承载，无 `tools/check-docs.sh`） |
 | Issue 台账 | 已建（`issues/README.md`；当前 0 条） |
 | 决策记录 | 已建（`docs/decisions/D-001.md`…`D-020.md`） |
 | 版本落点 | `src/rill/__init__.py#__version__`（产品版本；语言规范版本另见 docs/RILL-0.1.0.md，不参与产品版本核对） |
