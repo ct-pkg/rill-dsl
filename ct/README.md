@@ -41,17 +41,21 @@ CLI 形状与 Python 版对齐：
 ct/bin/rill_ct tokenize testdata/0.1.0/positive/tokens/compact/source.rill
 ct/bin/rill_ct parse --dump-ast testdata/0.1.0/positive/simple/read-write/source.rill --profile shell
 ct/bin/rill_ct check testdata/0.1.0/positive/check/each-bareword-w01/source.rill
+ct/bin/rill_ct run testdata/0.1.0/positive/run/segment/success-plain/source.rill \
+  --profile shell --fakes testdata/0.1.0/fakes/tools.json
 ```
 
-退出码：`0` 成功（stdout 为 `{"tokens":[...]}`、`{"ast":...}` 或 `{"warnings":[...]}`）；
+退出码：`0` 成功（stdout 为 `{"tokens":[...]}`、`{"ast":...}`、`{"warnings":[...]}` 或
+`{"ok":true,...}`）；`1` 运行结果失败（`{"ok":false,"error":...}`，仍属运行结果）；
 `2` 诊断（stdout 为 `{"error":{"stage","code","line","col","message"}}`）。`stage` 取
-`tokenize` / `parse` / `load`；CLI 用法错误取 `cli` / `E_USAGE`，与 Python 版一致。
+`tokenize` / `parse` / `load` / `run`；CLI 用法错误取 `cli` / `E_USAGE`，与 Python 版一致。
 `--profile` 接受 `shell|agent`，但 AST 与 profile 无关，两个值输出相同；`check` 的动词集
-在 0.1.0 两个 profile 下相同（harness 的 `host-ast-equal` 也依赖这一点）。
+在 0.1.0 两个 profile 下相同（harness 的 `host-ast-equal` 也依赖这一点）。`run` 只实现伪宿主，
+必须给 `--fakes`。
 
 `tokenize` 输出覆盖 `positive/**` 与 `negative/tokenize/**`；`parse` 输出覆盖
 `positive/**` 与 `negative/parse/**`；`check` 覆盖 `positive/check/**` 与
-`negative/load/**`。
+`negative/load/**`；`run` 覆盖 `positive/run/{segment,into,pipe,call}/**`（10 例）。
 
 对拍入口（PH-13 起的回归门禁）：
 
@@ -59,6 +63,7 @@ ct/bin/rill_ct check testdata/0.1.0/positive/check/each-bareword-w01/source.rill
 python3 tools/diff/diff.py --layer token    # PH-13：82 源，0 差异
 python3 tools/diff/diff.py --layer ast      # PH-14 预演（忽略 span）
 python3 tools/diff/diff.py --layer error    # PH-15：negative/** 26 源，0 差异
+python3 tools/diff/diff.py --layer eval     # PH-16：run 10 例，0 差异
 ```
 
 ## 规则到 CT 写法的映射
@@ -67,8 +72,8 @@ python3 tools/diff/diff.py --layer error    # PH-15：negative/** 26 源，0 差
 | --- | --- | --- |
 | §3.1 注释与区块头 | `lx_comment_or_header` | 先看 `//` 后是否紧跟 `map`/`fn` 与 `{`；命中发 `MAP_HEADER`/`FN_HEADER`，否则吃到行尾；`//fn` 内用 `fn_depth` 让 `//` 退回普通注释 |
 | §3.2 map 行模式 | `lx_map_line` | 独立状态机：行首短词 → 单字符标记（``'``/`` ` ``/`<`）→ 行尾长词；未闭合回到 `map_line/map_col` 报错 |
-| §4.4 状语并列 | `p_parse_adverb` | `(` 后循环读单词，逗号分隔，`)` 收口，产出 `Adverb.items` |
-| §4.5 介宾短语 | `p_parse_prep_phrase` | `[名称]` 后读一个单词；名称先查冻结介词表，表外直接 `E-PARSE-UNKNOWN-PREP` |
+| §4.4 状语并列 | `p_parse_verb_call` | `(` 后循环读单词，逗号分隔，`)` 收口，产出 `Adverb.items` |
+| §4.5 介宾短语 | `p_parse_verb_call` | `[名称]` 后读一个单词；名称先查冻结介词表，表外直接 `E-PARSE-UNKNOWN-PREP` |
 | §4.10 尾随块 | `p_parse_trailing_block` | 语句尾巴循环识别 `[ok]/[error]/[into]{`，每条语句用 `ok_count/err_count` 做重复判定 |
 | §4.14 `[results]` | `p_reject_results` / `p_parse_parallel` | 只有 `parallel` 的块尾允许；其余方括号入口先调用同一拒绝函数 |
 | §4.16 token 位置 | `lx_advance` + `Token` | 1 基行列；换行重置 col；UTF-8 连续字节不增 col，等价于按码点计数 |
@@ -218,14 +223,18 @@ clang 直接报 `error: member reference type 'struct S *' is a pointer`，`ct b
 
 ## 明确没做
 
-- 求值、宿主调用、`--fakes`、`shell/agent` 双 profile 行为（仅接受参数，不改变 token/AST）。
-- `run` / `fmt` 子命令。
-- AST 的 `span`：golden 与 harness canonical 都不含 span，Python 版有 span 但比对时被剥离。
+- 真实宿主：`run` 只认 `--fakes`；没有真实进程/文件/网络（PH-19/PH-20）。
+- `if` / `each` / `break` / `parallel` 求值（PH-17）；`fmt` 子命令。
+- `Value` 的 arena / retain / release：求值器直接消费 JSON 树，进程即退，未做回收。
+  `Bytes` / `Opaque` 也没有可注入的 fake 通道，未建立单测（见 `closeout-16.md` §6）。
+- AST 的 `span`：golden 与 harness canonical 都不含 span，Python 版有 span 但比对时被剥离；
+  运行时错误因此只有 `stage=run` 与 `line/col=0`。
 - 释放 AST/JSON 内存：进程即退，未做回收；若第二层要长驻，需要补生命周期管理。
 
 ## 第二层需要的准备
 
-PH-15 已完成第 3、4 项里的加载期校验与 `W-01`；求值与真实宿主仍在后续相。
+PH-15 已完成加载期校验与 `W-01`；PH-16 已完成求值核心的 10 个 run 用例；真实宿主与控制流
+仍在后续相。
 
 1. 用 `ct build` 多单元替代单文件 `ctc`，把词法、语法、CLI 拆开；同时获得 `lib/std` 的
    `Vec`/`Map`（或继续用自建数组，避免容器语义差异）。

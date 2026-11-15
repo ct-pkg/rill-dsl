@@ -156,12 +156,8 @@ static void jgrow(JVal *v)
     }
 }
 
-static void jpush(JVal *arr, JVal *item)
-{
-    jgrow(arr);
-    arr->items[arr->len] = item;
-    arr->len++;
-}
+#define jpush(arr, item) \
+    (jgrow(arr), (arr)->items[(arr)->len++] = (item), 0)
 
 static JVal *jput(JVal *obj, const char *key, JVal *val)
 {
@@ -182,11 +178,10 @@ static JVal *jget(JVal *obj, const char *key)
     return 0;
 }
 
-static const char *jget_str(JVal *obj, const char *key)
-{
-    JVal *v = jget(obj, key);
-    return (v != 0 && v->kind == J_STR) ? v->str : "";
-}
+/* 宏化省函数槽：只读键查询。重复 jget 是刻意取舍，见 closeout-16 §7。 */
+#define jget_str(obj, key) \
+    (jget((obj), (key)) != 0 && jget((obj), (key))->kind == J_STR \
+         ? jget((obj), (key))->str : "")
 
 static void jwrite_string(FILE *out, const char *s)
 {
@@ -447,32 +442,6 @@ static void lx_bare(Lexer *l)
     }
 }
 
-static void lx_dollar(Lexer *l)
-{
-    int line = l->line;
-    int col = l->col;
-    int start;
-    lx_advance(l, 1);
-    start = l->i;
-    while (l->i < l->n && is_ident_char(lx_peek(l, 0))) lx_advance(l, 1);
-    if (l->i == start) {
-        lx_emit(l, TK_DOLLAR, "$", line, col);
-    } else {
-        lx_emit_slice(l, TK_VARIABLE, start, l->i, line, col);
-    }
-}
-
-static void lx_field(Lexer *l)
-{
-    int line = l->line;
-    int col = l->col;
-    int start;
-    lx_advance(l, 1);
-    start = l->i;
-    while (l->i < l->n && is_ident_char(lx_peek(l, 0))) lx_advance(l, 1);
-    lx_emit_slice(l, TK_FIELD, start, l->i, line, col);
-}
-
 static void lx_string(Lexer *l)
 {
     int line = l->line;
@@ -608,11 +577,9 @@ static void lx_comment_or_header(Lexer *l)
     while (l->i < l->n && lx_peek(l, 0) != '\n') lx_advance(l, 1);
 }
 
-static void lx_map_unclosed(Lexer *l)
-{
-    fail("tokenize", "E-LEX-MAP-UNCLOSED", l->map_line, l->map_col,
-         "//map 区块未闭合：缺少 }");
-}
+#define lx_map_unclosed(l) \
+    fail("tokenize", "E-LEX-MAP-UNCLOSED", (l)->map_line, (l)->map_col, \
+         "//map 区块未闭合：缺少 }")
 
 static void lx_map_line(Lexer *l)
 {
@@ -771,7 +738,17 @@ static void lx_normal(Lexer *l)
         return;
     }
     if (ch == '$') {
-        lx_dollar(l);
+        int line = l->line;
+        int col = l->col;
+        int start;
+        lx_advance(l, 1);
+        start = l->i;
+        while (l->i < l->n && is_ident_char(lx_peek(l, 0))) lx_advance(l, 1);
+        if (l->i == start) {
+            lx_emit(l, TK_DOLLAR, "$", line, col);
+        } else {
+            lx_emit_slice(l, TK_VARIABLE, start, l->i, line, col);
+        }
         return;
     }
     if (ch == '\'' || ch == '"') {
@@ -783,7 +760,13 @@ static void lx_normal(Lexer *l)
         return;
     }
     if (ch == '.' && is_ident_start(lx_peek(l, 1)) && !wordish_prev(l->prev)) {
-        lx_field(l);
+        int line = l->line;
+        int col = l->col;
+        int start;
+        lx_advance(l, 1);
+        start = l->i;
+        while (l->i < l->n && is_ident_char(lx_peek(l, 0))) lx_advance(l, 1);
+        lx_emit_slice(l, TK_FIELD, start, l->i, line, col);
         return;
     }
     if (!wordish_prev(l->prev)) {
@@ -905,12 +888,10 @@ typedef struct {
 #define p_skip_newlines(p) \
     do { while (p_at((p), TK_NEWLINE)) (p)->i++; } while (0)
 
-static Token *p_take(Parser *p)
-{
-    Token *t = p_peek(p, 0);
-    if (t->kind != TK_EOF) p->i++;
-    return t;
-}
+/* 宏化省函数槽：`p` 在调用点都是局部 Parser*，重复求值无副作用。 */
+#define p_take(p) \
+    (p_at((p), TK_EOF) ? p_peek((p), 0) \
+                       : ((p)->i++, p_peek((p), -1)))
 
 static void p_error_at(Parser *p, const char *code, Token *t, const char *fmt, ...)
 {
@@ -944,19 +925,13 @@ static Token *p_expect(Parser *p, TokKind kind, const char *what,
      (kind) == TK_RBRACE || (kind) == TK_ARROW || (kind) == TK_PIPE || \
      (kind) == TK_NEWLINE || (kind) == TK_EOF)
 
-static MapPair *maps_find(Parser *p, const char *short_name)
-{
-    int i;
-    for (i = 0; i < p->nmaps; i++) {
-        if (strcmp(p->maps[i].short_name, short_name) == 0) return &p->maps[i];
-    }
-    return 0;
-}
-
 static void maps_add(Parser *p, const char *short_name, char marker,
                      const char *long_name)
 {
-    if (maps_find(p, short_name) != 0) return;
+    int i;
+    for (i = 0; i < p->nmaps; i++) {
+        if (strcmp(p->maps[i].short_name, short_name) == 0) return;
+    }
     if (p->nmaps >= p->capmaps) {
         p->capmaps = p->capmaps ? p->capmaps * 2 : 8;
         p->maps = (MapPair *)xrealloc(p->maps,
@@ -973,7 +948,6 @@ static void maps_add(Parser *p, const char *short_name, char marker,
 
 static JVal *p_parse_verb_call(Parser *p);
 static JVal *p_parse_simple_stmt(Parser *p);
-static JVal *p_parse_statement(Parser *p);
 static JVal *p_parse_block(Parser *p, const char *what);
 static JVal *p_parse_word(Parser *p, int bare_as_string);
 static JVal *p_parse_expr(Parser *p);
@@ -1186,34 +1160,6 @@ static JVal *p_parse_parallel(Parser *p)
     return ast_parallel_stmt(branches, results, pipe);
 }
 
-static JVal *p_parse_break(Parser *p)
-{
-    JVal *value = 0;
-    const char *target = 0;
-    p_take(p);
-    if (p_at(p, TK_VERB)) {
-        p_error_at(p, "E-PARSE-BREAK-VALUE", p_peek(p, 0),
-                   "break 的值只能是 value，不能是动词调用");
-    }
-    if (!(p_at(p, TK_NEWLINE) || p_at(p, TK_EOF) || p_at(p, TK_RBRACE) ||
-          p_at(p, TK_ARROW))) {
-        if (p_is_word_kind(p_kind(p, 0))) {
-            value = p_parse_word(p, 1);
-        } else {
-            p_error_at(p, "E-PARSE-UNEXPECTED", p_peek(p, 0),
-                       "break 后出现意外 token");
-        }
-    }
-    if (p_at(p, TK_ARROW)) {
-        Token *t;
-        p_take(p);
-        t = p_expect(p, TK_VARIABLE, "break -> 后的 $变量",
-                     "E-PARSE-UNEXPECTED");
-        target = xstrdup(t->text);
-    }
-    return ast_break_stmt(value, target);
-}
-
 static JVal *p_parse_expr(Parser *p)
 {
     int starts_verb;
@@ -1325,7 +1271,32 @@ static JVal *p_parse_statement(Parser *p)
         if (strcmp(token->text, "if") == 0) return p_parse_if(p);
         if (strcmp(token->text, "each") == 0) return p_parse_each(p);
         if (strcmp(token->text, "parallel") == 0) return p_parse_parallel(p);
-        if (strcmp(token->text, "break") == 0) return p_parse_break(p);
+        if (strcmp(token->text, "break") == 0) {
+            JVal *value = 0;
+            const char *target = 0;
+            p_take(p);
+            if (p_at(p, TK_VERB)) {
+                p_error_at(p, "E-PARSE-BREAK-VALUE", p_peek(p, 0),
+                           "break 的值只能是 value，不能是动词调用");
+            }
+            if (!(p_at(p, TK_NEWLINE) || p_at(p, TK_EOF) ||
+                  p_at(p, TK_RBRACE) || p_at(p, TK_ARROW))) {
+                if (p_is_word_kind(p_kind(p, 0))) {
+                    value = p_parse_word(p, 1);
+                } else {
+                    p_error_at(p, "E-PARSE-UNEXPECTED", p_peek(p, 0),
+                               "break 后出现意外 token");
+                }
+            }
+            if (p_at(p, TK_ARROW)) {
+                Token *t;
+                p_take(p);
+                t = p_expect(p, TK_VARIABLE, "break -> 后的 $变量",
+                             "E-PARSE-UNEXPECTED");
+                target = xstrdup(t->text);
+            }
+            return ast_break_stmt(value, target);
+        }
         p_error_at(p, "E-PARSE-UNEXPECTED", token,
                    "关键字 %s 不能出现在语句起始位", token->text);
     }
@@ -1397,7 +1368,14 @@ static JVal *p_word_node(Parser *p, Token *token, int bare_as_string)
     if (token->kind == TK_DOLLAR) return ast_self();
     if (token->kind == TK_FIELD) return ast_field(token->text);
     if (token->kind == TK_MAP_REF) {
-        MapPair *mapped = maps_find(p, token->text);
+        MapPair *mapped = 0;
+        int i;
+        for (i = 0; i < p->nmaps; i++) {
+            if (strcmp(p->maps[i].short_name, token->text) == 0) {
+                mapped = &p->maps[i];
+                break;
+            }
+        }
         if (mapped != 0 && (mapped->marker == '\'' || mapped->marker == '`')) {
             return ast_string(mapped->long_name);
         }
@@ -1484,52 +1462,6 @@ static JVal *p_parse_word(Parser *p, int bare_as_string)
     return result;
 }
 
-static JVal *p_parse_adverb(Parser *p)
-{
-    Token *paren = p_take(p);
-    JVal *items = jarr();
-    while (!p_at(p, TK_RPAREN)) {
-        if (p_at(p, TK_EOF) || p_at(p, TK_NEWLINE)) {
-            p_error_at(p, "E-PARSE-UNEXPECTED", paren, "状语缺 )");
-        }
-        jpush(items, p_parse_word(p, 0));
-        if (p_at(p, TK_COMMA)) {
-            p_take(p);
-            continue;
-        }
-        if (!p_at(p, TK_RPAREN)) {
-            p_error_at(p, "E-PARSE-UNEXPECTED", p_peek(p, 0),
-                       "状语项之间必须是逗号");
-        }
-    }
-    p_take(p);
-    return ast_adverb(items);
-}
-
-static JVal *p_parse_prep_phrase(Parser *p)
-{
-    Token *bracket;
-    Token *prep;
-    JVal *obj;
-    p_reject_results(p);
-    bracket = p_take(p);
-    prep = p_take(p);
-    if (strcmp(prep->text, "to") != 0 && strcmp(prep->text, "with") != 0 &&
-        strcmp(prep->text, "from") != 0 && strcmp(prep->text, "in") != 0 &&
-        strcmp(prep->text, "on") != 0 && strcmp(prep->text, "into") != 0 &&
-        strcmp(prep->text, "ok") != 0 && strcmp(prep->text, "error") != 0) {
-        p_error_at(p, "E-PARSE-UNKNOWN-PREP", prep,
-                   "未知介词 [%s]；§4.5 只接受 to/with/from/in/on/into/ok/error",
-                   prep->text);
-    }
-    if (!p_at(p, TK_RBRACKET)) {
-        p_error_at(p, "E-PARSE-UNKNOWN-PREP", bracket, "介宾标记必须是 [名称]");
-    }
-    p_take(p);
-    obj = p_parse_word(p, 0);
-    return ast_prep_phrase(prep->text, obj);
-}
-
 static JVal *p_parse_verb_call(Parser *p)
 {
     JVal *subject = 0;
@@ -1545,8 +1477,13 @@ static JVal *p_parse_verb_call(Parser *p)
     verb = p_expect(p, TK_VERB, "动词 <name>", "E-PARSE-UNEXPECTED");
     verb_name = verb->text;
     {
-        MapPair *mapped = maps_find(p, verb_name);
-        if (mapped != 0 && mapped->marker == '<') verb_name = mapped->long_name;
+        int i;
+        for (i = 0; i < p->nmaps; i++) {
+            if (strcmp(p->maps[i].short_name, verb_name) == 0) {
+                if (p->maps[i].marker == '<') verb_name = p->maps[i].long_name;
+                break;
+            }
+        }
     }
     if (p_is_stop_kind(p_kind(p, 0)) || p_at(p, TK_LPAREN) ||
         p_at(p, TK_LBRACKET)) {
@@ -1556,11 +1493,53 @@ static JVal *p_parse_verb_call(Parser *p)
     obj = p_parse_word(p, 0);
     for (;;) {
         if (p_at(p, TK_LPAREN)) {
-            jpush(post, p_parse_adverb(p));
+            Token *paren = p_take(p);
+            JVal *items = jarr();
+            while (!p_at(p, TK_RPAREN)) {
+                if (p_at(p, TK_EOF) || p_at(p, TK_NEWLINE)) {
+                    p_error_at(p, "E-PARSE-UNEXPECTED", paren, "状语缺 )");
+                }
+                jpush(items, p_parse_word(p, 0));
+                if (p_at(p, TK_COMMA)) {
+                    p_take(p);
+                    continue;
+                }
+                if (!p_at(p, TK_RPAREN)) {
+                    p_error_at(p, "E-PARSE-UNEXPECTED", p_peek(p, 0),
+                               "状语项之间必须是逗号");
+                }
+            }
+            p_take(p);
+            jpush(post, ast_adverb(items));
             continue;
         }
         if (p_at(p, TK_LBRACKET) && !p_is_trailing_block(p)) {
-            jpush(post, p_parse_prep_phrase(p));
+            Token *bracket;
+            Token *prep;
+            JVal *pobj;
+            p_reject_results(p);
+            bracket = p_take(p);
+            prep = p_take(p);
+            if (strcmp(prep->text, "to") != 0 &&
+                strcmp(prep->text, "with") != 0 &&
+                strcmp(prep->text, "from") != 0 &&
+                strcmp(prep->text, "in") != 0 &&
+                strcmp(prep->text, "on") != 0 &&
+                strcmp(prep->text, "into") != 0 &&
+                strcmp(prep->text, "ok") != 0 &&
+                strcmp(prep->text, "error") != 0) {
+                p_error_at(p, "E-PARSE-UNKNOWN-PREP", prep,
+                           "未知介词 [%s]；§4.5 只接受 "
+                           "to/with/from/in/on/into/ok/error",
+                           prep->text);
+            }
+            if (!p_at(p, TK_RBRACKET)) {
+                p_error_at(p, "E-PARSE-UNKNOWN-PREP", bracket,
+                           "介宾标记必须是 [名称]");
+            }
+            p_take(p);
+            pobj = p_parse_word(p, 0);
+            jpush(post, ast_prep_phrase(prep->text, pobj));
             continue;
         }
         break;
@@ -1595,16 +1574,6 @@ static const char *LOAD_VERBS[] = {
     "read", "write", "parse", "send", "search", "replace", "contains",
     "review", "env", "run"
 };
-
-static int load_verb_known(const char *name)
-{
-    int i;
-    int n = (int)(sizeof(LOAD_VERBS) / sizeof(LOAD_VERBS[0]));
-    for (i = 0; i < n; i++) {
-        if (strcmp(LOAD_VERBS[i], name) == 0) return 1;
-    }
-    return 0;
-}
 
 static void load_scan(Lexer *lx, JVal *warnings)
 {
@@ -1807,6 +1776,7 @@ static void load_scan(Lexer *lx, JVal *warnings)
         } else if (kind == TK_VERB) {
             const char *verb = toks[i].text;
             int start = i;
+            int known = 0;
             for (k = 0; k < nmaps; k++) {
                 if (maps[k].marker == '<' &&
                     strcmp(maps[k].short_name, verb) == 0) {
@@ -1814,7 +1784,14 @@ static void load_scan(Lexer *lx, JVal *warnings)
                     break;
                 }
             }
-            if (!load_verb_known(verb)) {
+            for (k = 0; k < (int)(sizeof(LOAD_VERBS) / sizeof(LOAD_VERBS[0]));
+                 k++) {
+                if (strcmp(LOAD_VERBS[k], verb) == 0) {
+                    known = 1;
+                    break;
+                }
+            }
+            if (!known) {
                 /* VerbCall 的 span 从主语开始（若有）。 */
                 if (i > 0 && p_is_word_kind(toks[i - 1].kind)) {
                     start = i - 1;
@@ -1903,6 +1880,507 @@ static char *read_source(const char *path, int *out_len)
     free(raw);
     *out_len = j;
     return norm;
+}
+
+/* ------------------------------------------------------------------ */
+/* evaluator (PH-16 subset: segment / into / ok / error / pipe / call)  */
+/* ------------------------------------------------------------------ */
+
+/* 死马当活马：0.1.0 的未处理错误串，与 Python DEFAULT_ERROR 一致。 */
+#define LOAD_DEFAULT_ERROR "RILL DSL ERROR"
+
+typedef struct {
+    int ok;
+    JVal *value;
+    const char *error;
+    JVal *meta;
+} EOut;
+
+typedef struct EVar {
+    char *name;
+    JVal *value;
+    struct EVar *next;
+} EVar;
+
+typedef struct {
+    JVal *program;
+    JVal *tools;
+    EVar *vars;
+} Eval;
+
+#define eout_success(o, v) \
+    ((o).ok = 1, (o).value = (v), (o).error = 0, (o).meta = 0)
+#define eout_failure(o, e) \
+    ((o).ok = 0, (o).value = 0, (o).error = (e), (o).meta = 0)
+
+/* 只读的伪宿主 JSON（fakes 目录）。标准 JSON 子集：对象/数组/字符串/
+   整数/true/false/null。递归下降，深度由 JSON offer 自身限制。 */
+static JVal *json_parse(const char *s, int *pos)
+{
+    JVal *v = 0;
+    char c;
+    int i;
+    while (s[*pos] == ' ' || s[*pos] == '\t' || s[*pos] == '\n' ||
+           s[*pos] == '\r') {
+        (*pos)++;
+    }
+    c = s[*pos];
+    if (c == '{') {
+        v = jobj();
+        (*pos)++;
+        for (;;) {
+            JVal *key;
+            JVal *val;
+            while (s[*pos] == ' ' || s[*pos] == '\t' || s[*pos] == '\n' ||
+                   s[*pos] == '\r') {
+                (*pos)++;
+            }
+            if (s[*pos] == '}') {
+                (*pos)++;
+                return v;
+            }
+            key = json_parse(s, pos);
+            while (s[*pos] == ' ' || s[*pos] == '\t' || s[*pos] == '\n' ||
+                   s[*pos] == '\r') {
+                (*pos)++;
+            }
+            if (s[*pos] == ':') (*pos)++;
+            val = json_parse(s, pos);
+            jput(v, key->str, val);
+            while (s[*pos] == ' ' || s[*pos] == '\t' || s[*pos] == '\n' ||
+                   s[*pos] == '\r') {
+                (*pos)++;
+            }
+            if (s[*pos] == ',') {
+                (*pos)++;
+                continue;
+            }
+            if (s[*pos] == '}') {
+                (*pos)++;
+                return v;
+            }
+            return v;
+        }
+    }
+    if (c == '[') {
+        v = jarr();
+        (*pos)++;
+        for (;;) {
+            while (s[*pos] == ' ' || s[*pos] == '\t' || s[*pos] == '\n' ||
+                   s[*pos] == '\r') {
+                (*pos)++;
+            }
+            if (s[*pos] == ']') {
+                (*pos)++;
+                return v;
+            }
+            jpush(v, json_parse(s, pos));
+            while (s[*pos] == ' ' || s[*pos] == '\t' || s[*pos] == '\n' ||
+                   s[*pos] == '\r') {
+                (*pos)++;
+            }
+            if (s[*pos] == ',') {
+                (*pos)++;
+                continue;
+            }
+            if (s[*pos] == ']') {
+                (*pos)++;
+                return v;
+            }
+            return v;
+        }
+    }
+    if (c == '"') {
+        int cap = 32;
+        int len = 0;
+        char *buf = (char *)xmalloc((size_t)cap);
+        (*pos)++;
+        while (s[*pos] && s[*pos] != '"') {
+            char ch = s[*pos];
+            if (ch == '\\') {
+                (*pos)++;
+                ch = s[*pos];
+                if (ch == 'n') ch = '\n';
+                else if (ch == 't') ch = '\t';
+                else if (ch == 'r') ch = '\r';
+                else if (ch == 'b') ch = '\b';
+                else if (ch == 'f') ch = '\f';
+                else if (ch == 'u') {
+                    ch = '?';
+                    for (i = 0; i < 4 && s[*pos + 1 + i]; i++) (*pos)++;
+                }
+            }
+            if (len + 1 >= cap) {
+                cap *= 2;
+                buf = (char *)xrealloc(buf, (size_t)cap);
+            }
+            buf[len++] = ch;
+            if (s[*pos]) (*pos)++;
+        }
+        if (s[*pos] == '"') (*pos)++;
+        v = jstrn(buf, len);
+        free(buf);
+        return v;
+    }
+    if (strncmp(s + *pos, "true", 4) == 0) {
+        *pos += 4;
+        return jbool(1);
+    }
+    if (strncmp(s + *pos, "false", 5) == 0) {
+        *pos += 5;
+        return jbool(0);
+    }
+    if (strncmp(s + *pos, "null", 4) == 0) {
+        *pos += 4;
+        return jnull();
+    }
+    {
+        long long num = 0;
+        int neg = 0;
+        if (s[*pos] == '-') {
+            neg = 1;
+            (*pos)++;
+        }
+        while (is_digit(s[*pos])) {
+            num = num * 10 + (s[*pos] - '0');
+            (*pos)++;
+        }
+        return jint(neg ? -num : num);
+    }
+}
+
+/* set=1 时写入并返回；set=0 时读取，未定义直接报 run 诊断。 */
+static JVal *var_lookup(Eval *ev, const char *name, JVal *value, int set)
+{
+    EVar *v;
+    for (v = ev->vars; v != 0; v = v->next) {
+        if (strcmp(v->name, name) == 0) {
+            if (set) v->value = value;
+            return v->value;
+        }
+    }
+    if (set) {
+        v = (EVar *)xmalloc(sizeof(EVar));
+        v->name = xstrdup(name);
+        v->value = value;
+        v->next = ev->vars;
+        ev->vars = v;
+        return value;
+    }
+    fail("run", "E-RUN-UNDEFINED", 0, 0, "变量 $%s 未定义", name);
+    return 0;
+}
+
+static JVal *eval_value(Eval *ev, JVal *node, JVal *dollar)
+{
+    const char *kind;
+    if (node == 0) return jnull();
+    kind = jget_str(node, "kind");
+    if (strcmp(kind, "String") == 0 || strcmp(kind, "Number") == 0) {
+        return jget(node, "value");
+    }
+    if (strcmp(kind, "Bare") == 0) return jget(node, "text");
+    if (strcmp(kind, "Variable") == 0) {
+        return var_lookup(ev, jget_str(node, "name"), 0, 0);
+    }
+    if (strcmp(kind, "Self") == 0) return dollar ? dollar : jnull();
+    if (strcmp(kind, "Field") == 0) {
+        JVal *field;
+        if (dollar == 0 || dollar->kind != J_OBJ) {
+            fail("run", "E-RUN-FIELD", 0, 0, "字段 .%s 的宿主不是对象",
+                 jget_str(node, "name"));
+        }
+        field = jget(dollar, jget_str(node, "name"));
+        if (field == 0) {
+            fail("run", "E-RUN-FIELD", 0, 0, "对象缺少字段 .%s",
+                 jget_str(node, "name"));
+        }
+        return field;
+    }
+    if (strcmp(kind, "Concat") == 0) {
+        JVal *parts = jget(node, "parts");
+        int i;
+        int total = 0;
+        char *buf;
+        int at = 0;
+        for (i = 0; i < parts->len; i++) {
+            JVal *part = eval_value(ev, parts->items[i], dollar);
+            if (part == 0 || part->kind != J_STR) {
+                fail("run", "E-RUN-CONCAT", 0, 0, "拼接段不是字符串");
+            }
+            total += (int)strlen(part->str);
+        }
+        buf = (char *)xmalloc((size_t)total + 1);
+        for (i = 0; i < parts->len; i++) {
+            JVal *part = eval_value(ev, parts->items[i], dollar);
+            memcpy(buf + at, part->str, strlen(part->str));
+            at += (int)strlen(part->str);
+        }
+        buf[at] = 0;
+        return jstrn(buf, at);
+    }
+    if (strcmp(kind, "Adverb") == 0) {
+        JVal *items = jget(node, "items");
+        JVal *out = jarr();
+        JVal *obj = jobj();
+        int i;
+        for (i = 0; i < items->len; i++) {
+            jpush(out, eval_value(ev, items->items[i], dollar));
+        }
+        jput(obj, "adverb", out);
+        return obj;
+    }
+    if (strcmp(kind, "PrepPhrase") == 0) {
+        JVal *obj = jobj();
+        jput(obj, "prep", jstr(jget_str(node, "prep")));
+        jput(obj, "object", eval_value(ev, jget(node, "object"), dollar));
+        return obj;
+    }
+    fail("run", "E-RUN-UNSUPPORTED", 0, 0, "暂不支持的值节点 %s", kind);
+    return jnull();
+}
+
+static EOut run_block(Eval *ev, JVal *block, JVal *dollar, int last_value);
+static EOut eval_stmt(Eval *ev, JVal *stmt, JVal *dollar);
+
+static EOut apply_tail(Eval *ev, JVal *tail, EOut out)
+{
+    JVal *cur;
+    EOut failure;
+    int failed = !out.ok;
+    JVal *ok_block = 0;
+    JVal *error_block = 0;
+    int i;
+
+    cur = out.ok ? out.value : jstr(out.error ? out.error : LOAD_DEFAULT_ERROR);
+    failure = out;
+    for (i = 0; i < tail->len; i++) {
+        JVal *item = tail->items[i];
+        const char *kind = jget_str(item, "kind");
+        if (strcmp(kind, "Assign") == 0) {
+            if (!failed) var_lookup(ev, jget_str(item, "target"), cur, 1);
+        } else if (strcmp(kind, "IntoBlock") == 0) {
+            EOut bo;
+            if (failed) continue;
+            bo = run_block(ev, jget(item, "body"), cur, 0);
+            if (!bo.ok) {
+                failure = bo;
+                failed = 1;
+            } else {
+                cur = bo.value;
+            }
+        } else if (strcmp(kind, "OkBlock") == 0) {
+            ok_block = item;
+        } else if (strcmp(kind, "ErrorBlock") == 0) {
+            error_block = item;
+        }
+    }
+    if (!failed) {
+        if (ok_block != 0) {
+            EOut bo = run_block(ev, jget(ok_block, "body"), out.value, 0);
+            if (!bo.ok) {
+                EOut u;
+                eout_failure(u, LOAD_DEFAULT_ERROR);
+                return u;
+            }
+            cur = bo.value;
+        }
+        eout_success(out, cur);
+        return out;
+    }
+    {
+        const char *err = failure.error ? failure.error : LOAD_DEFAULT_ERROR;
+        if (error_block != 0) {
+            EOut bo = run_block(ev, jget(error_block, "body"), jstr(err), 0);
+            if (!bo.ok) {
+                EOut u;
+                eout_failure(u, LOAD_DEFAULT_ERROR);
+                return u;
+            }
+            eout_success(out, bo.value);
+            return out;
+        }
+    }
+    eout_failure(out, LOAD_DEFAULT_ERROR);
+    return out;
+}
+
+static EOut run_block(Eval *ev, JVal *block, JVal *dollar, int last_value)
+{
+    EVar *saved = ev->vars;
+    EOut out;
+    JVal *body = jget(block, "body");
+    int i;
+
+    eout_success(out, dollar ? dollar : jnull());
+    for (i = 0; i < body->len; i++) {
+        out = eval_stmt(ev, body->items[i], dollar);
+        if (!out.ok) {
+            ev->vars = saved;
+            return out;
+        }
+    }
+    ev->vars = saved;
+    if (last_value) return out;
+    eout_success(out, dollar ? dollar : jnull());
+    return out;
+}
+
+static EOut eval_stmt(Eval *ev, JVal *stmt, JVal *dollar)
+{
+    EOut out;
+    const char *kind = jget_str(stmt, "kind");
+
+    eout_success(out, jnull());
+    if (strcmp(kind, "SimpleStmt") == 0) {
+        JVal *call = jget(stmt, "call");
+        const char *verb = jget_str(call, "verb");
+        JVal *spec = jget(ev->tools, verb);
+        JVal *queue;
+        JVal *entry = 0;
+        int okv = 1;
+        JVal *okb;
+        JVal *post = jget(call, "post");
+        int i;
+
+        if (spec == 0) {
+            fail("run", "E-RUN-VERB-UNREGISTERED", 0, 0,
+                 "fake 动词 '%s' 未注册", verb);
+        }
+        queue = jget(spec, "queue");
+        if (queue != 0 && queue->kind == J_ARR && queue->len > 0) {
+            entry = queue->items[0];
+            for (i = 0; i < queue->len - 1; i++) {
+                queue->items[i] = queue->items[i + 1];
+            }
+            queue->len--;
+        } else {
+            entry = jget(spec, "default");
+            if (entry == 0 || entry->kind == J_NULL) {
+                eout_failure(out, "fake 动词没有排队结果且无 default");
+                return apply_tail(ev, jget(stmt, "tail"), out);
+            }
+        }
+        okb = jget(entry, "ok");
+        if (okb != 0 && okb->kind == J_BOOL) okv = okb->boolean;
+        if (okv) {
+            eout_success(out, jget(entry, "value"));
+            out.meta = jget(entry, "host_meta");
+        } else {
+            const char *err = jget_str(entry, "error");
+            eout_failure(out, (err && *err) ? err : LOAD_DEFAULT_ERROR);
+            out.meta = jget(entry, "host_meta");
+        }
+        (void)post;
+    } else if (strcmp(kind, "CallStmt") == 0) {
+        const char *name = jget_str(stmt, "name");
+        JVal *args = jget(stmt, "args");
+        JVal *def = 0;
+        JVal *headers = jget(ev->program, "headers");
+        JVal *body;
+        char *pname[64];
+        JVal *pdef[64];
+        JVal *bind[64];
+        JVal *stack[512];
+        EVar *saved;
+        int np = 0;
+        int sp = 0;
+        int na;
+        int i;
+
+        for (i = 0; i < headers->len; i++) {
+            JVal *header = headers->items[i];
+            JVal *defs;
+            int d;
+            if (strcmp(jget_str(header, "kind"), "FnBlock") != 0) continue;
+            defs = jget(header, "defs");
+            for (d = 0; d < defs->len; d++) {
+                JVal *cand = defs->items[d];
+                if (strcmp(jget_str(cand, "name"), name) == 0) {
+                    def = cand;
+                    break;
+                }
+            }
+            if (def != 0) break;
+        }
+        if (def == 0) {
+            fail("run", "E-RUN-FN-UNDECLARED", 0, 0, "未声明的函数 '%s'", name);
+        }
+        stack[sp++] = jget(def, "template");
+        while (sp > 0) {
+            JVal *n = stack[--sp];
+            const char *nk;
+            int k;
+            if (n == 0) continue;
+            if (n->kind == J_ARR) {
+                for (k = n->len - 1; k >= 0; k--) {
+                    if (sp < 512) stack[sp++] = n->items[k];
+                }
+                continue;
+            }
+            if (n->kind != J_OBJ) continue;
+            nk = jget_str(n, "kind");
+            if (strcmp(nk, "Variable") == 0 ||
+                strcmp(nk, "Default") == 0) {
+                const char *pn = jget_str(n, "name");
+                int idx = -1;
+                for (k = 0; k < np; k++) {
+                    if (strcmp(pname[k], pn) == 0) {
+                        idx = k;
+                        break;
+                    }
+                }
+                if (idx < 0 && np < 64) {
+                    idx = np;
+                    pname[np] = xstrdup(pn);
+                    pdef[np] = 0;
+                    np++;
+                }
+                if (strcmp(nk, "Default") == 0 && idx >= 0 &&
+                    pdef[idx] == 0) {
+                    pdef[idx] = jget(n, "value");
+                }
+            } else {
+                for (k = n->len - 1; k >= 0; k--) {
+                    if (strcmp(n->keys[k], "kind") == 0) continue;
+                    if (sp < 512) stack[sp++] = n->items[k];
+                }
+            }
+        }
+        na = args->len;
+        if (na > np) {
+            fail("run", "E-RUN-FN-ARITY", 0, 0,
+                 "函数 '%s' 需要 %d 个实参，实际 %d 个", name, np, na);
+        }
+        for (i = 0; i < na; i++) {
+            bind[i] = eval_value(ev, args->items[i], dollar);
+        }
+        for (; i < np; i++) {
+            if (pdef[i] == 0) {
+                fail("run", "E-RUN-FN-ARITY", 0, 0,
+                     "函数 '%s' 需要 %d 个实参，实际 %d 个", name, np, na);
+            }
+            bind[i] = eval_value(ev, pdef[i], dollar);
+        }
+        saved = ev->vars;
+        for (i = 0; i < np; i++) var_lookup(ev, pname[i], bind[i], 1);
+        body = jget(jget(def, "body"), "body");
+        if (body->len == 0) {
+            eout_success(out, jnull());
+        } else {
+            out = run_block(ev, jget(def, "body"), dollar, 1);
+            if (out.ok) eout_success(out, out.value);
+        }
+        ev->vars = saved;
+    } else {
+        fail("run", "E-RUN-UNSUPPORTED", 0, 0, "暂不支持的语句 %s", kind);
+    }
+    out = apply_tail(ev, jget(stmt, "tail"), out);
+    if (out.ok && jget(stmt, "pipe") != 0 &&
+        jget(stmt, "pipe")->kind != J_NULL) {
+        out = eval_stmt(ev, jget(stmt, "pipe"), out.value ? out.value : jnull());
+    }
+    return out;
 }
 
 /* ------------------------------------------------------------------ */
@@ -2069,6 +2547,113 @@ static int cmd_check(int argc, char **argv)
     return 0;
 }
 
+static int cmd_run(int argc, char **argv)
+{
+    const char *profile = "shell";
+    const char *path = 0;
+    const char *fakes_path = 0;
+    int count = 0;
+    int i = 0;
+    int n = 0;
+    int fn = 0;
+    int pos = 0;
+    char *source;
+    char *fake_src;
+    Lexer lexer;
+    Parser parser;
+    JVal *program;
+    JVal *doc;
+    JVal *tools;
+    JVal *body;
+    JVal *root;
+    JVal *principal;
+    JVal *host;
+    Eval ev;
+    EOut out;
+
+    while (i < argc) {
+        const char *arg = argv[i];
+        if (strcmp(arg, "--profile") == 0) {
+            i++;
+            if (i >= argc) usage_fail("--profile 缺参数");
+            profile = argv[i];
+        } else if (strncmp(arg, "--profile=", 10) == 0) {
+            profile = arg + 10;
+        } else if (strcmp(arg, "--fakes") == 0) {
+            i++;
+            if (i >= argc) usage_fail("--fakes 缺参数");
+            fakes_path = argv[i];
+        } else if (strncmp(arg, "--fakes=", 8) == 0) {
+            fakes_path = arg + 8;
+        } else if (arg[0] == '-') {
+            usage_fail("run 不认识的参数 %s", arg);
+        } else {
+            path = arg;
+            count++;
+        }
+        i++;
+    }
+    if (count != 1) usage_fail("run 需要且只需要一个源文件参数");
+    if (strcmp(profile, "shell") != 0 && strcmp(profile, "agent") != 0) {
+        usage_fail("未知 profile %s（只允许 shell / agent）", profile);
+    }
+    if (fakes_path == 0) {
+        usage_fail("run 需要 --fakes（本相只实现伪宿主）");
+    }
+
+    source = read_source(path, &n);
+    if (source == 0) usage_fail("无法读取 %s", path);
+    fake_src = read_source(fakes_path, &fn);
+    if (fake_src == 0) usage_fail("无法读取 fakes %s", fakes_path);
+
+    memset(&lexer, 0, sizeof(lexer));
+    lexer.src = source;
+    lexer.n = n;
+    lexer.line = 1;
+    lexer.col = 1;
+    lexer_run(&lexer);
+
+    memset(&parser, 0, sizeof(parser));
+    parser.toks = lexer.toks;
+    parser.ntok = lexer.ntoks;
+    program = p_parse_program(&parser);
+
+    doc = json_parse(fake_src, &pos);
+    tools = jget(doc, "tools");
+    if (tools == 0 || tools->kind != J_OBJ) {
+        fail("run", "E-RUN-FAKES", 0, 0, "fakes 缺少 tools 对象");
+    }
+
+    ev.program = program;
+    ev.tools = tools;
+    ev.vars = 0;
+    eout_success(out, jnull());
+    body = jget(program, "body");
+    for (i = 0; i < body->len; i++) {
+        out = eval_stmt(&ev, body->items[i], jnull());
+        if (!out.ok) break;
+    }
+
+    root = jobj();
+    jput(root, "ok", jbool(out.ok));
+    jput(root, "value", out.ok && out.value ? out.value : jnull());
+    jput(root, "error",
+         out.ok ? jnull() : jstr(out.error ? out.error : LOAD_DEFAULT_ERROR));
+    jput(root, "host_meta",
+         (out.meta != 0 && out.meta->kind == J_OBJ) ? out.meta : jobj());
+    principal = jobj();
+    jput(principal, "kind", jstr("test-transport"));
+    jput(principal, "name", jstr("--fakes"));
+    host = jobj();
+    jput(host, "profile", jstr("fakes"));
+    jput(host, "principal", principal);
+    jput(root, "host", host);
+    jdump(stdout, root);
+    fputc('\n', stdout);
+    fflush(stdout);
+    return out.ok ? 0 : 1;
+}
+
 int main(int argc, char **argv)
 {
     StdoutEmitter out;
@@ -2089,10 +2674,14 @@ int main(int argc, char **argv)
     if (strcmp(argv[1], "check") == 0) {
         return cmd_check(argc - 2, argv + 2);
     }
+    if (strcmp(argv[1], "run") == 0) {
+        return cmd_run(argc - 2, argv + 2);
+    }
     if (strcmp(argv[1], "-h") == 0 || strcmp(argv[1], "--help") == 0) {
         printf("usage: rill-ct tokenize <file> | rill-ct parse --dump-ast <file> "
                "[--profile shell|agent] | rill-ct check <file> "
-               "[--profile shell|agent]\n");
+               "[--profile shell|agent] | rill-ct run <file> "
+               "[--fakes <json>] [--profile shell|agent]\n");
         return 0;
     }
     usage_fail("未知子命令 %s", argv[1]);
