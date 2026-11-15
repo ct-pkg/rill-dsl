@@ -910,13 +910,32 @@ def main(argv):
         return 1 if run_host_layer(opts, py_sut, ct_sut, root) else 0
 
     positive, negative = discover_sources(root)
+
+    if opts.layer == "all":
+        # PH-21：全层总对拍 —— 四层语料 + fmt 三种模式 + 宿主两个 profile。
+        layers = ("token", "ast", "error", "eval")
+    else:
+        layers = (opts.layer,)
+    total_diffs = run_source_layers(layers, opts, py_sut, ct_sut, root, positive, negative)
+    if opts.layer == "all":
+        for mode in ("compress", "display", "roundtrip"):
+            opts.mode = mode
+            total_diffs += run_fmt_layer(opts, py_sut, ct_sut, root)
+        opts.profile = "shell"
+        total_diffs += run_host_layer(opts, py_sut, ct_sut, root)
+        opts.profile = "agent"
+        total_diffs += run_host_layer(opts, py_sut, ct_sut, root)
+    print("== total diffs: %d" % total_diffs)
+    return 1 if total_diffs else 0
+
+
+def run_source_layers(layers, opts, py_sut, ct_sut, root, positive, negative):
     sources = positive + negative
     if opts.bucket == "positive":
         sources = positive
     elif opts.bucket == "negative":
         sources = negative
 
-    layers = ("token", "ast") if opts.layer == "all" else (opts.layer,)
     total_diffs = 0
     for layer in layers:
         if layer == "error":
@@ -960,8 +979,7 @@ def main(argv):
             % (len(layer_sources), ok_compared, err_compared, diffs)
         )
         print("   RESULT: %s" % ("PASS" if diffs == 0 else "FAIL"))
-    print("== total diffs: %d" % total_diffs)
-    return 1 if total_diffs else 0
+    return total_diffs
 
 
 if __name__ == "__main__":

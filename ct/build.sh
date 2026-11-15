@@ -66,6 +66,8 @@ mkdir -p "$LIBGEN"
         -o "$OUT"
 )
 echo "built $OUT"
+# 兼容旧名：PH-19/PH-20 的对拍脚本与文档里写的是 ct/bin/rill_ct。
+ln -sf rill "$ROOT/ct/bin/rill_ct"
 
 # PATH 入口：shebang 行 `#!/usr/bin/env rill` 需要 PATH 上有 rill。
 if [ -d "$HOME/.local/bin" ] && [ -w "$HOME/.local/bin" ]; then
