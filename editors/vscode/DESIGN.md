@@ -29,18 +29,45 @@ LSP 的常驻索引会更省。当前仓库规模（对拍覆盖 129 个 `.ri`/`
 | --- | --- | --- |
 | 关键字 `if/else/else-if/each/parallel/break` | `src/rill/tokens.py:KEYWORDS`、规范 §三 | `syntaxes/rill.tmLanguage.json#keywords` |
 | 动词 `<name>` | 规范 §4.2、`lexer.py:_lex_verb` | `#verbs` |
-| 介词 `[to]/[with]/[from]/[in]/[on]/[into]/[ok]/[error]` | 规范 §4.5、`parser.py:_PREPS` | `#prepositions` |
-| `[results]` | 规范 §4.14（仅 `parallel` 块级） | `#prepositions`（仅着色，不做语义校验） |
+| 介词 `[to]/[with]/[from]/[in]/[on]` | 规范 §4.5、`parser.py:_PREPS` | `#prepositions` |
+| 块标记 `[into]/[ok]/[error]/[results]` | 规范 §4.5/§4.14 | `#block-markers`（仅着色，不做语义校验） |
 | 单/双引号与转义 | 规范 §4.16、`lexer.py:_lex_string` | `#strings` |
 | 反引号映射引用 | 规范 §4.17、`lexer.py:_lex_map_ref` | `#map-reference` |
-| `//map{}` 行模式 | 规范 §3.1/§3.2、`lexer.py:_lex_map_line` | `#map-block` 区域 |
-| `//fn{}` 区块 | 规范 §4.18、`lexer.py:_lex_comment_or_header` | `#fn-block` 区域 |
+| `//map{}` 行模式 | 规范 §3.1/§3.2、`lexer.py:_lex_map_line` | `#map-block` 区域，整段 `comment.block.map.rill` |
+| `//fn{}` 区块 | 规范 §4.18、`lexer.py:_lex_comment_or_header` | `#fn-block` 区域（函数代码，保留代码配色） |
 | 函数定义/调用 `@ "name"` | 规范 §4.18、`parser.py:_parse_fn_def/_parse_call_stmt` | `#fn-definition`、`#function-call` |
 | 变量 `$x` / self `$` / 字段 `.x` | 规范 §4.7/§4.8、`lexer.py:_lex_dollar/_lex_field` | `#variables`、`#fields` |
 | `|>` / `->` / `?` | 规范 §二/§4.6/§4.15 | `#operators` |
 
 展示态格式化（`src/rill/formatter.py`）只影响空白与引号形态，不引入新 token；
 插件的引号正则按 formatter 的“单引号优先、双引号仅 `\"`/`\\`”口径写。
+
+### 3.1 注释、动词、介词与块标记的配色
+
+根因有两层，第一层是致命的：`repository.common` 此前被写成数组，而
+`vscode-textmate` 只接受 rule 对象；`include: "#common"` 静默失效，导致注释、
+字符串、变量、动词、介词、数字等所有挂在 common 下的规则整体不上色，只剩
+`map-block`/`fn-block` 里直接写的规则与标点可见。改成
+`{"patterns": [...]}` 后 common 才真正参与匹配。
+
+第二层是主题覆盖：`entity.name.function.verb.rill` 这类非标准后缀不保证被主题
+命中。插件不再依赖主题碰巧覆盖，改为在 `package.json` 的
+`contributes.configurationDefaults["editor.tokenColorCustomizations"]`
+里固定四组 TextMate 规则：
+
+| 语法元素 | 作用域 | 颜色 | 字重 | 深色背景对比度 |
+| --- | --- | --- | --- | --- |
+| 注释 | `comment.line.double-slash.rill`、`comment.block.map.rill` | `#8B949E` 灰 | 常规 | 5.42:1 |
+| 动词 `<read>` | `entity.name.function.verb.rill` | `#3B82F6` 蓝 | 粗体 | 4.53:1 |
+| 介词 `[to]` | `support.type.preposition.rill` | `#BA68C8` 紫 | 常规 | 4.69:1 |
+| 块标记 `[ok]` | `keyword.control.block-marker.rill` | `#EA580C` 橙 | 粗体 | 4.68:1 |
+
+方括号 `[` `]` 仍用主题的标点色，不进入上述规则；四组颜色互不相同，深色主题
+下均高于 WCAG AA 的 4.5:1，浅色主题下均不低于 3.0:1。`//map{}` 按用户口径从
+header 到第一个行首 `}` 整段灰显，内部不再嵌代码作用域；词法上它是
+`MAP_HEADER`/`MAP_*`/`RBRACE`，不是注释 token，这里只是显示层处理。
+`//fn{}` 是函数代码块，仍保留代码配色。这里是 TextMate 主题覆盖问题，不是
+语义 token 覆盖：本插件没有注册 semantic tokens provider。
 
 ## 4. 符号解析规则
 
@@ -82,13 +109,19 @@ LSP 的常驻索引会更省。当前仓库规模（对拍覆盖 129 个 `.ri`/`
    同时用 `parser.py` 的 AST 交叉核对名字集合；
 2. 与 `lib/scanner.js` 逐文件比对 `name/line/character/length`；
 3. 跑同文件、跨文件、注释/字符串/map/函数体嵌套/转义名/未闭合输入等边界用例，
-   并校验 `package.json`、语法 JSON、include 引用和正则可编译。
+   并校验 `package.json`、语法 JSON、include 引用和正则可编译；
+4. `test/scope-dump.js` 用编辑器同款 `vscode-textmate` + `vscode-oniguruma`
+   对 `examples/tour/04-map.ri` 逐 token 校验作用域，并覆盖 `[into]/[ok]/[error]/[results]`
+   与函数区块。
 
 实测（2026-11-15，仓库根目录）：
 
 ```text
 oracle: 129 个文件对拍通过，10 个 lex 错误文件跳过
-checks: 552, failed: 0
+checks: 598, failed: 0
+PASS
+
+scopes: 34, failed: 0
 PASS
 ```
 

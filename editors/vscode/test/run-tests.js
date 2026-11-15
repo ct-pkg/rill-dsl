@@ -240,11 +240,16 @@ ok(
   'language-configuration.json 存在',
 );
 const grammarContribution = packageJson.contributes.grammars[0];
-ok(grammarContribution.scopeName === 'source.ri', '文法语名为 source.ri');
+ok(grammarContribution.scopeName === 'source.rill', '文法语名为 source.rill');
 const grammarPath = path.join(__dirname, '..', grammarContribution.path);
 ok(fs.existsSync(grammarPath), 'TextMate 语法文件存在');
 const grammar = JSON.parse(fs.readFileSync(grammarPath, 'utf8'));
 ok(grammar.fileTypes.includes('ri'), '语法声明 .ri 文件类型');
+ok(
+  !Array.isArray(grammar.repository.common) &&
+    Array.isArray(grammar.repository.common.patterns),
+  'repository.common 是带 patterns 的 rule 对象（数组会被 vscode-textmate 忽略）',
+);
 
 function walkGrammar(node, visit) {
   if (Array.isArray(node)) {
@@ -279,6 +284,147 @@ walkGrammar(grammar, (node) => {
   }
 });
 ok(regexCount >= 15, `语法包含足够多的匹配规则（实际 ${regexCount}）`);
+
+// 动词、介词、块标记、注释各有独立作用域和插件自带的默认配色。
+const VERB_SCOPE = 'entity.name.function.verb.rill';
+const PREPOSITION_SCOPE = 'support.type.preposition.rill';
+const BLOCK_MARKER_SCOPE = 'keyword.control.block-marker.rill';
+const COMMENT_SCOPES = ['comment.line.double-slash.rill', 'comment.block.map.rill'];
+const textMateRules =
+  packageJson.contributes.configurationDefaults[
+    'editor.tokenColorCustomizations'
+  ].textMateRules;
+
+function ruleFor(scope) {
+  return textMateRules.find((rule) =>
+    Array.isArray(rule.scope)
+      ? rule.scope.includes(scope)
+      : rule.scope === scope,
+  );
+}
+
+function scopesOf(rule) {
+  return Array.isArray(rule.scope) ? rule.scope : [rule.scope];
+}
+
+ok(Boolean(ruleFor(VERB_SCOPE)), '插件为动词作用域提供默认配色');
+ok(Boolean(ruleFor(PREPOSITION_SCOPE)), '插件为介词作用域提供默认配色');
+ok(Boolean(ruleFor(BLOCK_MARKER_SCOPE)), '插件为块标记作用域提供默认配色');
+for (const scope of COMMENT_SCOPES) {
+  ok(Boolean(ruleFor(scope)), `插件为 ${scope} 提供灰色默认配色`);
+}
+ok(
+  textMateRules.every((rule) =>
+    scopesOf(rule).every((scope) => !scope.includes('punctuation')),
+  ),
+  '方括号标点本身不被改色，靠字的颜色区分',
+);
+
+function luminance(hex) {
+  const channels = [1, 3, 5].map((offset) => {
+    const value = parseInt(hex.slice(offset, offset + 2), 16) / 255;
+    return value <= 0.04045
+      ? value / 12.92
+      : Math.pow((value + 0.055) / 1.055, 2.4);
+  });
+  return 0.2126 * channels[0] + 0.7152 * channels[1] + 0.0722 * channels[2];
+}
+
+function contrast(hex, background) {
+  const values = [luminance(hex), luminance(background)].sort((a, b) => b - a);
+  return (values[0] + 0.05) / (values[1] + 0.05);
+}
+
+for (const scope of [
+  VERB_SCOPE,
+  PREPOSITION_SCOPE,
+  BLOCK_MARKER_SCOPE,
+  ...COMMENT_SCOPES,
+]) {
+  const rule = ruleFor(scope);
+  if (!rule) {
+    continue;
+  }
+  ok(
+    /^#[0-9A-Fa-f]{6}$/.test(rule.settings.foreground),
+    `${scope} 使用六位十六进制颜色`,
+  );
+  ok(
+    contrast(rule.settings.foreground, '#1E1E1E') >= 4.5,
+    `${scope} 在深色背景下的对比度不低于 4.5`,
+  );
+  ok(
+    contrast(rule.settings.foreground, '#FFFFFF') >= 3.0,
+    `${scope} 在浅色背景下保持至少 3.0 对比度`,
+  );
+}
+
+const foregrounds = [VERB_SCOPE, PREPOSITION_SCOPE, BLOCK_MARKER_SCOPE].map(
+  (scope) => ruleFor(scope) && ruleFor(scope).settings.foreground,
+);
+ok(new Set(foregrounds).size === 3, '动词、介词、块标记三种颜色互不相同');
+ok(
+  ruleFor(VERB_SCOPE).settings.fontStyle === 'bold' &&
+    ruleFor(BLOCK_MARKER_SCOPE).settings.fontStyle === 'bold',
+  '动词与块标记加粗，介词保持常规字重',
+);
+ok(
+  !ruleFor(COMMENT_SCOPES[0]).settings.fontStyle,
+  '注释不加粗，保持灰色正文之外的弱化观感',
+);
+
+function matchGroup(ruleName, text, group) {
+  const rule = grammar.repository[ruleName];
+  const match = rule && new RegExp(rule.match).exec(text);
+  return match ? match[group] : null;
+}
+
+ok(matchGroup('verbs', '<read>', 2) === 'read', '动词规则匹配 <read>');
+ok(
+  grammar.repository.verbs.captures['2'].name === VERB_SCOPE,
+  '尖括号内动词使用独立 verb 作用域',
+);
+for (const word of ['to', 'with', 'from', 'in', 'on']) {
+  ok(
+    matchGroup('prepositions', `[${word}]`, 2) === word,
+    `介词规则匹配 [${word}]`,
+  );
+}
+for (const word of ['into', 'ok', 'error', 'results']) {
+  ok(
+    matchGroup('block-markers', `[${word}]`, 2) === word,
+    `块标记规则匹配 [${word}]`,
+  );
+}
+ok(matchGroup('prepositions', '[ok]', 2) === null, '[ok] 不走介词规则');
+ok(matchGroup('block-markers', '[to]', 2) === null, '[to] 不走块标记规则');
+ok(
+  grammar.repository.prepositions.captures['2'].name === PREPOSITION_SCOPE,
+  '介词使用独立 preposition 作用域',
+);
+ok(
+  grammar.repository['block-markers'].captures['2'].name === BLOCK_MARKER_SCOPE,
+  '块标记使用独立的 block-marker 作用域',
+);
+
+const mapBlock = grammar.repository['map-block'];
+ok(
+  mapBlock.name === 'comment.block.map.rill',
+  '//map{} 整段使用 comment.block.map.rill，而不是代码作用域',
+);
+ok(
+  !mapBlock.patterns || mapBlock.patterns.length === 0,
+  '//map{} 内不再嵌代码配色规则',
+);
+ok(
+  mapBlock.beginCaptures['0'].name === 'comment.block.map.rill' &&
+    mapBlock.endCaptures['0'].name === 'comment.block.map.rill',
+  '//map{} 的起止标记也保持注释灰',
+);
+ok(
+  grammar.repository.comment.name === 'comment.line.double-slash.rill',
+  '普通 // 行注释使用 comment.line.double-slash.rill',
+);
 
 // ---- 5. 扩展入口冒烟：用假 vscode 模块跑 activate --------------------
 async function smokeExtension() {

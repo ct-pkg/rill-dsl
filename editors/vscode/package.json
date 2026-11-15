@@ -2,7 +2,7 @@
   "name": "rill-dsl",
   "displayName": "RILL DSL",
   "description": "RILL 0.1.x 语法高亮，以及函数定义/调用点的跨文件跳转",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "publisher": "rill-lang",
   "license": "UNLICENSED",
   "private": true,
@@ -40,14 +40,49 @@
     "grammars": [
       {
         "language": "rill",
-        "scopeName": "source.ri",
+        "scopeName": "source.rill",
         "path": "./syntaxes/rill.tmLanguage.json"
       }
-    ]
+    ],
+    "configurationDefaults": {
+      "editor.tokenColorCustomizations": {
+        "textMateRules": [
+          {
+            "scope": [
+              "comment.line.double-slash.rill",
+              "comment.block.map.rill"
+            ],
+            "settings": {
+              "foreground": "#8B949E"
+            }
+          },
+          {
+            "scope": "entity.name.function.verb.rill",
+            "settings": {
+              "foreground": "#3B82F6",
+              "fontStyle": "bold"
+            }
+          },
+          {
+            "scope": "support.type.preposition.rill",
+            "settings": {
+              "foreground": "#BA68C8"
+            }
+          },
+          {
+            "scope": "keyword.control.block-marker.rill",
+            "settings": {
+              "foreground": "#EA580C",
+              "fontStyle": "bold"
+            }
+          }
+        ]
+      }
+    }
   },
   "scripts": {
     "test": "bash test/run-tests.sh",
     "package": "python3 tools/package_vsix.py",
-    "check:vsix": "python3 tools/package_vsix.py --check dist/rill-dsl-0.1.1.vsix"
+    "check:vsix": "python3 tools/package_vsix.py --check dist/rill-dsl-0.1.2.vsix"
   }
 }
