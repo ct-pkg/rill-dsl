@@ -1,9 +1,9 @@
 # CHANGELOG
 
-> 版本规则见 `AGENTS.md` 6.7。`version-minor` 与 phase 对应；本文件只记已经落地的
-> 行为变更，版本号落点以 `docs/session-map.md` 的「版本落点」为准。
+> 版本规则见 `AGENTS.md` 6.7。本项目 phase 号与产品版本已解耦，映射见
+> `AGENTS.md` 0.3；本文件只记已经落地的行为变更。
 
-## Unreleased — PH-22 函数签名去名（version-minor=22）
+## 0.22.0 — 2026-11-15（PH-22 收口 / 0.1.0 判定转 GO / 重编号点）
 
 ### Breaking
 
@@ -26,6 +26,7 @@
 ### Notes
 
 - 本相不停留在“名字 + 字符串匹配”；同形冲突在加载期显式报错，不做静默覆盖。
-- 版本：**保持 `0.12.0`**。C 裁定 phase 号与产品版本解耦，PH-22 不跳号；
-  `version-minor=22` 已登记，映射表与重编号触发条件见 `AGENTS.md` 0.3
-  与 `docs/reviews/closeout-22.md` §5。
+- 版本：产品 `0.12.0` → `0.22.0`（2026-11-15 重编号点）。触发条件是 0.1.0 判定转 GO；
+  phase 号与产品版本解耦，映射与历史留档见 `AGENTS.md` 0.3。
+- 0.1.0 判定：C-8 `Opaque` 经 `tests/opaque` 测试通道验收（透传同一性 + truthy +
+  边界不有损），0.1.0 由 NO-GO 转 GO。`src/rill` 实现零改动，仅 `__version__` 随本版移动。
