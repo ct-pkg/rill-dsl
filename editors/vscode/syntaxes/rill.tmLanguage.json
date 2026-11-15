@@ -103,7 +103,7 @@
     },
     "fn-definition": {
       "name": "meta.function.definition.rill",
-      "match": "(@)([ \\t]*)(\"(?:[^\"\\\\\\n]|\\\\.)*\"|'[^'\\n]*')",
+      "match": "(@)([ \\t]*)(<[^>\\n]+>)",
       "captures": {
         "1": {
           "name": "keyword.operator.function.rill"
@@ -115,7 +115,7 @@
     },
     "function-call": {
       "name": "meta.function.call.rill",
-      "match": "(@)([ \\t]*)(\"(?:[^\"\\\\\\n]|\\\\.)*\"|'[^'\\n]*')",
+      "match": "(@)([ \\t]*)(<[^>\\n]+>)",
       "captures": {
         "1": {
           "name": "keyword.operator.function.rill"
