@@ -1,50 +1,40 @@
-# Rill DSL 教程
+# 旧教程已迁移（v0.1 rev.1 → RILL 0.1.0）
 
-> 状态：`unverified`。本教程是**非规范性文档**；规范正文以 [docs/spec/dsl/](../../spec/dsl/README.md) 为准，冲突时规范优先。
-> 仓库当前没有 lexer/parser/解释器。教程中的示例只按 `v0.1 rev.1` 文法与决策记录做过推导，未经运行。
-> 工具参数细节以 [docs/spec/tools/](../../spec/tools/README.md) 为准；本教程不复述完整工具契约。
+> 状态：**已迁移**。本教程的 12 卷基于 `v0.1 rev.1` 文法手工推导，自述 `unverified`、
+> **没有运行过**，与现在能跑的 RILL 0.1.0 不是同一套语法。旧卷已删除，按下面的对照
+> 表改读 [examples/tour/](../../../examples/tour/) 与 [语言规范](../../RILL-0.1.0.md)。
 
-## 1. 教程目标
+## 1. 为什么整体下线
 
-让两类读者在最短时间内具备同一能力：**写出能被 rev.1 文法解析、能表达一次工具编排的 Rill 脚本**。
+旧教程里的 `let text = read "notes.txt"`、`# allow: read, write`、`if hits.length > 0`、
+`|>` 追加实参等写法，在当前实现里分别对应完全不同的形态（句子式动词、`[to]` 介宾、
+`//map{}`/`//fn{}`、`|>` 只传段值）。教程还按“仓库没有 parser”的前提写成推导稿，
+继续留着会让人把不存在的语法当契约。
 
-| 读者 | 关心什么 | 建议读法 |
+## 2. 卷目对照
+
+| 旧卷 | 原主题 | 现在看哪里 |
 | --- | --- | --- |
-| 人（第一次接触的工程师） | 为什么这样设计、边界在哪、错了怎么修 | 按 01 → 12 顺序读；每卷先看示例再看规则 |
-| LLM（照教程写脚本） | 可复制的写法、禁写清单、错误后果 | 先读 [12 few-shot](12-fewshot.md) 与 [11 常见错误](11-mistakes.md)，再回查 [03 词法](03-lexical.md)、[04 管道](04-pipeline.md)、[09 安全](09-security.md) |
+| 01 | 定位与边界 | [README](../../../README.md) §8、[规范](../../RILL-0.1.0.md) 第 1–2 节 |
+| 02 | 最小可运行脚本 | [01-send](../../../examples/tour/01-send.md)、[02-pipe](../../../examples/tour/02-pipe.md) |
+| 03 | 词法 | [01-send](../../../examples/tour/01-send.md)、[04-map](../../../examples/tour/04-map.md)、[规范](../../RILL-0.1.0.md) §4.16 |
+| 04 | 管道 | [02-pipe](../../../examples/tour/02-pipe.md)、[12-error-run](../../../examples/tour/12-error-run.md) |
+| 05 | 作用域 | [03-into-order](../../../examples/tour/03-into-order.md) |
+| 06 | 变量与循环 | [05-if](../../../examples/tour/05-if.md)、[06-each](../../../examples/tour/06-each.md)、[07-break](../../../examples/tour/07-break.md) |
+| 07 | 函数 | [09-fn](../../../examples/tour/09-fn.md) |
+| 08 | 事件 | **当前实现没有事件机制**，无对应样例；不要把旧卷的写法当可用语法 |
+| 09 | 安全与能力边界 | [15-profile](../../../examples/tour/15-profile.md) |
+| 10 | 错误与限制 | [10-error-lex](../../../examples/tour/10-error-lex.md)、[11-error-parse](../../../examples/tour/11-error-parse.md)、[12-error-run](../../../examples/tour/12-error-run.md) |
+| 11 | 常见错误 | [10-error-lex](../../../examples/tour/10-error-lex.md)、[11-error-parse](../../../examples/tour/11-error-parse.md) |
+| 12 | few-shot | [样例索引](../../../examples/README.md)（16 个实测样例，按能力分组） |
 
-## 2. 目录与阅读顺序
+## 3. 读法建议
 
-| 卷 | 内容 | 读完能做什么 |
-| --- | --- | --- |
-| [01 定位与边界](01-overview.md) | DSL 是什么、解决什么问题、与 agent 运行时的分工 | 判断一个需求该写脚本还是交给内核 |
-| [02 最小可运行脚本](02-first-script.md) | 一次调用、管道、判断、写文件；等价写法 | 写出第一个可加载的脚本 |
-| [03 词法与书写规则](03-lexical.md) | 空格调用、括号分组、NEWLINE、注释、数字、字符串 | 不写出解析不了的文本 |
-| [04 数据流：管道与降级](04-pipeline.md) | `\|>` 追加位置、`\|?` 优先级、失败单元、`degraded` | 正确串联工具并处理可捕获失败 |
-| [05 作用域：into 与 $](05-scope.md) | `into`、`$`、嵌套覆盖与恢复、`accepts_context` | 把上一步结果安全地带进下一步 |
-| [06 变量与循环](06-variables-loops.md) | `let`、`let mut`、`for`、`break`/`continue`、无 `while` | 写有界循环与累加 |
-| [07 函数](07-functions.md) | `fn`、空格调用、参数作用域、只读捕获、无递归 | 复用一段编排并避免名字冲突 |
-| [08 事件](08-events.md) | `emit`、`# emit:`、payload、fire-and-forget、上限 | 向内核事件总线发布结构化结果 |
-| [09 安全](09-security.md) | `# allow:` 默认拒绝、`# deny:`、`# allow: *`、参数约束 | 让脚本通过加载期与调用前检查 |
-| [10 错误与限制](10-errors-limits.md) | 错误格式、`error_kind`、`ExecLimits`、超限返回值 | 读懂失败原因并判断能否被 `\|?` 捕获 |
-| [11 常见错误清单](11-mistakes.md) | 13 条 LLM 高频错误：错写法/原因/正确写法/判据 | 交稿前逐条自检 |
-| [12 few-shot 片段](12-fewshot.md) | 5 个由短到长的示例 + 2 条硬规则 | 直接放进提示词 |
+第一次接触：`01-send` → `02-pipe` → `03-into-order` → `05-if` → `06-each` → `08-parallel`
+→ `09-fn`，然后按 [索引](../../examples/README.md) 补错误路径与宿主部分。每个样例的
+`.md` 都写了“演示什么 + 需要哪条语法”，命令可直接复制运行。
 
-## 3. 示例约定
+## 4. 历史材料
 
-- 代码块语言标记统一用 `rill`；`# allow:` 是脚本 header，不是注释。
-- 标注「反例」的代码块**故意不可加载**，用于说明错误与期望的 `error_kind`；正例都按 rev.1 文法推导过。
-- 错误文案采用规范格式：`<path>:<line>:<col>: error: <message>`，第二行详情，第三行 `Hint:`。
-- 示例中的工具只使用 [工具契约目录](../../spec/tools/README.md) 收录的 `read`、`grep`、`write`、`json_parse`、`get`、`json_build`（可选）；不使用未定义工具名。
-
-## 4. 与规范的关系
-
-1. **规范优先**：本教程任何说法与 [docs/spec/dsl/](../../spec/dsl/README.md) 冲突，以规范为准；教程不新增语法。
-2. **状态诚实**：示例状态 `unverified`。没有 parser，无法证明「示例能跑通」；只能证明「按 EBNF 可推导」。
-3. **不写未定项**：教程不写 `while`、括号调用、`retry n {}`、通用对象字面量，也不写「将来可能支持」。
-4. **工具契约同状态**：工具条目编号为 `T-001..T-006`，同样 `unverified`；参数个数、类型、失败类别以工具目录为准，教程只用到其中已写明的部分。
-
-## 5. 版本
-
-- 依据：规范 `v0.1 rev.1`（2026-11-12），决策 D-001..D-019。
-- 本教程不改变规范版本，不 bump 产品版本号。
+旧的 `v0.1 rev.1` 规范与工具契约留在 [docs/spec/](../../spec/) 作历史档案，按 DOC-S2
+冻结，不作为当前语法依据。
