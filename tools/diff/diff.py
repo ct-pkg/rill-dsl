@@ -4,6 +4,7 @@
   python3 tools/diff/diff.py --layer token          # PH-13 验收口径
   python3 tools/diff/diff.py --layer ast            # PH-14 预演（忽略 span）
   python3 tools/diff/diff.py --layer error          # PH-15 加载期（check）
+  python3 tools/diff/diff.py --layer eval           # PH-16 运行期（run，10 例）
   python3 tools/diff/diff.py --layer all --bucket negative
 
 两侧都是 ``testdata/0.1.0`` 的 SUT 协议（命令 + 退出码 + stdout JSON）：
@@ -115,6 +116,19 @@ def compare_ok(layer, py_payload, ct_payload):
         if "warnings" not in ct_payload:
             return "CT 输出缺少 warnings 字段"
         return "" if py_payload == ct_payload else "warnings 信封不一致"
+    if layer == "eval":
+        for key in ("ok", "value", "error", "host_meta"):
+            if key not in py_payload:
+                return "Python 输出缺少 %s 字段" % key
+            if key not in ct_payload:
+                return "CT 输出缺少 %s 字段" % key
+            if canonical(py_payload[key]) != canonical(ct_payload[key]):
+                return "%s 不一致：py=%r ct=%r" % (
+                    key,
+                    py_payload[key],
+                    ct_payload[key],
+                )
+        return ""
     if "ast" not in py_payload:
         return "Python 输出缺少 ast 字段"
     if "ast" not in ct_payload:
@@ -139,22 +153,44 @@ def compare_error(py_payload, ct_payload):
     return ""
 
 
-def args_for(layer, source):
+def case_opts(root, source):
+    """读 case.json 的 profile 与 fakes；缺省与 harness 一致。"""
+    fakes = "fakes/tools.json"
+    profile = "shell"
+    path = os.path.join(root, source, "case.json")
+    try:
+        with open(path, encoding="utf-8") as fh:
+            doc = json.load(fh)
+        fakes = doc.get("fakes") or fakes
+        profile = (doc.get("expect") or {}).get("profile") or profile
+    except (OSError, ValueError):
+        pass
+    return profile, os.path.join("testdata", "0.1.0", fakes)
+
+
+def args_for(layer, root, source):
     if layer == "token":
         return ["tokenize", source]
     if layer == "error":
         return ["check", source, "--profile", "shell"]
+    if layer == "eval":
+        profile, fakes = case_opts(root, source)
+        return ["run", source, "--profile", profile, "--fakes", fakes]
     return ["parse", "--dump-ast", source, "--profile", "shell"]
 
 
 def compare_source(layer, py_sut, ct_sut, root, source):
-    args = args_for(layer, os.path.join("testdata", "0.1.0", source))
+    args = args_for(layer, root, os.path.join("testdata", "0.1.0", source))
     py_rc, py_payload, py_err = run(py_sut, root, args)
     ct_rc, ct_payload, ct_err = run(ct_sut, root, args)
     if py_err or ct_err:
         return "执行失败：py=%s ct=%s" % (py_err or "ok", ct_err or "ok"), ""
     if py_rc != ct_rc:
         return "退出码不一致：py=%s ct=%s" % (py_rc, ct_rc), ""
+    if layer == "eval":
+        if py_rc not in (0, 1):
+            return "eval 层只比 0/1，实际退出码 %s" % py_rc, ""
+        return compare_ok(layer, py_payload, ct_payload), "ok"
     if py_rc == 0:
         return compare_ok(layer, py_payload, ct_payload), "ok"
     if py_rc == 2:
@@ -164,7 +200,7 @@ def compare_source(layer, py_sut, ct_sut, root, source):
 
 def main(argv):
     parser = argparse.ArgumentParser(description="Python 参考实现 vs CT 实现逐层对拍")
-    parser.add_argument("--layer", choices=("token", "ast", "error", "all"), default="token")
+    parser.add_argument("--layer", choices=("token", "ast", "error", "eval", "all"), default="token")
     parser.add_argument("--bucket", choices=("positive", "negative", "all"), default="all")
     parser.add_argument("--python-sut", default="")
     parser.add_argument("--ct-sut", default="")
@@ -192,6 +228,14 @@ def main(argv):
                 print("diff.py: --layer error 只对拍负例（negative/**）", file=sys.stderr)
                 return 2
             layer_sources = negative
+        elif layer == "eval":
+            prefixes = (
+                "positive/run/segment/",
+                "positive/run/into/",
+                "positive/run/pipe/",
+                "positive/run/call/",
+            )
+            layer_sources = [s for s in positive if s.startswith(prefixes)]
         else:
             layer_sources = sources
         print("== layer=%s" % layer)
