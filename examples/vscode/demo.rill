@@ -1,0 +1,10 @@
+// 同文件函数定义与调用：在调用点的 "greet-user" 上按 F12 / Ctrl+Click。
+//fn{
+@ "greet-user" $name <send> $name {
+    <send> $name [to] user
+}
+}
+
+@ "greet-user" 'hello rill' [ok] {
+    <send> '调用完成' [to] user
+}
