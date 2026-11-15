@@ -72,17 +72,21 @@ hello, rill
 - `ok` / `value` / `error` 是语句结果；`host_meta` 是宿主旁路信息。
 - `host.principal.name` 是本机 OS 用户名，换机器会变；其余字段与机器无关。
 
-退出码：
+退出码（口径同 [README.md](../README.md) §5/§7、[known-limits](../docs/planning/rill-0.1.0-known-limits.md) §2、[acceptance](../docs/planning/rill-0.1.0-acceptance.md) §4）：
 
 | 码 | 含义 |
 | --- | --- |
-| 0 | `ok=true`（含 `break` 收口） |
-| 1 | 有未处理失败（`ok=false`） |
-| 2 | 诊断：词法 / 解析 / 加载错误，或宿主能力被 profile 拒绝 |
+| 0 | `ok=true`（含 `break` 收口）；**Agent 真实传输**的未处理失败也是 0，必须读 payload 的 `ok` |
+| 1 | Shell / `--fakes`（含 Agent + `--fakes`）的未处理失败（`ok=false`） |
+| 2 | 诊断：词法 / 解析 / 加载错误、CLI 参数错误、宿主能力被 profile 拒绝 |
+
+harness 里出现的 `3`（BLOCK）是 SUT 适配层的"未实现"标记，不是 CLI 退出码。
 
 ## 4. 写样例时踩到的两个已知问题
 
-样例本身都绕开了这两个写法，记在这里是为了不让下一个人把它们当成"能跑"：
+样例本身都绕开了这两个写法，记在这里是为了不让下一个人把它们当成"能跑"。两条都已
+单独记账到 [解析期缺陷登记](../docs/planning/rill-0.1.0-parser-defects.md)（PD-1 / PD-2），
+含最小复现、两侧输出与待办方向；修复不在样例这一摊，也不在本次提交里：
 
 1. **引号串在前的相邻拼接解析失败**。`<send> "n="$x` 报 `E-PARSE-UNEXPECTED`，Python
    参考实现与 CT 实现一致：相邻判定的宽度按 token 文本长度算，没把两端引号算进去，
