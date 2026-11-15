@@ -8,6 +8,7 @@
   python3 tools/diff/diff.py --layer fmt --mode compress   # PH-18 压缩态
   python3 tools/diff/diff.py --layer fmt --mode display    # PH-18 展示态
   python3 tools/diff/diff.py --layer fmt --mode roundtrip  # PH-18 压缩→展示→压缩
+  python3 tools/diff/diff.py --layer host --profile shell  # PH-19 真实 Shell 宿主
   python3 tools/diff/diff.py --layer all --bucket negative
 
 两侧都是 ``testdata/0.1.0`` 的 SUT 协议（命令 + 退出码 + stdout JSON）：
@@ -28,6 +29,7 @@ Python 侧读 ``testdata/0.1.0/sut.json``，CT 侧读 ``tools/diff/sut.ct.json``
 """
 
 import argparse
+import base64
 import json
 import os
 import shutil
@@ -67,6 +69,13 @@ def load_sut(path, root):
     command = doc.get("command")
     if not isinstance(command, list) or not command:
         raise SystemExit("diff.py: %s.command 必须是非空数组" % path)
+    # 相对可执行路径按仓库根解析：host 层会把 cwd 换到临时目录。
+    command = [
+        os.path.join(root, part)
+        if not os.path.isabs(part) and os.sep in part
+        else part
+        for part in command
+    ]
     env = {}
     for key, value in (doc.get("env") or {}).items():
         if not isinstance(value, str):
@@ -96,13 +105,16 @@ def discover_sources(root):
     return positive, negative
 
 
-def run(sut, root, args):
+def run(sut, root, args, cwd=None, env_extra=None, env_drop=()):
     env = dict(os.environ)
     env.update(sut["env"])
+    env.update(env_extra or {})
+    for key in env_drop:
+        env.pop(key, None)
     try:
         proc = subprocess.run(
             sut["command"] + list(args),
-            cwd=root,
+            cwd=cwd or root,
             env=env,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
@@ -118,6 +130,34 @@ def run(sut, root, args):
     if not isinstance(payload, dict):
         return proc.returncode, None, "stdout 顶层不是对象"
     return proc.returncode, payload, ""
+
+
+def run_host_sut(sut, root, args, cwd, env_extra=None, env_drop=()):
+    """host 层需要同时比 stderr（stdio.send 的落点）。"""
+    env = dict(os.environ)
+    env.update(sut["env"])
+    env.update(env_extra or {})
+    for key in env_drop:
+        env.pop(key, None)
+    try:
+        proc = subprocess.run(
+            sut["command"] + list(args),
+            cwd=cwd,
+            env=env,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            universal_newlines=True,
+            timeout=sut["timeout"],
+        )
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        return None, None, "", "无法启动 %s：%s" % (" ".join(sut["command"]), exc)
+    try:
+        payload = json.loads(proc.stdout) if proc.stdout.strip() else None
+    except ValueError as exc:
+        return proc.returncode, None, proc.stderr, "stdout 不是 JSON：%s" % exc
+    if not isinstance(payload, dict):
+        return proc.returncode, None, proc.stderr, "stdout 顶层不是对象"
+    return proc.returncode, payload, proc.stderr, ""
 
 
 def canonical(node):
@@ -440,6 +480,183 @@ def compare_source(layer, py_sut, ct_sut, root, source):
     return "非约定退出码 %s（仅 0/2 可比）" % py_rc, ""
 
 
+# PH-19：真实 Shell 宿主的定向用例（fixture 语料之外的 E-2 二进制面）。
+HOST_DIRECTED = (
+    ("bytes-read", "<read> bin.dat\n"),
+    ("bytes-run", '<read> bin.dat |> <run> "cat"\n'),
+    ("bytes-truthy",
+     '<read> bin.dat ->$b\nif $b { break "yes" } else { break "no" }\n'),
+    ("process-stderr",
+     '<run> "python3 -c \\"import sys; sys.stderr.write(\'e\')\\""\n'),
+    ("text-run", '<read> text.txt |> <run> "cat"\n'),
+)
+
+
+def host_fixtures(root):
+    base = os.path.join(root, "testdata", "0.1.0", "host", "shell")
+    found = []
+    for name in sorted(os.listdir(base)):
+        path = os.path.join(base, name)
+        if (
+            os.path.isdir(path)
+            and os.path.isfile(os.path.join(path, "script.rill"))
+            and os.path.isfile(os.path.join(path, "expect.json"))
+        ):
+            found.append(path)
+    return found
+
+
+def materialize(directory, files):
+    for relative, text in files.items():
+        path = os.path.join(directory, relative)
+        parent = os.path.dirname(path)
+        if parent and not os.path.isdir(parent):
+            os.makedirs(parent)
+        with open(path, "w", encoding="utf-8") as handle:
+            handle.write(text)
+
+
+def host_problem(py_rc, py_payload, py_stderr, py_err,
+                 ct_rc, ct_payload, ct_stderr, ct_err):
+    if py_err or ct_err:
+        return "执行失败：py=%s ct=%s" % (py_err or "ok", ct_err or "ok")
+    if py_rc != ct_rc:
+        return "退出码不一致：py=%s ct=%s" % (py_rc, ct_rc)
+    if py_stderr != ct_stderr:
+        return "stderr 不一致：py=%r ct=%r" % (py_stderr, ct_stderr)
+    if py_rc == 2:
+        py_error = py_payload.get("error") if py_payload else None
+        ct_error = ct_payload.get("error") if ct_payload else None
+        if py_error != ct_error:
+            return "诊断不一致：py=%r ct=%r" % (py_error, ct_error)
+        return ""
+    if canonical(py_payload) != canonical(ct_payload):
+        for key in ("ok", "value", "error", "host_meta", "host"):
+            if canonical(py_payload.get(key)) != canonical(ct_payload.get(key)):
+                return "%s 不一致：py=%r ct=%r" % (
+                    key,
+                    py_payload.get(key),
+                    ct_payload.get(key),
+                )
+        return "payload 不一致"
+    return ""
+
+
+def run_host_layer(opts, py_sut, ct_sut, root):
+    """host 层：12 个 Shell fixture + 3 个 E-2 定向用例，两侧逐字段比。"""
+    if opts.profile != "shell":
+        print("diff.py: --layer host 目前只覆盖 shell profile", file=sys.stderr)
+        return 2
+    fixtures = host_fixtures(root)
+    print("== layer=host profile=%s" % opts.profile)
+    print("   python: %s" % " ".join(py_sut["command"]))
+    print("   ct    : %s" % " ".join(ct_sut["command"]))
+
+    diffs = 0
+    for path in fixtures:
+        name = os.path.relpath(path, os.path.join(root, "testdata", "0.1.0", "host", "shell"))
+        with open(os.path.join(path, "expect.json"), encoding="utf-8") as handle:
+            spec = json.load(handle)
+        profile = os.path.join(
+            root,
+            "testdata",
+            "0.1.0",
+            "host",
+            "shell",
+            "profiles",
+            spec.get("profile", "min") + ".json",
+        )
+        script = os.path.join(path, "script.rill")
+        args = [
+            "run",
+            script,
+            "--profile",
+            "shell",
+            "--host-profile",
+            profile,
+        ]
+        tmp = tempfile.mkdtemp(prefix="rill-host-")
+        try:
+            materialize(tmp, spec.get("files", {}))
+            py_rc, py_payload, py_stderr, py_err = run_host_sut(
+                py_sut,
+                root,
+                args,
+                cwd=tmp,
+                env_extra=spec.get("env"),
+                env_drop=("RILL_TEST_MISSING",),
+            )
+            ct_rc, ct_payload, ct_stderr, ct_err = run_host_sut(
+                ct_sut,
+                root,
+                args,
+                cwd=tmp,
+                env_extra=spec.get("env"),
+                env_drop=("RILL_TEST_MISSING",),
+            )
+            problem = host_problem(
+                py_rc, py_payload, py_stderr, py_err,
+                ct_rc, ct_payload, ct_stderr, ct_err,
+            )
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
+        if problem:
+            diffs += 1
+            print("   DIFF %s: %s" % (name, problem))
+        elif opts.verbose:
+            print("   PASS %s" % name)
+
+    directed = 0
+    directed_diffs = 0
+    tmp = tempfile.mkdtemp(prefix="rill-host-bytes-")
+    try:
+        binary = bytes([0xFF, 0xFE, 0x80, 0x00, 0x41])
+        with open(os.path.join(tmp, "bin.dat"), "wb") as handle:
+            handle.write(binary)
+        with open(os.path.join(tmp, "text.txt"), "w", encoding="utf-8") as handle:
+            handle.write("hello\n")
+        profile = os.path.join(
+            root, "testdata", "0.1.0", "host", "shell", "profiles", "full.json"
+        )
+        for name, source in HOST_DIRECTED:
+            directed += 1
+            script = os.path.join(tmp, name + ".rill")
+            write_text(script, source)
+            args = [
+                "run",
+                script,
+                "--profile",
+                "shell",
+                "--host-profile",
+                profile,
+            ]
+            py_rc, py_payload, py_stderr, py_err = run_host_sut(
+                py_sut, root, args, cwd=tmp
+            )
+            ct_rc, ct_payload, ct_stderr, ct_err = run_host_sut(
+                ct_sut, root, args, cwd=tmp
+            )
+            problem = host_problem(
+                py_rc, py_payload, py_stderr, py_err,
+                ct_rc, ct_payload, ct_stderr, ct_err,
+            )
+            if problem:
+                directed_diffs += 1
+                print("   DIFF directed/%s: %s" % (name, problem))
+            elif opts.verbose:
+                print("   PASS directed/%s" % name)
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+
+    print(
+        "   fixtures=%d diffs=%d directed=%d directed_diffs=%d"
+        % (len(fixtures), diffs, directed, directed_diffs)
+    )
+    total = diffs + directed_diffs
+    print("   RESULT: %s" % ("PASS" if total == 0 else "FAIL"))
+    return total
+
+
 def run_fmt_layer(opts, py_sut, ct_sut, root):
     """fmt 层：71 例语料 + E-3 定向用例 + E-4 头写法容忍。"""
     mode = opts.mode
@@ -502,10 +719,11 @@ def main(argv):
     parser = argparse.ArgumentParser(description="Python 参考实现 vs CT 实现逐层对拍")
     parser.add_argument(
         "--layer",
-        choices=("token", "ast", "error", "eval", "fmt", "all"),
+        choices=("token", "ast", "error", "eval", "fmt", "host", "all"),
         default="token",
     )
     parser.add_argument("--mode", choices=("compress", "display", "roundtrip"), default="compress")
+    parser.add_argument("--profile", choices=("shell", "agent"), default="shell")
     parser.add_argument("--bucket", choices=("positive", "negative", "all"), default="all")
     parser.add_argument("--python-sut", default="")
     parser.add_argument("--ct-sut", default="")
@@ -523,6 +741,12 @@ def main(argv):
             print("diff.py: --layer fmt 只跑固定的 71 例语料", file=sys.stderr)
             return 2
         return 1 if run_fmt_layer(opts, py_sut, ct_sut, root) else 0
+
+    if opts.layer == "host":
+        if opts.bucket != "all":
+            print("diff.py: --layer host 只跑固定的 fixture 语料", file=sys.stderr)
+            return 2
+        return 1 if run_host_layer(opts, py_sut, ct_sut, root) else 0
 
     positive, negative = discover_sources(root)
     sources = positive + negative
