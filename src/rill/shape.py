@@ -10,8 +10,12 @@
   / ``{"role": "value"}``
 
 模板侧的 ``param``（``$变量`` / ``$变量?默认值``）与调用侧的 ``value`` 都是
-“这里是值”的位置；匹配时模板 ``param`` 接受调用侧任何非空值。常量位按值的
-字符串形态比较：``'ok'`` / ``"ok"`` / ``ok`` 同值。参数名、默认值、状语值不进签名。
+“这里是值”的位置；匹配时模板 ``param`` 接受调用侧任何非空值。常量位按 AST 里
+保存的字面原文比较（``String.value`` / ``Bare.text`` / 数字的规范字符串）：引号
+与节点种类不改变形状，``类型:值`` 前缀在签名层不拆分（D-024）。参数名、默认值、
+状语值不进签名。
+
+定义侧形状键首位写 ``shape_version``；调用侧不写（D-024 §判决 3）。
 
 本模块只读 AST，不解析、不求值、不 import 宿主。
 """
@@ -20,31 +24,19 @@ SLOT_NONE = {"role": "none"}
 SLOT_PARAM = {"role": "param"}
 SLOT_VALUE = {"role": "value"}
 
-
-def _strip_type_prefix(text):
-    """P-025 未裁定前：常量位的 ``类型:值`` 前缀不进形状键。"""
-    if ":" not in text:
-        return text
-    head, tail = text.split(":", 1)
-    if not head or not tail:
-        return text
-    if not (head[0].isalpha() or head[0] == "_"):
-        return text
-    for ch in head:
-        if not (ch.isalnum() or ch in "_-"):
-            return text
-    return tail
+# D-024 §判决 3：v1 = PH-22 收口时的“剥离类型前缀”临时口径；v2 = 字面原文。
+SHAPE_VERSION = 2
 
 
 def const_value(node):
-    """常量位的字符串形态；不是常量返回 ``None``。"""
+    """常量位的字面原文；不是常量返回 ``None``。"""
     if not isinstance(node, dict):
         return None
     kind = node.get("kind")
     if kind == "String":
-        return _strip_type_prefix(node["value"])
+        return node["value"]
     if kind == "Bare":
-        return _strip_type_prefix(node["text"])
+        return node["text"]
     if kind == "Number":
         return str(node["value"])
     return None
@@ -95,13 +87,15 @@ def shape_of(call, template):
             preps.append(
                 {"prep": item["prep"], "object": slot(item["object"], template)}
             )
-    return {
-        "verb": call["verb"],
-        "subject": slot(call["subject"], template),
-        "object": slot(call["object"], template),
-        "preps": preps,
-        "adverbs": adverb_names(call["post"]),
-    }
+    result = {}
+    if template:
+        result["shape_version"] = SHAPE_VERSION
+    result["verb"] = call["verb"]
+    result["subject"] = slot(call["subject"], template)
+    result["object"] = slot(call["object"], template)
+    result["preps"] = preps
+    result["adverbs"] = adverb_names(call["post"])
+    return result
 
 
 def _preps_of(call):
