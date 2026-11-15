@@ -108,6 +108,7 @@ RILL 的早期目标有两个宿主：
 | phase 11 | Host | 智能体宿主能力层：工具/角色/limits 映射到同一 HostCapabilities | phase 10、phase 4 | 与 phase 7/8/9 | agent profile 与 shell profile 共用 AST；能力差异只在结果 |
 | phase 12 | 集成 | 双宿主集成：CLI + 全样例 + golden + 双 profile 一致性 | phase 4、phase 5、phase 9、phase 11 | 无 | 非 pending 样例全通过；pending 列 xfail；双 profile AST 相等；round-trip 通过 |
 | PH-22（追加） | 语言变更 | 函数签名去名：签名 = 动词 + 状语 + 介词构成的形状键，见 D-022 | PH-12；CT 以 PH-21 收口状态为准 | 无 | 已收口：E-1…E-28 全绿；产品 0.22.0、tag `v0.22.0`；Python/CT 对拍 0 未解释差异；旧 `@ "name"` 清零 |
+| PH-23（追加） | 语言变更 | P-025=B：签名层不识别类型前缀，常量位按 AST 字面原文比较，`shape_version=2` 仅定义侧（[D-024](../decisions/D-024.md)） | PH-22 收口 `0.22.0`；CT 以 PH-22 收口基线为准 | 无 | 目标 0.23.0；loader 断言 `E-LOAD-FN-SHAPE-VERSION`；4 份 AST golden 重录；PH-22 E-26 被取代不回改 |
 
 ## 3. 两条横切主线
 
