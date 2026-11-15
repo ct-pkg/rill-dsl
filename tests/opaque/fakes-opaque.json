@@ -1,0 +1,18 @@
+{
+  "schema": "rill-fakes-tools/0",
+  "description": "0.1.1 B-1 专用：唯一允许产出 Opaque 的测试通道。只被 tests/opaque 使用，真宿主与生产路径不得引用。",
+  "tools": {
+    "read": {
+      "queue": [],
+      "default": {"ok": true, "value": {"$test-opaque": {"handle": "test-handle-1", "tag": "stream"}}}
+    },
+    "send": {
+      "queue": [],
+      "default": {"ok": true, "value": null}
+    },
+    "parse": {
+      "queue": [],
+      "default": {"ok": true, "value": "done"}
+    }
+  }
+}

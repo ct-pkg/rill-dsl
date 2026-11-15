@@ -1,0 +1,5 @@
+<read> "test.txt" ->$h
+if $h {
+    <send> $h [to] user
+}
+<parse> "test.txt"
