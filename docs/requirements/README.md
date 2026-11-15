@@ -81,7 +81,7 @@
 | 正文 | Rill DSL 规范 `v0.1 rev.1`（词法/文法/语义/安全/运行时/示例/里程碑） | unverified | [dsl/README.md](../spec/dsl/README.md) |
 | S-001 | 调用形态：空格参数，括号仅分组 | unverified | [S-001](../spec/S-001-call-form.md) |
 | S-002..S-024 | 文法、语义、安全、错误、值层的可验收条目 | unverified | [规格索引](../spec/README.md) |
-| P-001..P-026 | 未决问题清单 | pending / partial | [PENDING](../spec/PENDING.md) |
+| P-001..P-028 | 未决问题清单 | pending / partial | [PENDING](../spec/PENDING.md) |
 
 ## 6. 候选偏离（未签字，不计为已登记 deviation）
 
