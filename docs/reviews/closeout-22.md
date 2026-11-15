@@ -1,7 +1,7 @@
 # PH-22 收口：函数签名去名（D-022）
 
-> 判定：**GO（工程面收口）**。E-1…E-28 全绿；E-28 按用户 **C 裁定**判绿：
-> 产品版本保持 `0.12.0`，phase 号与版本解耦，映射与重编号触发见 `AGENTS.md` 0.3。
+> 判定：**GO（工程面收口）**。E-1…E-28 全绿；E-28 按用户 **A 裁定**判绿：
+> 产品版本 `0.22.0`；PH-22 前未发布、无历史 tag、无 release、无包发布，重编号结案见 `AGENTS.md` 0.3。
 > 全层对拍 `total diffs: 0`；90 个样例 `compliance 88 + smoke 2`，`pending 0`。
 > 本记录只写实测结果；与卡面不一致处按原样登记在 §3。
 
@@ -36,7 +36,7 @@
 | E-25 | T1…T8 逐项 verify 原文 | **过** | 本文 §2 |
 | E-26 | 类型前缀不进签名 | **过** | `test_type_prefix_does_not_change_shape` → E-03 |
 | E-27 | 不做兼容层；旧脚本 E-07 且给迁移提示 | **过** | 4 条 E-07 负例；定义用例断言提示含 `verb_call` |
-| E-28 | 记录破坏性变更；`version-minor=22`；bump 按 §9 在收口提交内完成 | **过** | C 裁定：产品保持 `0.12.0`；`AGENTS.md` 0.3 登记 `deviation: PH-22-version` + 映射表；`CHANGELOG.md` 同条目（§5） |
+| E-28 | 记录破坏性变更；`version-minor=22`；bump 按 §9 在收口提交内完成 | **过** | A 裁定：产品 `0.22.0`；`AGENTS.md` 0.3 重编号结案（`decision: PH-22-renumber`）+ 映射表；`CHANGELOG.md` 同条目（§5） |
 
 ## 2. 任务逐项 verify（原始输出）
 
@@ -179,7 +179,7 @@ $ test -s docs/reviews/closeout-22.md; echo $?
 | 7 | D-022 只说“`@` 后写 verb_call” | 常量主语 `@ "name"` 与旧形态不可区分 | 规范补注：`@` 后不得以字符串开头（`5250664`）；属卡内实现裁定，不扩语言面 |
 | 8 | 原 `default_tail_can_be_overridden` 用例 | 签名只取模板第一段，第二段参数无法由调用覆盖 | 用例退役，改测“尾部可选介宾可整段省略” |
 | 9 | E-20 范围只看 fn 语料 | 全量 grep 把非 fn 夹具一并扫出 | 同步迁移 `positive/tokens/keywords-values`（GC-22-07）与 retired 的 `pending/bareword-value/call-arg-bareword`；`09-fn.md` 改述为“旧形态（`@` 后跟字符串名字）” |
-| 10 | 卡面 `version-minor=22` / 目标 `0.22.0` | 用户裁定走 C：产品保持 `0.12.0`，phase 号与版本解耦 | E-28 据此判绿；映射表与重编号触发写入 `AGENTS.md` 0.3（§5） |
+| 10 | 卡面 `version-minor=22` / 目标 `0.22.0` | 用户裁定走 A：PH-22 一次性补到 `0.22.0`；PH-22 前未发布、无历史 tag；d=0 from PH-22，PH-23 起 0.23.0 | E-28 据此判绿；映射与结案写入 `AGENTS.md` 0.3（§5） |
 | 11 | PH-21 判定文书写“85 个用例” | PH-22 新增 5 个 fn 夹具后为 90 | `docs/planning/rill-0.1.0-acceptance.md` 已按 90 更新；`0.1.0-verdict.md` 保留 PH-21 时点原文 |
 | 12 | 卡 §4 未预设门禁对非法 fixture 的处理 | 一个 `phase: p22` 让整个 0.1.0 门禁拒绝执行，合法用例零信号 | 数据修为 `r1`；门禁行为登记为 **GD-001**（`docs/planning/rill-0.1.0-known-limits.md` §7），本相不改共享门禁 |
 | 13 | 卡面 E-20 只要求“清零” | 收口复验时 `tests/` 仍有 3 处旧形态字面量 | 位置见 §3.1；已全部清零（`E20_exit=0`） |
@@ -213,29 +213,25 @@ $ test -s docs/reviews/closeout-22.md; echo $?
 | T6 | `ad42794 test(fn): PH-22-T6 语料去名迁移` |
 | T7 | `32cbdbb docs(fn): PH-22-T7 编辑器语法去名` |
 | T8 | `9c3286c docs(fn): PH-22-T8 收口对照与变更记录` |
-| T8 补 | 本次提交 `docs(review): PH-22 E-28 判绿与门禁缺陷登记`（C 裁定、GD-001、旧形态位置） |
+| T8 补 | 本次提交 `docs(review): PH-22 E-28 判绿与门禁缺陷登记`（E-28 版本裁定、GD-001、旧形态位置） |
 
-只做本地提交；未 push、未打 tag、未改 `.ai-engineering`。工作区残留的 `.trae/`
+只做本地提交；分支未 push；tag `v0.22.0` 已创建并推送；未改 `.ai-engineering`。工作区残留的 `.trae/`
 是本地工具目录，未纳入提交。
 
-## 5. E-28 版本裁定（C，已执行）
+## 5. E-28 版本裁定（A，已执行）
 
-用户 2026-11-15 裁定走 **C**；重编号提案同日批准并执行：
+用户 2026-11-15 批准路径 A（重新编号结案）：
 
-- **phase 号与产品版本正式解耦**：phase 号只表示开发序列，映射表在
-  `AGENTS.md` 0.3（PH-12 → `0.12.0`；PH-13…PH-21 → `0.12.0`；
-  PH-22 → `0.22.0`，重编号点）。
-- **重编号**：产品 `0.12.0` → `0.22.0`，与 0.1.0 判定转 GO 同一条提交完成，
-  并建 annotated tag `v0.22.0`。
-- **解耦原因（留档）**：转 GO 之前，真正待发的语言规范 0.1.0 因 C-8 `Opaque`
-  无构造入口仍是 NO-GO；那时跳号会让外部把 phase 数误读为发布进度。
-- **触发条件已发生**：`docs/reviews/0.1.0-verdict.md` 的 C-8 经
-  `tests/opaque` 测试通道验收后转 GO，触发本次重编号；旧映射表留档不改写。
-
-E-28 判绿：`AGENTS.md` 0.3 的 `deviation: PH-22-version` 含
-日期/条款/现状/理由/收敛/签字六项；`CHANGELOG.md` 有 `0.22.0` 段；
-`src/rill/__init__.py#__version__` 为 `0.22.0`，`g8-version` 报
-“版本落点一致：0.22.0”。
+- **结案口径**：PH-22 前未发布、无历史 tag、无 release、无包发布；按 6.7
+  「未发布、且没有 tag → 重新编号」在 PH-22 一次性补到 `0.22.0`。
+- **换算**：自 PH-22 起 `d=0`；PH-23 起按 V-1 得 `0.23.0`。`d=10` 只作为
+  PH-13…PH-21 的历史注脚，不用于 PH-22 及以后。
+- **tag**：annotated `v0.22.0` 指向 `47e2a68`，已推送；不重建。
+- **已知记录缺口**：tag message 未含收口提交 sha 前 7 位（`47e2a68`）；
+  按用户口径保留现 tag，以本记录与 `git rev-parse v0.22.0^{commit}` 为准。
+- **E-28 判绿**：`AGENTS.md` 0.3 的 `decision: PH-22-renumber` 含日期/条款/现状/
+  理由/结案/换算/签字；`CHANGELOG.md` 有 `0.22.0` 段；`src/rill/__init__.py#__version__`
+  为 `0.22.0`，`g8-version` 报“版本落点一致：0.22.0”。
 
 ## 6. 对 0.1.0 完工判定的影响
 

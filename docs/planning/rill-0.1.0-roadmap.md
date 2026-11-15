@@ -55,7 +55,7 @@ RILL 的早期目标有两个宿主：
 
 | 项 | 状态 |
 | --- | --- |
-| Python 参考实现 | `src/rill/`，产品 0.12.0，PH-1…PH-12 已收口；**永久保留为参考实现与对拍基准**，不随 CT 版淘汰。PH-5 的 `E-3`/`E-5` 于 2026-11-15 裁定移出 0.1.0（见 §0.3），故不是 12 卡全绿 |
+| Python 参考实现 | `src/rill/`，PH-12 基线 0.12.0；PH-22 收口后产品 0.22.0；PH-1…PH-12 已收口；**永久保留为参考实现与对拍基准**，不随 CT 版淘汰。PH-5 的 `E-3`/`E-5` 于 2026-11-15 裁定移出 0.1.0（见 §0.3），故不是 12 卡全绿 |
 | CT 正式实现 | P1 已收口（PH-13：token golden 12/12、82 个源 token 对拍 0 差异）；P2 起未开始 |
 | 实现语言账 | R-005 已从 pending 翻面为 decided：CT 为正式实现，Python 为长期参考实现 |
 | 重写路线图 | `docs/planning/rill-0.1.0-ct-rewrite-roadmap.md`（PH-13…PH-21，P1…P9） |
@@ -75,7 +75,7 @@ RILL 的早期目标有两个宿主：
 - 本记录只补状态与去向，不改 phase 1–12 的编号、依赖与并行结论。
 
 ## 0.4 PH-22 追加（2026-11-15）
-- 触发/编号：用户裁定去掉 `@ "name"`，签名 = 动词 + 状语 + 介词形状键（[D-022](../decisions/D-022.md)）；PH-22 接 PH-21，`version-minor=22`。当前产品 0.12.0，`d=10`，收敛方式待用户三选一（[PH-22 卡](../phases/PH-22/card.md) §9），本路线图不代替裁定。
+- 触发/编号/结案：用户裁定去掉 `@ "name"`，签名 = 动词 + 状语 + 介词形状键（[D-022](../decisions/D-022.md)）；PH-22 接 PH-21，`version-minor=22`；PH-22 前未发布、无历史 tag，2026-11-15 按路径 A 重编号到 0.22.0；自 PH-22 起 `d=0`，PH-23 起按 V-1 得 0.23.0；`d=10` 仅作 PH-13…PH-21 历史注脚（[PH-22 卡](../phases/PH-22/card.md) §9）。
 - 范围/依赖：规范正文、Python/CT 实现、语料与编辑器；不改宿主能力，不裁定 P-025/P-026。Python 基线 PH-12；CT 以 PH-21 收口为准；不改变 phase 1–12 的编号与并行结论。
 
 ## 1. 完成定义
@@ -107,7 +107,7 @@ RILL 的早期目标有两个宿主：
 | phase 10 | Host | Shell 宿主能力层：进程/文件路径/env/stdio/退出码 | phase 6、phase 1 host contract | 与 phase 7/8/9、phase 11 | 五类能力各有 golden；同一 AST 在 shell profile 可执行 |
 | phase 11 | Host | 智能体宿主能力层：工具/角色/limits 映射到同一 HostCapabilities | phase 10、phase 4 | 与 phase 7/8/9 | agent profile 与 shell profile 共用 AST；能力差异只在结果 |
 | phase 12 | 集成 | 双宿主集成：CLI + 全样例 + golden + 双 profile 一致性 | phase 4、phase 5、phase 9、phase 11 | 无 | 非 pending 样例全通过；pending 列 xfail；双 profile AST 相等；round-trip 通过 |
-| PH-22（追加） | 语言变更 | 函数签名去名：签名 = 动词 + 状语 + 介词构成的形状键，见 D-022 | PH-12；CT 以 PH-21 收口状态为准 | 无 | PH-22 卡 E-1…E-28 全绿；Python/CT 对拍 0 未解释差异；旧 `@ "name"` 清零 |
+| PH-22（追加） | 语言变更 | 函数签名去名：签名 = 动词 + 状语 + 介词构成的形状键，见 D-022 | PH-12；CT 以 PH-21 收口状态为准 | 无 | 已收口：E-1…E-28 全绿；产品 0.22.0、tag `v0.22.0`；Python/CT 对拍 0 未解释差异；旧 `@ "name"` 清零 |
 
 ## 3. 两条横切主线
 

@@ -1,7 +1,8 @@
-# phase 卡片与收口账体系（PH-1…PH-21）
+# phase 卡片与收口账体系（PH-1…PH-22）
 
-本目录把 `docs/planning/rill-0.1.0-roadmap.md` 的 12 个阶段与
-`docs/planning/rill-0.1.0-ct-rewrite-roadmap.md` 的 9 个 CT 重写阶段落成可冻结、可门禁的 phase 卡片。
+本目录把 `docs/planning/rill-0.1.0-roadmap.md` 的 12 个阶段、
+`docs/planning/rill-0.1.0-ct-rewrite-roadmap.md` 的 9 个 CT 重写阶段与 PH-22 追加卡
+落成可冻结、可门禁的 phase 卡片。
 体系依据：主规范 `ai-coding-workflow.md` 1.9.0 §6.2（phase 交付流程）、§6.3（三档流程）、
 §6.4（门禁）、§6.6（任务切分）、§6.7（版本号）。本目录只记账，不改
 `docs/RILL-0.1.0.md` 正文，也不改 roadmap / phase-plan 的阶段编号与并行结论。
@@ -13,7 +14,7 @@
 | 卡片 | `docs/phases/PH-<n>/card.md`，`n` 与 roadmap 的 phase `n` 一一对应 |
 | 收口对照表 | `docs/reviews/closeout-<n>.md`（阶段 2、3 的模板已建，其余收口时新建） |
 | 门禁红证 | `docs/reviews/gate-evidence.md`（新增检查的负例原始输出） |
-| 编号口径 | `PH-1`=基座、`PH-2`=词法、…、`PH-12`=双宿主集成；`PH-13`…`PH-21` 是 CT 重写 P1…P9，见 `docs/planning/rill-0.1.0-ct-rewrite-roadmap.md` |
+| 编号口径 | `PH-1`=基座、`PH-2`=词法、…、`PH-12`=双宿主集成；`PH-13`…`PH-21` 是 CT 重写 P1…P9；`PH-22`=函数签名去名（D-022 追加卡），见对应 roadmap |
 | 对拍产物 | `tools/diff/`（脚本，PH-13 首次建立）与 `docs/reviews/diff/PH-<n>.md`（每阶段收口必附） |
 
 `PH-1` 与 `PH-2` 的实物产出早于本体系，因此写「对照卡」：格式与正常卡一致，但明确标注
@@ -44,9 +45,19 @@
 `version-minor` 写 `n`，`g1-phase-card` 校验它等于 `PH-<n>`（该子检查输出前缀 `g1-version`）。
 `PATCH` 由该 phase 内的 fix 数决定，**不写进卡片**。
 
+`PH-1…PH-11`、`PH-13…PH-21` 卡片 §0 的「收口目标产品版本」/「目标产品版本」一律读作
+**计划版本，未发布**，不是实际落点；只有 PH-12 与 PH-22 是实际发布版本：
+
+| phase 范围 | 版本 | 状态 |
+| --- | --- | --- |
+| PH-1…PH-11 | 0.1.0…0.11.0（实际初始 0.1.1） | 计划版本，未发布 |
+| PH-12 | 0.12.0 | 实际发布 |
+| PH-13…PH-21 | 0.13.0…0.21.0（实际保持 0.12.0） | 计划版本，未发布 |
+| PH-22 | 0.22.0 | 实际发布（重编号点） |
+
 现状：`AGENTS.md` 的「版本落点」已声明为 `src/rill/__init__.py#__version__`，
 当前产品版本 `0.22.0`（PH-22 重编号点，2026-11-15；此前为 PH-12 收口的 `0.12.0`）。`g8-version` 在落点声明后按声明校验；
-仓库仍为 0 个 tag（按用户指令本轮不打 tag）。
+仓库现有 1 个 tag：`v0.22.0`（PH-22 重编号点，2026-11-15，已推送）；PH-1…PH-21 不补打历史 tag。
 
 ## 4. tag 口径
 
@@ -54,8 +65,10 @@
   message 含 `PH-<n>` 与收口提交 sha 前 7 位；只在四项校验（名/annotated/指向/可追溯）全过后推。
 - **只推 tag，不推分支，不对外发布**。分支推送与远端发布须用户显式指令（§6.5）。
 - fix 不打 tag；fix 只进 CHANGELOG，由下一次 phase tag 覆盖。
-- 现状：仓库 tag 数量为 **0**。`PH-1`、`PH-2` 的实物早于本体系，**不自动补打历史 tag**；
+- 现状：仓库 tag 数量为 **1**（`v0.22.0`）。`PH-1`、`PH-2` 的实物早于本体系，**不自动补打历史 tag**；
   是否回补由用户单独裁定，卡片只登记「未打」，不代替用户决定。
+- 已知记录缺口：`v0.22.0` 的 message 未含收口提交 `47e2a68` 前 7 位；不重建 tag，
+  按 6.7 V-7 记为记录缺口。
 - `g8-version` 校验：tag 名、annotated 属性、message 里的 `PH-<n>`、`MINOR == n`、
   `PATCH == 0`、指向提交是 `HEAD` 祖先；以及已声明版本落点的一致性。
 
