@@ -13,18 +13,21 @@
 仓库内已生成可离线安装的包：
 
 ```text
-editors/vscode/dist/rill-dsl-0.1.0.vsix
+editors/vscode/dist/rill-dsl-0.1.1.vsix
 ```
 
 VS Code 命令行安装：
 
 ```console
-$ code --install-extension editors/vscode/dist/rill-dsl-0.1.0.vsix
+$ code --install-extension editors/vscode/dist/rill-dsl-0.1.1.vsix
 $ # 安装后 Reload Window
 ```
 
 图形界面安装：扩展视图右上角 `...` → **Install from VSIX...** → 选择上面的文件。
 VS Code 兼容编辑器（如 Trae CN）同样走“从 VSIX 安装”。
+
+> `.ri` 文件关联写在扩展清单里，**只重载窗口不会让旧 0.1.0 生效**；
+> 需要重新安装 0.1.1 的 VSIX，再 Reload Window。
 
 安装不需要 node/npm；插件本身没有 npm 运行期依赖。
 
@@ -54,14 +57,14 @@ VS Code 兼容编辑器（如 Trae CN）同样走“从 VSIX 安装”。
 ```console
 $ cd editors/vscode
 $ python3 tools/package_vsix.py
-已生成 dist/rill-dsl-0.1.0.vsix
-VSIX 校验通过：dist/rill-dsl-0.1.0.vsix（11 个条目，解压后 35783 字节）
+已生成 dist/rill-dsl-0.1.1.vsix
+VSIX 校验通过：dist/rill-dsl-0.1.1.vsix（11 个条目，解压后 35858 字节）
 ```
 
 只校验已有包：
 
 ```console
-$ python3 tools/package_vsix.py --check dist/rill-dsl-0.1.0.vsix
+$ python3 tools/package_vsix.py --check dist/rill-dsl-0.1.1.vsix
 ```
 
 ## 4. 自测
@@ -69,8 +72,8 @@ $ python3 tools/package_vsix.py --check dist/rill-dsl-0.1.0.vsix
 ```console
 $ cd editors/vscode
 $ bash test/run-tests.sh
-oracle: 128 个文件对拍通过，10 个 lex 错误文件跳过
-checks: 550, failed: 0
+oracle: 129 个文件对拍通过，10 个 lex 错误文件跳过
+checks: 552, failed: 0
 PASS
 ```
 

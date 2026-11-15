@@ -106,9 +106,9 @@ for (const relative of Object.keys(oracle.files)) {
 }
 
 // ---- 2. 跨文件解析用例 ----------------------------------------------
-const demo = uriOf('editors/vscode/test/fixtures/demo.ri');
+const demo = uriOf('examples/vscode/demo.ri');
 const demoEntry = workspace.get(demo);
-ok(Boolean(demoEntry), 'fixture editors/vscode/test/fixtures/demo.ri 已被索引');
+ok(Boolean(demoEntry), '示例 examples/vscode/demo.ri 已被索引');
 if (demoEntry) {
   const call = demoEntry.calls.find((entry) => entry.name === 'greet-user');
   ok(Boolean(call), 'demo.ri 中存在 @ "greet-user" 调用点');
@@ -126,8 +126,8 @@ if (demoEntry) {
   ok(sites.length === 1, '同文件调用点只有一个');
 }
 
-const crossMain = uriOf('editors/vscode/test/fixtures/cross-file/main.ri');
-const crossShared = uriOf('editors/vscode/test/fixtures/cross-file/shared.ri');
+const crossMain = uriOf('examples/vscode/cross-file/main.ri');
+const crossShared = uriOf('examples/vscode/cross-file/shared.ri');
 const crossTargets = resolveDefinitions(workspace, 'format-report', crossMain);
 ok(crossTargets.length === 1, '跨文件 format-report 定义只有一个候选');
 ok(

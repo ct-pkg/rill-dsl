@@ -19,7 +19,7 @@
 | 后续扩展 | 若将来需要诊断/补全，可在同一 `lib/scanner.js` 上再加 Provider，或整体迁移到 LSP，不影响语法文件 |
 
 代价：每次跳转会在扩展进程内做一次工作区索引（带 mtime 缓存），文件极多时首次会慢；
-LSP 的常驻索引会更省。当前仓库规模（对拍覆盖 128 个 `.ri`）下不构成问题。
+LSP 的常驻索引会更省。当前仓库规模（对拍覆盖 129 个 `.ri`/`.rill` 源文件）下不构成问题。
 
 ## 3. 语法支持的来源
 
@@ -78,7 +78,7 @@ LSP 的常驻索引会更省。当前仓库规模（对拍覆盖 128 个 `.ri`�
 
 `test/run-tests.js` 做三件事：
 
-1. 调 `test/oracle.py`，用仓库 `src/rill/lexer.py` 产出全部 `.ri` 的函数定义/调用点，
+1. 调 `test/oracle.py`，用仓库 `src/rill/lexer.py` 产出全部 `.ri`/`.rill` 源文件的函数定义/调用点，
    同时用 `parser.py` 的 AST 交叉核对名字集合；
 2. 与 `lib/scanner.js` 逐文件比对 `name/line/character/length`；
 3. 跑同文件、跨文件、注释/字符串/map/函数体嵌套/转义名/未闭合输入等边界用例，
@@ -87,8 +87,8 @@ LSP 的常驻索引会更省。当前仓库规模（对拍覆盖 128 个 `.ri`�
 实测（2026-11-15，仓库根目录）：
 
 ```text
-oracle: 128 个文件对拍通过，10 个 lex 错误文件跳过
-checks: 544, failed: 0
+oracle: 129 个文件对拍通过，10 个 lex 错误文件跳过
+checks: 552, failed: 0
 PASS
 ```
 
