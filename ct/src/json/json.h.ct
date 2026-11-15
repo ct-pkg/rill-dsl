@@ -1,0 +1,159 @@
+// json — 最小 JSON 写出（PH-20 T3）
+//
+// 解析在 common::json_parse（PH-19 上移），这里只补「值 → 字符串」的两种形态：
+// - json_compact：CLI 输出风格，`,`/`:` 无空格；
+// - json_text：Python ``json.dumps(ensure_ascii=False, sort_keys=True)`` 风格，
+//   ``, ``/``: `` 带空格、对象键排序；Agent 的 bytes 限额按这个长度算。
+//
+// 没有引入第三方 JSON 库；`ct` 侧 .m.ct 不能定义函数，故实现与声明同在本单元。
+
+#include "bridge.h"
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+typedef struct {
+    char *data;
+    int len;
+    int cap;
+} Jb;
+
+static void jb_put(Jb *b, const char *data, int n)
+{
+    if (b->len + n + 1 > b->cap) {
+        int cap = b->cap ? b->cap : 64;
+        while (cap < b->len + n + 1) cap *= 2;
+        b->data = (char *)xrealloc(b->data, (size_t)cap);
+        b->cap = cap;
+    }
+    if (n > 0) memcpy(b->data + b->len, data, (size_t)n);
+    b->len += n;
+    b->data[b->len] = 0;
+}
+
+static void jb_str(Jb *b, const char *s)
+{
+    jb_put(b, s, (int)strlen(s));
+}
+
+static void jb_quote(Jb *b, const char *s)
+{
+    const unsigned char *p = (const unsigned char *)s;
+    jb_put(b, "\"", 1);
+    while (*p) {
+        unsigned char c = *p;
+        if (c == '"') jb_put(b, "\\\"", 2);
+        else if (c == '\\') jb_put(b, "\\\\", 2);
+        else if (c == '\b') jb_put(b, "\\b", 2);
+        else if (c == '\f') jb_put(b, "\\f", 2);
+        else if (c == '\n') jb_put(b, "\\n", 2);
+        else if (c == '\r') jb_put(b, "\\r", 2);
+        else if (c == '\t') jb_put(b, "\\t", 2);
+        else if (c < 0x20) {
+            char esc[8];
+            snprintf(esc, sizeof(esc), "\\u%04x", (unsigned)c);
+            jb_str(b, esc);
+        } else {
+            jb_put(b, (const char *)p, 1);
+        }
+        p++;
+    }
+    jb_put(b, "\"", 1);
+}
+
+static void jw(Jb *b, JVal *v, int pretty)
+{
+    int i;
+    if (v == 0) {
+        jb_str(b, "null");
+        return;
+    }
+    switch (v->kind) {
+    case J_NULL:
+        jb_str(b, "null");
+        break;
+    case J_BOOL:
+        jb_str(b, v->boolean ? "true" : "false");
+        break;
+    case J_INT: {
+        char num[32];
+        snprintf(num, sizeof(num), "%lld", v->num);
+        jb_str(b, num);
+        break;
+    }
+    case J_FLOAT: {
+        char num[64];
+        jfmt_double(num, sizeof(num), v->dbl);
+        jb_str(b, num);
+        break;
+    }
+    case J_STR:
+        jb_quote(b, v->str);
+        break;
+    case J_BYTES: {
+        char *raw = xbase64(v->str, (int)v->num);
+        jb_str(b, "{\"$bytes\":");
+        if (pretty) jb_str(b, " ");
+        jb_quote(b, raw);
+        jb_str(b, "}");
+        free(raw);
+        break;
+    }
+    case J_ARR:
+        jb_str(b, "[");
+        for (i = 0; i < v->len; i++) {
+            if (i > 0) jb_str(b, pretty ? ", " : ",");
+            jw(b, v->items[i], pretty);
+        }
+        jb_str(b, "]");
+        break;
+    case J_OBJ: {
+        int order[256];
+        int n = v->len < 256 ? v->len : 256;
+        for (i = 0; i < n; i++) order[i] = i;
+        if (pretty) {
+            for (i = 1; i < n; i++) {
+                int j = i;
+                int key = order[i];
+                while (j > 0 &&
+                       strcmp(v->keys[order[j - 1]], v->keys[key]) > 0) {
+                    order[j] = order[j - 1];
+                    j--;
+                }
+                order[j] = key;
+            }
+        }
+        jb_str(b, "{");
+        for (i = 0; i < n; i++) {
+            if (i > 0) jb_str(b, pretty ? ", " : ",");
+            jb_quote(b, v->keys[order[i]]);
+            jb_str(b, pretty ? ": " : ":");
+            jw(b, v->items[order[i]], pretty);
+        }
+        jb_str(b, "}");
+        break;
+    }
+    }
+}
+
+static char *jw_finish(Jb *b)
+{
+    return b->data != 0 ? b->data : xstrdup("");
+}
+
+pub char *json_compact(JVal *v)
+{
+    Jb b;
+    memset(&b, 0, sizeof(b));
+    jw(&b, v, 0);
+    return jw_finish(&b);
+}
+
+pub char *json_text(JVal *v)
+{
+    Jb b;
+    memset(&b, 0, sizeof(b));
+    jw(&b, v, 1);
+    return jw_finish(&b);
+}

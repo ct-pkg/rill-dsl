@@ -1,0 +1,373 @@
+// agent_verbs — Agent 能力分派（PH-20）
+//
+// 拆分原因同 agent_profile：能力分派与 profile 校验互不依赖。
+
+#include "bridge.h"
+
+import host::host;
+
+import host::exec;
+
+import json::json;
+
+import host::agent;
+
+import host::agent_caps;
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#define AG_TIMEOUT_MS 5000
+
+/* ------------------------------------------------------------------ */
+/* 能力                                                                */
+/* ------------------------------------------------------------------ */
+
+typedef struct {
+    int ok;
+    char *path;
+    char *type;
+    char *root;
+    const char *code;
+    char *detail;
+    JVal *meta;
+} AgFsPath;
+
+static AgFsPath ag_fs_path(AgentHost *h, const char *raw, const char *op)
+{
+    AgFsPath out;
+    const char *value = raw;
+    const char *type = 0;
+    char *joined;
+    char *target;
+    JVal *fs;
+
+    memset(&out, 0, sizeof(out));
+    if (raw == 0 || raw[0] == 0) {
+        out.code = "E-HOST-TOOL-ARGS";
+        out.detail = (char *)xmalloc(128);
+        snprintf(out.detail, 128, "%s 需要一个非空路径字符串", op);
+        return out;
+    }
+    if (strchr(raw, ':') != 0) {
+        const char *colon = strchr(raw, ':');
+        int prefix_len = (int)(colon - raw);
+        char *prefix = xstrndup(raw, prefix_len);
+        JVal *constraint = jget(h->types, prefix);
+        if (constraint != 0) {
+            type = prefix;
+            if (strcmp(constraint->str, "path") != 0) {
+                JVal *fsm = jobj();
+                out.code = "E-HOST-FS-TYPE";
+                out.detail = (char *)xmalloc(strlen(raw) + 128);
+                snprintf(out.detail, strlen(raw) + 128,
+                         "%s 只接受 path 类型，'%s' 是 %s", op, prefix,
+                         constraint->str);
+                jput(fsm, "code", jstr("E-HOST-FS-TYPE"));
+                jput(fsm, "path", jstr(raw));
+                out.meta = jobj();
+                jput(out.meta, "fs", fsm);
+                return out;
+            }
+            value = colon + 1;
+        }
+    }
+    if (value[0] == 0) {
+        out.code = "E-HOST-TOOL-ARGS";
+        out.detail = (char *)xmalloc(128);
+        snprintf(out.detail, 128, "%s 的路径为空", op);
+        return out;
+    }
+    joined = ag_join_path(h->workspace, value);
+    target = ag_normpath(joined);
+    if (!ag_within(target, h->workspace)) {
+        out.code = "E-HOST-FS-OUTSIDE";
+        out.detail = (char *)xmalloc(strlen(raw) + strlen(h->workspace) + 128);
+        snprintf(out.detail, strlen(raw) + strlen(h->workspace) + 128,
+                 "%s 的路径 '%s' 越出 workspace '%s'", op, raw, h->workspace);
+        fs = jobj();
+        jput(fs, "code", jstr("E-HOST-FS-OUTSIDE"));
+        jput(fs, "path", jstr(raw));
+        jput(fs, "root", jstr(h->workspace));
+        out.meta = jobj();
+        jput(out.meta, "fs", fs);
+        return out;
+    }
+    out.ok = 1;
+    out.path = ag_relpath(target, h->workspace);
+    out.type = type != 0 ? xstrdup(type) : 0;
+    out.root = xstrdup(h->workspace);
+    return out;
+}
+
+static HRes ag_fs_read(AgentHost *h, JVal *object, int *raised)
+{
+    AgFsPath fp;
+    JVal *args;
+    JVal *meta;
+    JVal *fs;
+    JVal *tool;
+    HRes outcome;
+    const char *raw = ag_is_str(object) ? object->str : "";
+
+    fp = ag_fs_path(h, raw, "read");
+    if (!fp.ok) {
+        *raised = 1;
+        return ag_tool_failure_text(fp.code, fp.detail, fp.meta);
+    }
+    args = jobj();
+    jput(args, "path", jstr(fp.path));
+    outcome = ag_tool_call(h, "read", args);
+    meta = jobj();
+    fs = jobj();
+    jput(fs, "tool", jstr("read"));
+    jput(fs, "path", jstr(fp.path));
+    jput(fs, "root", jstr(fp.root));
+    jput(fs, "type", fp.type != 0 ? jstr(fp.type) : jnull());
+    jput(meta, "fs", fs);
+    tool = jobj();
+    jput(tool, "name", jstr("read"));
+    jput(tool, "args", args);
+    jput(meta, "tool", tool);
+    return ag_attach(outcome, meta);
+}
+
+static HRes ag_fs_write(AgentHost *h, JVal *object, JVal *content, int *raised)
+{
+    AgFsPath fp;
+    JVal *args;
+    JVal *meta;
+    JVal *fs;
+    JVal *tool;
+    HRes outcome;
+    const char *raw = ag_is_str(object) ? object->str : "";
+
+    fp = ag_fs_path(h, raw, "write");
+    if (!fp.ok) {
+        *raised = 1;
+        return ag_tool_failure_text(fp.code, fp.detail, fp.meta);
+    }
+    if (content == 0 ||
+        (content->kind != J_STR && content->kind != J_BYTES)) {
+        *raised = 1;
+        return ag_tool_failure_text("E-HOST-TOOL-ARGS",
+                                    "write 的内容只接受文本或 Bytes", 0);
+    }
+    args = jobj();
+    jput(args, "path", jstr(fp.path));
+    jput(args, "content", content);
+    outcome = ag_tool_call(h, "write", args);
+    if (outcome.ok && (outcome.value == 0 || outcome.value->kind == J_NULL)) {
+        outcome.value = jstr(fp.path);
+    }
+    meta = jobj();
+    fs = jobj();
+    jput(fs, "tool", jstr("write"));
+    jput(fs, "path", jstr(fp.path));
+    jput(fs, "root", jstr(fp.root));
+    jput(fs, "type", fp.type != 0 ? jstr(fp.type) : jnull());
+    jput(meta, "fs", fs);
+    tool = jobj();
+    jput(tool, "name", jstr("write"));
+    jput(tool, "args", args);
+    jput(meta, "tool", tool);
+    return ag_attach(outcome, meta);
+}
+
+static HRes ag_env(AgentHost *h, JVal *object, int *raised)
+{
+    HRes r;
+    JVal *value;
+    JVal *env;
+    JVal *meta;
+    const char *name;
+    if (!ag_nonempty(object)) {
+        *raised = 1;
+        return ag_tool_failure_text("E-HOST-TOOL-ARGS",
+                                    "env 需要一个非空变量名", 0);
+    }
+    name = object->str;
+    value = jget(h->context, name);
+    if (value == 0 || value->kind != J_STR) {
+        char detail[512];
+        env = jobj();
+        meta = jobj();
+        snprintf(detail, sizeof(detail), "环境变量 '%s' 未在 agent context 中注入",
+                 name);
+        jput(env, "code", jstr("E-HOST-ENV-MISSING"));
+        jput(env, "name", jstr(name));
+        jput(env, "source", jstr("context"));
+        jput(meta, "env", env);
+        *raised = 1;
+        return ag_tool_failure_text("E-HOST-ENV-MISSING", detail, meta);
+    }
+    env = jobj();
+    meta = jobj();
+    jput(env, "name", jstr(name));
+    jput(env, "source", jstr("context"));
+    jput(meta, "env", env);
+    hres_success(&r, jstr(value->str));
+    r.meta = meta;
+    return r;
+}
+
+static HRes ag_process(AgentHost *h, JVal *object, JVal *input, int *raised)
+{
+    JVal *args;
+    JVal *meta;
+    JVal *process;
+    const char *tool;
+    HRes outcome;
+    if (!ag_nonempty(object)) {
+        *raised = 1;
+        return ag_tool_failure_text("E-HOST-TOOL-ARGS",
+                                    "run 需要一个命令字符串", 0);
+    }
+    if (input != 0 && input->kind != J_STR && input->kind != J_BYTES) {
+        *raised = 1;
+        return ag_tool_failure_text("E-HOST-TOOL-ARGS",
+                                    "run 的 stdin 只接受文本或 Bytes", 0);
+    }
+    /* 对齐 Python `_tool()`：注册表里优先 run，其次 exec，都没有时仍用 run。 */
+    if (jget(h->tools, "run") != 0) tool = "run";
+    else if (jget(h->tools, "exec") != 0) tool = "exec";
+    else tool = "run";
+    args = jobj();
+    jput(args, "command", jstr(object->str));
+    jput(args, "stdin", input != 0 ? input : jnull());
+    outcome = ag_tool_call(h, tool, args);
+    process = jobj();
+    jput(process, "tool", jstr(tool));
+    jput(process, "command", jstr(object->str));
+    meta = jobj();
+    jput(meta, "process", process);
+    return ag_attach(outcome, meta);
+}
+
+static HRes ag_stdio(AgentHost *h, JVal *object, JVal *subject, JVal *input,
+                     int *raised)
+{
+    JVal *value = object != 0 ? object : (subject != 0 ? subject : input);
+    char *payload;
+    const char *tool;
+    JVal *args;
+    JVal *meta;
+    JVal *stdio;
+    HRes outcome;
+    (void)raised;
+
+    if (value == 0 || value->kind == J_NULL) payload = xstrdup("");
+    else if (value->kind == J_STR) payload = xstrdup(value->str);
+    else if (value->kind == J_BYTES) payload = jbytes_text(value);
+    else payload = json_text(value);
+
+    /* 对齐 Python `_tool()`：注册表里优先 send，其次 emit，都没有时仍用 send。 */
+    if (jget(h->tools, "send") != 0) tool = "send";
+    else if (jget(h->tools, "emit") != 0) tool = "emit";
+    else tool = "send";
+    args = jobj();
+    jput(args, "text", jstr(payload));
+    outcome = ag_tool_call(h, tool, args);
+    if (outcome.ok &&
+        (outcome.value == 0 || outcome.value->kind == J_NULL)) {
+        outcome.value = jstr(payload);
+    }
+    stdio = jobj();
+    jput(stdio, "tool", jstr(tool));
+    jput(stdio, "channel", jstr("tool"));
+    jput(stdio, "text", jstr(payload));
+    meta = jobj();
+    jput(meta, "stdio", stdio);
+    return ag_attach(outcome, meta);
+}
+
+static HRes ag_tool_verb(AgentHost *h, const char *verb, JVal *entry)
+{
+    JVal *object = ag_need(entry, "object");
+    JVal *input = ag_need(entry, "input");
+    JVal *post = ag_need(entry, "post");
+    JVal *args = jobj();
+    JVal *meta;
+    JVal *tool;
+    HRes outcome;
+
+    jput(args, "object", object != 0 ? object : jnull());
+    jput(args, "input", input != 0 ? input : jnull());
+    jput(args, "post", post != 0 ? post : jarr());
+    outcome = ag_tool_call(h, verb, args);
+    tool = jobj();
+    jput(tool, "name", jstr(verb));
+    jput(tool, "args", args);
+    meta = jobj();
+    jput(meta, "tool", tool);
+    return ag_attach(outcome, meta);
+}
+
+static int ag_verb_known(const char *verb)
+{
+    return strcmp(verb, "read") == 0 || strcmp(verb, "write") == 0 ||
+           strcmp(verb, "run") == 0 || strcmp(verb, "env") == 0 ||
+           strcmp(verb, "send") == 0 || strcmp(verb, "search") == 0 ||
+           strcmp(verb, "parse") == 0 || strcmp(verb, "replace") == 0 ||
+           strcmp(verb, "contains") == 0 || strcmp(verb, "review") == 0;
+}
+
+static HRes ag_inner(AgentHost *h, const char *verb, JVal *entry, int *raised)
+{
+    JVal *object = ag_need(entry, "object");
+    JVal *subject = ag_need(entry, "subject");
+    JVal *input = ag_need(entry, "input");
+    if (strcmp(verb, "read") == 0) return ag_fs_read(h, object, raised);
+    if (strcmp(verb, "write") == 0) {
+        JVal *content = input;
+        if (content == 0 && subject != 0) {
+            if (subject->kind != J_STR || jget(h->roles, subject->str) == 0) {
+                content = subject;
+            }
+        }
+        return ag_fs_write(h, object, content, raised);
+    }
+    if (strcmp(verb, "run") == 0) return ag_process(h, object, input, raised);
+    if (strcmp(verb, "env") == 0) return ag_env(h, object, raised);
+    if (strcmp(verb, "send") == 0) {
+        return ag_stdio(h, object, subject, input, raised);
+    }
+    return ag_tool_verb(h, verb, entry);
+}
+
+static HRes ag_dispatch(void *ctx, const char *verb, JVal *entry)
+{
+    AgentHost *h = (AgentHost *)ctx;
+    HRes out;
+    int raised = 0;
+    if (!ag_verb_known(verb)) {
+        fail("run", "E-RUN-VERB-UNREGISTERED", 0, 0,
+             "动词 '%s' 没有 agent 宿主映射；已映射：contains, env, parse, read, "
+             "replace, review, run, search, send, write",
+             verb);
+    }
+    if (!ag_limits_before(h, &out)) return out;
+    out = ag_inner(h, verb, entry, &raised);
+    if (!raised) {
+        HRes limit;
+        if (!ag_limits_after(h, out.value, &limit)) return limit;
+    }
+    return out;
+}
+
+static HRes ag_call(void *ctx, const char *verb, JVal *entry)
+{
+    return ag_dispatch(ctx, verb, entry);
+}
+
+pub HostOps *ag_ops(AgentHost *h)
+{
+    HostOps *ops = (HostOps *)xmalloc(sizeof(HostOps));
+    memset(ops, 0, sizeof(*ops));
+    ops->ctx = h;
+    ops->call = ag_call;
+    h->ops = ops;
+    return ops;
+}
+

@@ -6,8 +6,10 @@
 role/limits/type 也由 fixture 覆盖。
 """
 
+import argparse
 import json
 import os
+import shlex
 import sys
 import tempfile
 
@@ -21,6 +23,8 @@ from support import (
     write_manifest,
     write_tools,
 )
+
+SUT = []
 
 CAPABILITIES = ("process", "fs", "env", "stdio", "exit", "role", "limits")
 
@@ -46,7 +50,7 @@ def fixture_dirs():
 def check_ast(fixture, script):
     seen = {}
     for profile in ("shell", "agent"):
-        result = run_cli(["parse", "--dump-ast", script, "--profile", profile])
+        result = run_cli(["parse", "--dump-ast", script, "--profile", profile], sut=SUT)
         assert result.returncode == 0, (fixture, profile, result.stdout, result.stderr)
         seen[profile] = canonical(payload_of(result)["ast"])
     assert seen["shell"] == seen["agent"], "%s: AST 跨 profile 不一致" % fixture
@@ -99,6 +103,7 @@ def run_fixture(path):
                 manifest,
             ],
             cwd=tmp,
+            sut=SUT,
         )
         payload = payload_of(result)
         expect = spec["expect"]
@@ -183,7 +188,13 @@ def case_canonical_manifest_loads():
     assert policy.limits["steps"] == 32, policy.limits
 
 
-def main():
+def main(argv=None):
+    parser = argparse.ArgumentParser(description="PH-11 agent fixture 回归")
+    parser.add_argument(
+        "--sut", default="", help="覆盖被测命令，如 './ct/bin/rill_ct'；缺省 python3 -m rill"
+    )
+    opts = parser.parse_args(argv)
+    SUT[:] = shlex.split(opts.sut) if opts.sut else []
     case_fixture_coverage()
     case_shared_source_is_identical()
     case_canonical_manifest_loads()

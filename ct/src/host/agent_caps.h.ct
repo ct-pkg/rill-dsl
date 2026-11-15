@@ -1,0 +1,323 @@
+// agent_caps — Agent 能力派发（PH-20）
+//
+// 从 agent.h.ct 拆出：limits 与工具派发各自成一组，便于单点验证。
+// 全项目的「已解析调用点」预算见 ct/build.sh 的两段构建说明。
+
+#include "bridge.h"
+
+import host::host;
+
+import host::exec;
+
+import json::json;
+
+import host::agent;
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
+
+#define AG_TIMEOUT_MS 5000
+
+/* ------------------------------------------------------------------ */
+/* limits                                                              */
+/* ------------------------------------------------------------------ */
+
+static HRes ag_limit_failure(const char *code, const char *detail, JVal *meta)
+{
+    HRes r;
+    hres_failure(&r, host_error_text(code, detail), meta);
+    return r;
+}
+
+pub int ag_limits_before(AgentHost *h, HRes *out)
+{
+    double elapsed;
+    JVal *meta;
+    JVal *limits;
+    char detail[160];
+    double now = ag_now_ms();
+    if (!h->started) {
+        h->started = 1;
+        h->started_ms = now;
+    }
+    elapsed = now - h->started_ms;
+    if (elapsed > (double)h->limit_time_ms) {
+        snprintf(detail, sizeof(detail), "agent 执行超时：%.3fms > %dms",
+                 elapsed, h->limit_time_ms);
+        limits = jobj();
+        jput(limits, "kind", jstr("time_ms"));
+        jput(limits, "limit", jint(h->limit_time_ms));
+        jput(limits, "observed", jnum(elapsed));
+        meta = jobj();
+        jput(meta, "limits", limits);
+        *out = ag_limit_failure("E-HOST-LIMIT-TIME", detail, meta);
+        return 0;
+    }
+    h->used++;
+    if (h->used > h->limit_steps) {
+        snprintf(detail, sizeof(detail), "agent 工具调用次数超限：%d > %d",
+                 h->used, h->limit_steps);
+        limits = jobj();
+        jput(limits, "kind", jstr("steps"));
+        jput(limits, "limit", jint(h->limit_steps));
+        jput(limits, "used", jint(h->used));
+        meta = jobj();
+        jput(meta, "limits", limits);
+        *out = ag_limit_failure("E-HOST-LIMIT-STEPS", detail, meta);
+        return 0;
+    }
+    return 1;
+}
+
+pub int ag_limits_after(AgentHost *h, JVal *value, HRes *out)
+{
+    char *text = json_text(value);
+    int observed = (int)strlen(text);
+    free(text);
+    if (observed > h->limit_bytes) {
+        char detail[160];
+        JVal *meta = jobj();
+        JVal *limits = jobj();
+        snprintf(detail, sizeof(detail),
+                 "agent 工具结果超限：%d bytes > %d bytes", observed,
+                 h->limit_bytes);
+        jput(limits, "kind", jstr("bytes"));
+        jput(limits, "limit", jint(h->limit_bytes));
+        jput(limits, "observed", jint(observed));
+        jput(meta, "limits", limits);
+        *out = ag_limit_failure("E-HOST-LIMIT-BYTES", detail, meta);
+        return 0;
+    }
+    return 1;
+}
+
+/* ------------------------------------------------------------------ */
+/* tools                                                               */
+/* ------------------------------------------------------------------ */
+
+static JVal *ag_queue_pop(JVal *list)
+{
+    JVal *first;
+    if (list == 0 || list->kind != J_ARR || list->len == 0) return 0;
+    first = list->items[0];
+    if (list->len > 1) {
+        memmove(&list->items[0], &list->items[1],
+                sizeof(JVal *) * (size_t)(list->len - 1));
+    }
+    list->len--;
+    return first;
+}
+
+static JVal *ag_decode(JVal *v)
+{
+    int i;
+    if (v == 0) return v;
+    if (v->kind == J_ARR) {
+        for (i = 0; i < v->len; i++) v->items[i] = ag_decode(v->items[i]);
+        return v;
+    }
+    if (v->kind != J_OBJ) return v;
+    if (v->len == 1 && strcmp(v->keys[0], "$bytes") == 0 &&
+        ag_is_str(v->items[0])) {
+        int n = 0;
+        char *raw = xb64decode(v->items[0]->str, &n);
+        return jbytes(raw, n);
+    }
+    for (i = 0; i < v->len; i++) v->items[i] = ag_decode(v->items[i]);
+    return v;
+}
+
+static char *ag_trim(char *s)
+{
+    char *end;
+    while (*s == ' ' || *s == '\t' || *s == '\n' || *s == '\r') s++;
+    end = s + strlen(s);
+    while (end > s && (end[-1] == ' ' || end[-1] == '\t' || end[-1] == '\n' ||
+                       end[-1] == '\r')) {
+        end--;
+    }
+    *end = 0;
+    return s;
+}
+
+static HRes ag_tool_command(AgentHost *h, const char *name, JVal *spec,
+                            JVal *args)
+{
+    JVal *command = jget(spec, "command");
+    JVal *timeout_v = jget(spec, "timeout_ms");
+    int timeout = AG_TIMEOUT_MS;
+    int argc = 0;
+    char **argv;
+    JVal *request;
+    char *payload;
+    ExecResult er;
+    JVal *meta;
+    JVal *transport;
+    HRes r;
+
+    if (ag_is_str(command)) {
+        argv = host_split(command->str, &argc);
+    } else {
+        int i;
+        argv = (char **)xmalloc(sizeof(char *) * (size_t)(command->len + 1));
+        for (i = 0; i < command->len; i++) {
+            argv[i] = xstrdup(command->items[i]->str);
+            argc++;
+        }
+        argv[argc] = 0;
+    }
+    if (timeout_v != 0 && timeout_v->kind == J_INT) timeout = (int)timeout_v->num;
+
+    request = jobj();
+    jput(request, "tool", jstr(name));
+    jput(request, "args", args);
+    payload = json_compact(request);
+    host_exec_argv(argv, argc, h->workspace, payload,
+                   (int)strlen(payload), timeout, &er);
+
+    transport = jobj();
+    jput(transport, "kind", jstr("process"));
+    jput(transport, "tool", jstr(name));
+    if (er.pid > 0) jput(transport, "pid", jint(er.pid));
+    {
+        JVal *argj = jarr();
+        int i;
+        for (i = 0; i < argc; i++) jpush(argj, jstr(argv[i]));
+        jput(transport, "argv", argj);
+    }
+    jput(transport, "code", er.have_code ? jint(er.code) : jnull());
+    meta = jobj();
+    jput(meta, "transport", transport);
+
+    if (er.timed_out) {
+        char detail[160];
+        snprintf(detail, sizeof(detail), "工具 '%s' 超时（%dms）", name, timeout);
+        return ag_limit_failure("E-HOST-TOOL-TIMEOUT", detail, meta);
+    }
+    if (er.spawn_error != 0) {
+        char detail[512];
+        snprintf(detail, sizeof(detail), "无法启动工具 '%s'（%s）", name,
+                 er.spawn_error);
+        return ag_limit_failure("E-HOST-TOOL-SPAWN", detail, meta);
+    }
+    {
+        char *text = ag_trim(er.stdout_data != 0 ? er.stdout_data : "");
+        JVal *doc;
+        JVal *okv;
+        int pos = 0;
+        if (text[0] == 0) {
+            char detail[512];
+            char *err = ag_trim(er.stderr_data != 0 ? er.stderr_data : "");
+            snprintf(detail, sizeof(detail),
+                     "工具 '%s' 没有输出 JSON（stderr='%s'）", name, err);
+            return ag_limit_failure("E-HOST-TOOL-TRANSPORT", detail, meta);
+        }
+        doc = json_parse(text, &pos);
+        if (doc == 0 || doc->kind != J_OBJ) {
+            char detail[512];
+            snprintf(detail, sizeof(detail), "工具 '%s' 的输出不是 JSON：'%s'",
+                     name, text);
+            return ag_limit_failure("E-HOST-TOOL-TRANSPORT", detail, meta);
+        }
+        okv = jget(doc, "ok");
+        if (okv == 0 || okv->kind != J_BOOL) {
+            char detail[512];
+            snprintf(detail, sizeof(detail), "工具 '%s' 的响应缺少布尔 ok", name);
+            return ag_limit_failure("E-HOST-TOOL-TRANSPORT", detail, meta);
+        }
+        if (okv->boolean) {
+            hres_success(&r, ag_decode(jget(doc, "value")));
+            r.meta = meta;
+            return r;
+        }
+        {
+            JVal *error = jget(doc, "error");
+            const char *text_error;
+            char fallback[256];
+            if (ag_nonempty(error)) text_error = error->str;
+            else {
+                snprintf(fallback, sizeof(fallback),
+                         "E-HOST-TOOL-FAILED: 工具 '%s' 返回 ok=false", name);
+                text_error = fallback;
+            }
+            hres_failure(&r, xstrdup(text_error), meta);
+            return r;
+        }
+    }
+}
+
+pub HRes ag_tool_failure_text(const char *code, const char *detail,
+                                 JVal *meta)
+{
+    HRes r;
+    hres_failure(&r, host_error_text(code, detail), meta);
+    return r;
+}
+
+pub HRes ag_tool_call(AgentHost *h, const char *name, JVal *args)
+{
+    JVal *spec = jget(h->tools, name);
+    HRes r;
+    if (spec == 0 || spec->kind != J_OBJ) {
+        char detail[512];
+        char *names = ag_key_names(h->tools);
+        JVal *tool = jobj();
+        JVal *meta = jobj();
+        snprintf(detail, sizeof(detail),
+                 "工具 '%s' 未注册；已注册：%s", name, names);
+        jput(tool, "name", jstr(name));
+        jput(tool, "args", args);
+        jput(tool, "code", jstr("E-HOST-TOOL-UNREGISTERED"));
+        jput(meta, "tool", tool);
+        hres_failure(&r, host_error_text("E-HOST-TOOL-UNREGISTERED", detail),
+                     meta);
+        return r;
+    }
+    if (jget(spec, "command") != 0) return ag_tool_command(h, name, spec, args);
+    {
+        JVal *script = ag_queue_pop(jget(spec, "queue"));
+        if (script == 0) {
+            JVal *def = jget(spec, "default");
+            if (def == 0 || def->kind == J_NULL) {
+                char detail[256];
+                snprintf(detail, sizeof(detail),
+                         "fake 动词 '%s' 无排队结果且无 default", name);
+                hres_failure(&r, xstrdup(detail), 0);
+                return r;
+            }
+            script = def;
+        }
+        if (script->kind != J_OBJ) {
+            hres_success(&r, script);
+            return r;
+        }
+        {
+            JVal *okv = jget(script, "ok");
+            int ok = (okv == 0) || (okv->kind == J_BOOL && okv->boolean);
+            JVal *meta = jget(script, "host_meta");
+            if (ok) {
+                JVal *value = jget(script, "value");
+                hres_success(&r, value != 0 ? value : jnull());
+            } else {
+                JVal *error = jget(script, "error");
+                const char *text = ag_is_str(error) ? error->str : 0;
+                hres_failure(&r, text, 0);
+            }
+            r.meta = (meta != 0 && meta->kind == J_OBJ) ? meta : 0;
+            return r;
+        }
+    }
+}
+
+/* 保留工具自己的 host_meta，再叠加能力槽位的可观察字段。 */
+pub HRes ag_attach(HRes outcome, JVal *meta)
+{
+    if (outcome.meta != 0 && outcome.meta->kind == J_OBJ) {
+        jput(meta, "tool_meta", outcome.meta);
+    }
+    outcome.meta = meta;
+    return outcome;
+}
+

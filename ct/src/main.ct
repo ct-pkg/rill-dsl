@@ -1,6 +1,6 @@
 // main — RILL 0.1.0 CT 多单元版（见 docs/phases/pending/ct-multiunit.md）
 
-import common::common;
+#include "bridge.h"
 
 import cli::cli;
 
@@ -11,14 +11,13 @@ import cli::cli;
 
 #define usage_fail(...) fail("cli", "E_USAGE", 0, 0, __VA_ARGS__)
 
-
 int main(int argc, char **argv)
 {
     StdoutEmitter out;
 
-    if (setjmp(g_fail_jmp) != 0) {
+    if (setjmp(*fail_jmp_slot()) != 0) {
         out.failed = 0;
-        out.emit(0, 0);
+        emitter_emit(&out, 0, 0);
         return 2;
     }
 

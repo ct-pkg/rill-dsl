@@ -4,7 +4,7 @@
 // vtable 点静默错值。能力派发统一走 C 函数指针表，第一参数显式传具体宿主，
 // 不出现连续 get 方法链（见 docs/reviews/diff/PH-19.md）。
 
-import common::common;
+#include "bridge.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -22,6 +22,9 @@ pub struct HRes {
    PH-51 的绕法就是这张表——函数指针字段，不用指针接收者方法。 */
 pub struct HostOps {
     void *ctx;
+    /* 统一入口：Shell 用 host_call，Agent 用自己的角色/limits 分派。
+       PH-51 绕法：C 函数指针字段 + 显式 ctx，不用指针接收者方法链。 */
+    HRes (*call)(void *ctx, const char *verb, JVal *entry);
     HRes (*fs_read)(void *ctx, const char *path);
     HRes (*fs_write)(void *ctx, const char *path, JVal *content);
     HRes (*process_run)(void *ctx, const char *command, JVal *stdin_value);

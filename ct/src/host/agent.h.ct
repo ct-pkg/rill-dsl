@@ -1,0 +1,278 @@
+// agent — Agent 宿主能力（PH-20）
+//
+// 把工具注册表映射到与 Shell 相同的 HostOps 入口：能力不直接碰 OS，
+// `run`/`send`/`read`/`write`/`env` 全部经工具；角色与 limits 在宿主侧。
+// 卡面原计划 agent.m.ct/json.m.ct，但 .m.ct 不能定义函数；实现与声明同在本单元，
+// 最小 JSON 在 json::json，进程执行在 host::exec（均已在 PH-19/PH-20 抽出）。
+
+#include "bridge.h"
+
+import host::host;
+
+import host::exec;
+
+import json::json;
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdarg.h>
+#include <time.h>
+
+#define AG_PROFILE_SCHEMA "rill.agent-profile/0"
+#define AG_TOOLS_SCHEMA "rill-fakes-tools/0"
+#define AG_TIMEOUT_MS 5000
+
+pub struct AgentHost {
+    char name[128];
+    char *workspace;
+    char *role;
+    char *manifest_path;
+    char *tools_path;
+    JVal *roles;
+    JVal *types;
+    JVal *context;
+    int limit_steps;
+    int limit_time_ms;
+    int limit_bytes;
+    int used;
+    int started;
+    double started_ms;
+    JVal *tools;
+    HostOps *ops;
+};
+
+/* ------------------------------------------------------------------ */
+/* 小工具                                                              */
+/* ------------------------------------------------------------------ */
+
+/* limits 用单调时钟：墙钟会被 NTP 拨动，超时判定会抖。 */
+pub double ag_now_ms(void)
+{
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return (double)ts.tv_sec * 1000.0 + (double)ts.tv_nsec / 1000000.0;
+}
+
+pub JVal *ag_need(JVal *obj, const char *key)
+{
+    JVal *v = jget(obj, key);
+    return (v != 0 && v->kind != J_NULL) ? v : 0;
+}
+
+pub int ag_is_str(JVal *v)
+{
+    return v != 0 && v->kind == J_STR;
+}
+
+pub int ag_nonempty(JVal *v)
+{
+    return ag_is_str(v) && v->str[0] != 0;
+}
+
+pub void ag_profile_fail(const char *path, const char *fmt, ...)
+{
+    char msg[512];
+    va_list ap;
+    va_start(ap, fmt);
+    vsnprintf(msg, sizeof(msg), fmt, ap);
+    va_end(ap);
+    (void)path;
+    fail("run", "E-RUN-HOST-PROFILE", 0, 0, "%s", msg);
+}
+
+static char *ag_join_strings(const char **items, int n)
+{
+    int i;
+    int len = 1;
+    char *out;
+    if (n == 0) return xstrdup("无");
+    for (i = 0; i < n; i++) len += (int)strlen(items[i]) + 2;
+    out = (char *)xmalloc((size_t)len);
+    out[0] = 0;
+    for (i = 0; i < n; i++) {
+        if (i > 0) strcat(out, ", ");
+        strcat(out, items[i]);
+    }
+    return out;
+}
+
+static int ag_has(JVal *list, const char *needle)
+{
+    int i;
+    if (list == 0 || list->kind != J_ARR) return 0;
+    for (i = 0; i < list->len; i++) {
+        JVal *item = list->items[i];
+        if (item->kind == J_STR && strcmp(item->str, needle) == 0) return 1;
+    }
+    return 0;
+}
+
+static void ag_sort_strings(char **items, int n){
+    int i;
+    for (i = 1; i < n; i++) {
+        int j = i;
+        char *key = items[i];
+        while (j > 0 && strcmp(items[j - 1], key) > 0) {
+            items[j] = items[j - 1];
+            j--;
+        }
+        items[j] = key;
+    }
+}
+
+pub char *ag_key_names(JVal *roles)
+{
+    char *items[64];
+    int n = roles != 0 && roles->len < 64 ? roles->len : 64;
+    int i;
+    for (i = 0; i < n; i++) items[i] = roles->keys[i];
+    ag_sort_strings(items, n);
+    return ag_join_strings((const char **)items, n);
+}
+
+static char *ag_verb_names(JVal *verbs)
+{
+    char *items[64];
+    int n = verbs != 0 && verbs->len < 64 ? verbs->len : 64;
+    int i;
+    for (i = 0; i < n; i++) {
+        JVal *item = verbs->items[i];
+        items[i] = ag_is_str(item) ? item->str : "";
+    }
+    ag_sort_strings(items, n);
+    return ag_join_strings((const char **)items, n);
+}
+
+/* ------------------------------------------------------------------ */
+/* 路径                                                                */
+/* ------------------------------------------------------------------ */
+
+pub char *ag_join_path(const char *base, const char *path)
+{
+    size_t n;
+    char *out;
+    if (path[0] == '/') return xstrdup(path);
+    n = strlen(base) + strlen(path) + 2;
+    out = (char *)xmalloc(n);
+    snprintf(out, n, "%s/%s", base, path);
+    return out;
+}
+
+/* Python os.path.normpath 的词法近似（不解析符号链接）。 */
+pub char *ag_normpath(const char *path)
+{
+    int absolute = path[0] == '/';
+    int n = (int)strlen(path);
+    int count = 0;
+    int i = 0;
+    int len = absolute ? 1 : 0;
+    char **parts = (char **)xmalloc(sizeof(char *) * ((size_t)n / 2 + 2));
+    char *out;
+
+    while (i < n) {
+        int start;
+        int part_len;
+        while (i < n && path[i] == '/') i++;
+        start = i;
+        while (i < n && path[i] != '/') i++;
+        part_len = i - start;
+        if (part_len == 0) continue;
+        if (part_len == 1 && path[start] == '.') continue;
+        if (part_len == 2 && path[start] == '.' && path[start + 1] == '.') {
+            if (count > 0 && strcmp(parts[count - 1], "..") != 0) {
+                count--;
+                continue;
+            }
+            if (absolute) continue;
+        }
+        parts[count++] = xstrndup(path + start, part_len);
+    }
+    for (i = 0; i < count; i++) len += (int)strlen(parts[i]) + 1;
+    out = (char *)xmalloc((size_t)len + 1);
+    out[0] = 0;
+    if (absolute) strcat(out, "/");
+    for (i = 0; i < count; i++) {
+        if (i > 0) strcat(out, "/");
+        strcat(out, parts[i]);
+    }
+    if (out[0] == 0) strcpy(out, ".");
+    return out;
+}
+
+pub int ag_within(const char *target, const char *root)
+{
+    size_t n = strlen(root);
+    if (strcmp(target, root) == 0) return 1;
+    if (strncmp(target, root, n) != 0) return 0;
+    return target[n] == '/';
+}
+
+pub char *ag_relpath(const char *target, const char *root)
+{
+    size_t n;
+    if (strcmp(target, root) == 0) return xstrdup(".");
+    n = strlen(root);
+    return xstrdup(target + n + 1);
+}
+
+/* ------------------------------------------------------------------ */
+/* 角色                                                                */
+/* ------------------------------------------------------------------ */
+
+static const char *ag_role_for(AgentHost *h, JVal *subject)
+{
+    const char *kind;
+    if (subject == 0 || subject->kind != J_OBJ) return h->role;
+    kind = jget_str(subject, "kind");
+    if (strcmp(kind, "String") == 0) return jget_str(subject, "value");
+    if (strcmp(kind, "Bare") == 0) return jget_str(subject, "text");
+    return h->role;
+}
+
+static void ag_require_role(AgentHost *h, const char *role, const char *verb)
+{
+    JVal *entry = jget(h->roles, role);
+    JVal *verbs;
+    char msg[512];
+    if (entry == 0 || entry->kind != J_OBJ) {
+        char *names = ag_key_names(h->roles);
+        snprintf(msg, sizeof(msg), "角色 '%s' 不在 roles 表；已知角色：%s",
+                 role, names);
+        fail("run", "E-HOST-ROLE-UNKNOWN", 0, 0, "%s", msg);
+    }
+    verbs = jget(entry, "verbs");
+    if (verbs == 0 || !ag_has(verbs, verb)) {
+        char *names = ag_verb_names(verbs);
+        snprintf(msg, sizeof(msg), "角色 '%s' 无权限调用动词 '%s'；允许：%s",
+                 role, verb, names);
+        fail("run", "E-HOST-ROLE-DENIED", 0, 0, "%s", msg);
+    }
+}
+
+/* 用户卡：主语是字面量才当角色；动态主语用默认角色。 */
+static void ag_walk_roles(AgentHost *h, JVal *node)
+{
+    int i;
+    if (node == 0) return;
+    if (node->kind == J_ARR) {
+        for (i = 0; i < node->len; i++) ag_walk_roles(h, node->items[i]);
+        return;
+    }
+    if (node->kind != J_OBJ) return;
+    if (strcmp(jget_str(node, "kind"), "VerbCall") == 0) {
+        ag_require_role(h, ag_role_for(h, jget(node, "subject")),
+                        jget_str(node, "verb"));
+    }
+    for (i = 0; i < node->len; i++) {
+        if (strcmp(node->keys[i], "kind") == 0) continue;
+        if (strcmp(node->keys[i], "span") == 0) continue;
+        ag_walk_roles(h, node->items[i]);
+    }
+}
+
+pub void ag_validate_program(AgentHost *h, JVal *program)
+{
+    ag_walk_roles(h, program);
+}
+

@@ -1,0 +1,310 @@
+// agent_profile — Agent manifest / tools 加载与默认策略（PH-20）
+//
+// 与 agent.h.ct 拆开：manifest/tools 的校验路径与运行时派发互不依赖，
+// 分开后两侧都能单独跑。
+
+#include "bridge.h"
+
+import host::host;
+
+import host::exec;
+
+import host::agent;
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdarg.h>
+
+#define AG_PROFILE_SCHEMA "rill.agent-profile/0"
+#define AG_TOOLS_SCHEMA "rill-fakes-tools/0"
+
+/* ------------------------------------------------------------------ */
+/* profile / tools 加载                                                */
+/* ------------------------------------------------------------------ */
+
+static void ag_tools_fail(const char *path, const char *fmt, ...)
+{
+    char msg[512];
+    va_list ap;
+    va_start(ap, fmt);
+    vsnprintf(msg, sizeof(msg), fmt, ap);
+    va_end(ap);
+    fail("run", "E-RUN-HOST-PROFILE", 0, 0, "%s", msg);
+}
+
+static JVal *ag_load_json(const char *path, const char *what)
+{
+    int n = 0;
+    int pos = 0;
+    char *text = read_source(path, &n);
+    JVal *doc;
+    (void)n;
+    if (text == 0) {
+        int err = host_errno();
+        char detail[512];
+        snprintf(detail, sizeof(detail), "[Errno %d] %s: '%s'", err,
+                 strerror(err), path);
+        ag_profile_fail(path, "%s: 无法读取 %s（%s）", path, what, detail);
+    }
+    doc = json_parse(text, &pos);
+    if (doc == 0 || doc->kind != J_OBJ) {
+        ag_profile_fail(path, "%s: 顶层必须是对象", path);
+    }
+    return doc;
+}
+
+static JVal *ag_load_tools(const char *path, const char *workspace)
+{
+    JVal *doc;
+    JVal *tools;
+    int i;
+    (void)workspace;
+    if (path == 0) return jobj();
+    doc = ag_load_json(path, "工具注册表");
+    {
+        JVal *schema = jget(doc, "schema");
+        if (schema == 0 || !ag_is_str(schema) ||
+            strcmp(schema->str, AG_TOOLS_SCHEMA) != 0) {
+            ag_tools_fail(path, "%s.schema: 必须是 %s", path, AG_TOOLS_SCHEMA);
+        }
+    }
+    tools = jget(doc, "tools");
+    if (tools == 0 || tools->kind != J_OBJ) {
+        ag_tools_fail(path, "%s.tools: 必须是对象", path);
+    }
+    for (i = 0; i < tools->len; i++) {
+        const char *name = tools->keys[i];
+        JVal *spec = tools->items[i];
+        if (spec->kind != J_OBJ) {
+            ag_tools_fail(path, "工具 '%s' 的描述必须是对象", name);
+        }
+        if (jget(spec, "command") != 0) {
+            JVal *command = jget(spec, "command");
+            JVal *timeout = jget(spec, "timeout_ms");
+            int k;
+            if (ag_is_str(command)) {
+                int argc = 0;
+                char **argv = host_split(command->str, &argc);
+                if (argc == 0) {
+                    ag_tools_fail(path, "工具 '%s'.command: 不能为空", name);
+                }
+            } else if (command->kind == J_ARR && command->len > 0) {
+                for (k = 0; k < command->len; k++) {
+                    if (!ag_nonempty(command->items[k])) {
+                        ag_tools_fail(path,
+                                      "工具 '%s'.command: 必须是非空字符串数组",
+                                      name);
+                    }
+                }
+            } else {
+                ag_tools_fail(path,
+                              "工具 '%s'.command: 必须是非空字符串或非空字符串数组",
+                              name);
+            }
+            if (timeout != 0 &&
+                (timeout->kind != J_INT || timeout->num <= 0)) {
+                ag_tools_fail(path, "工具 '%s'.timeout_ms: 必须是正整数", name);
+            }
+            for (k = 0; k < spec->len; k++) {
+                const char *key = spec->keys[k];
+                if (strcmp(key, "command") != 0 &&
+                    strcmp(key, "timeout_ms") != 0 &&
+                    strcmp(key, "description") != 0) {
+                    ag_tools_fail(path, "工具 '%s': command 形态不接受字段 '%s'",
+                                  name, key);
+                }
+            }
+        }
+    }
+    return tools;
+}
+
+static char *ag_dirname(const char *path)
+{
+    const char *slash = strrchr(path, '/');
+    if (slash == 0) return xstrdup(".");
+    if (slash == path) return xstrdup("/");
+    return xstrndup(path, (int)(slash - path));
+}
+
+pub AgentHost *ag_load_host(const char *path, const char *cwd)
+{
+    AgentHost *h;
+    JVal *doc;
+    JVal *roles;
+    JVal *role;
+    JVal *types;
+    JVal *context;
+    JVal *limits;
+    JVal *workspace;
+    JVal *tools_ref;
+    int i;
+
+    h = (AgentHost *)xmalloc(sizeof(AgentHost));
+    memset(h, 0, sizeof(*h));
+    h->limit_steps = 64;
+    h->limit_time_ms = 5000;
+    h->limit_bytes = 65536;
+    h->workspace = xstrdup(cwd);
+
+    doc = ag_load_json(path, "agent manifest");
+    for (i = 0; i < doc->len; i++) {
+        const char *key = doc->keys[i];
+        if (strcmp(key, "schema") != 0 && strcmp(key, "name") != 0 &&
+            strcmp(key, "description") != 0 && strcmp(key, "role") != 0 &&
+            strcmp(key, "roles") != 0 && strcmp(key, "types") != 0 &&
+            strcmp(key, "workspace") != 0 && strcmp(key, "tools") != 0 &&
+            strcmp(key, "context") != 0 && strcmp(key, "limits") != 0) {
+            ag_profile_fail(path, "%s: 未知字段 '%s'", path, key);
+        }
+    }
+    {
+        JVal *schema = jget(doc, "schema");
+        if (schema == 0 || !ag_is_str(schema) ||
+            strcmp(schema->str, AG_PROFILE_SCHEMA) != 0) {
+            ag_profile_fail(path, "%s.schema: 必须是 %s", path,
+                            AG_PROFILE_SCHEMA);
+        }
+    }
+    {
+        JVal *name = jget(doc, "name");
+        if (!ag_nonempty(name)) {
+            ag_profile_fail(path, "%s.name: 必须是非空字符串", path);
+        }
+        snprintf(h->name, sizeof(h->name), "%s", name->str);
+    }
+    {
+        JVal *description = jget(doc, "description");
+        if (description != 0 && description->kind != J_STR) {
+            ag_profile_fail(path, "%s.description: 必须是字符串", path);
+        }
+    }
+    roles = jget(doc, "roles");
+    if (roles == 0 || roles->kind != J_OBJ || roles->len == 0) {
+        ag_profile_fail(path, "%s.roles: 必须是非空对象", path);
+    }
+    for (i = 0; i < roles->len; i++) {
+        const char *name = roles->keys[i];
+        JVal *item = roles->items[i];
+        JVal *verbs;
+        int k;
+        if (item->kind != J_OBJ || item->len != 1 ||
+            strcmp(item->keys[0], "verbs") != 0) {
+            ag_profile_fail(path, "%s.roles.%s: 必须只有 verbs 字段", path,
+                            name);
+        }
+        verbs = item->items[0];
+        if (verbs->kind != J_ARR || verbs->len == 0) {
+            ag_profile_fail(path, "%s.roles.%s.verbs: 必须是非空字符串数组",
+                            path, name);
+        }
+        for (k = 0; k < verbs->len; k++) {
+            if (!ag_nonempty(verbs->items[k])) {
+                ag_profile_fail(path, "%s.roles.%s.verbs: 必须是非空字符串数组",
+                                path, name);
+            }
+        }
+    }
+    role = jget(doc, "role");
+    if (role == 0) {
+        h->role = xstrdup("default");
+    } else if (!ag_nonempty(role)) {
+        ag_profile_fail(path, "%s.role: 必须是非空字符串", path);
+    } else {
+        h->role = xstrdup(role->str);
+    }
+    if (jget(roles, h->role) == 0) {
+        ag_profile_fail(path, "%s.role: '%s' 不在 roles 表里", path, h->role);
+    }
+    h->roles = roles;
+
+    types = jget(doc, "types");
+    if (types == 0) types = jobj();
+    if (types->kind != J_OBJ) {
+        ag_profile_fail(path, "%s.types: 必须是对象", path);
+    }
+    for (i = 0; i < types->len; i++) {
+        JVal *value = types->items[i];
+        if (!ag_is_str(value) ||
+            (strcmp(value->str, "path") != 0 && strcmp(value->str, "text") != 0)) {
+            ag_profile_fail(path, "%s.types.%s: 必须是 path / text", path,
+                            types->keys[i]);
+        }
+    }
+    h->types = types;
+
+    context = jget(doc, "context");
+    if (context == 0) context = jobj();
+    if (context->kind != J_OBJ) {
+        ag_profile_fail(path, "%s.context: 必须是字符串到字符串的对象", path);
+    }
+    for (i = 0; i < context->len; i++) {
+        if (!ag_is_str(context->items[i])) {
+            ag_profile_fail(path, "%s.context: 必须是字符串到字符串的对象",
+                            path);
+        }
+    }
+    h->context = context;
+
+    limits = jget(doc, "limits");
+    if (limits != 0) {
+        if (limits->kind != J_OBJ) {
+            ag_profile_fail(path, "%s.limits: 必须是对象", path);
+        }
+        for (i = 0; i < limits->len; i++) {
+            const char *key = limits->keys[i];
+            JVal *value = limits->items[i];
+            if (strcmp(key, "steps") != 0 && strcmp(key, "time_ms") != 0 &&
+                strcmp(key, "bytes") != 0) {
+                ag_profile_fail(path, "%s.limits: 未知字段 '%s'", path, key);
+            }
+            if (value->kind != J_INT || value->num <= 0) {
+                ag_profile_fail(path, "%s.limits.%s: 必须是正整数", path, key);
+            }
+            if (strcmp(key, "steps") == 0) h->limit_steps = (int)value->num;
+            else if (strcmp(key, "time_ms") == 0) {
+                h->limit_time_ms = (int)value->num;
+            } else {
+                h->limit_bytes = (int)value->num;
+            }
+        }
+    }
+
+    workspace = jget(doc, "workspace");
+    if (workspace == 0) {
+        free(h->workspace);
+        h->workspace = xstrdup(cwd);
+    } else if (!ag_nonempty(workspace)) {
+        ag_profile_fail(path, "%s.workspace: 必须是非空字符串", path);
+    } else {
+        char *joined = ag_join_path(cwd, workspace->str);
+        free(h->workspace);
+        h->workspace = ag_normpath(joined);
+    }
+
+    tools_ref = jget(doc, "tools");
+    h->manifest_path = xstrdup(path);
+    if (tools_ref == 0 || !ag_is_str(tools_ref) || tools_ref->str[0] == 0) {
+        h->tools = jobj();
+        h->tools_path = 0;
+    } else {
+        char *abs = path[0] == '/' ? xstrdup(path) : ag_join_path(cwd, path);
+        char *dir = ag_dirname(abs);
+        h->tools_path = ag_join_path(dir, tools_ref->str);
+        h->tools = ag_load_tools(h->tools_path, h->workspace);
+    }
+    return h;
+}
+
+pub int ag_exit_code(AgentHost *h, int ok)
+{
+    (void)h;
+    (void)ok;
+    return 0;
+}
+
+pub const char *ag_role(AgentHost *h)
+{
+    return h->role;
+}

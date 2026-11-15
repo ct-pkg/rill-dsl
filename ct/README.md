@@ -1,7 +1,7 @@
 # RILL 0.1.0 — CT 侧实现（token / parse / check / run）
 
 独立的 CT 实现，不碰 `src/rill/` 的 Python 对照实现，也不改 `testdata/` 的既有 golden。
-范围：读 `.rill` → 词法 → 语法 → 加载期校验 → 伪宿主求值；不含真实宿主与格式化。
+范围：读 `.rill` → 词法 → 语法 → 加载期校验 → 求值 → 格式化 → 真实 Shell/Agent 宿主。
 
 ```
 ct/
@@ -11,9 +11,13 @@ ct/
 ├── src/parser/          AST 与语法（31 条产生式）
 ├── src/loader/          加载期校验（三遍）与源码读入
 ├── src/eval/            求值：核心 / 控制流 / 并行 / 函数（文件内分区）
-├── src/cli/             tokenize/parse/check/run 四个子命令
+├── src/formatter/       fmt --compress / --display
+├── src/json/            最小 JSON（紧凑态 + Python 风格）
+├── src/host/            HostOps 能力表、exec、shell、agent（+ bridge.h 跨层类型）
+├── src/cli/             tokenize/parse/check/run/fmt 五个子命令
 ├── rill_ct.ct           单文件旧实现（冻结为参考实现，不参与构建，可作两条路的对照）
-├── build.sh             从零构建出 ct/bin/rill_ct（ct build 多单元）
+├── build.sh             从零构建出 ct/bin/rill_ct（两段 ct build，见下）
+├── build/gen-lib/       第一段的生成头与 librill_core.a（每次重建）
 ├── test.sh              跑本层覆盖的门禁用例
 └── README.md            本文件（构建、规则映射、CT 限制、验证记录）
 ```
@@ -32,12 +36,25 @@ cd /Users/samxx/trae-ws/rill-dsl
 CT=/path/to/ct ./ct/build.sh
 ```
 
-`build.sh` 展开后就是一条 `ct build`：
+`build.sh` 展开后是两条 `ct build`（PH-20 起）：
 
 ```bash
-cd ct && ct build src/main.ct -I src --outdir <tmp> \
-  --cflags '-Wall -Wextra -O2' -o ct/bin/rill_ct
+cd ct
+# 一：语言核心 -> 静态库（同时留下生成头）
+ct build src/lexer/lexer.h.ct src/parser/parser.h.ct src/loader/loader.h.ct \
+  src/formatter/formatter.h.ct --lib -I src --outdir build/gen-lib -o build/librill_core.a
+# 二：宿主与入口 -> 可执行文件
+ct build src/main.ct -I src --outdir <tmp> \
+  --cflags '-Wall -Wextra -O2 -Ibuild/gen-lib -Isrc/host' \
+  --ldflags build/librill_core.a -o bin/rill_ct
 ```
+
+分两次的原因不是「单元切分」，而是 ct 前端的「已解析调用点」表全局 1024 条：
+PH-19 收口时已用掉 927，Agent 宿主再要 ~500。整套一次编译必然超表。实测与探针见
+`docs/reviews/diff/PH-20.md` §3 与 `docs/planning/rill-0.1.0-ct-defect-workarounds.md` §8。
+跨层的类型别名手写在 `ct/src/host/bridge.h`（生成头写 `struct JVal`，宿主层补
+`typedef`），`pub` 全局量收成 `static` 并改用 `fail_jmp_slot()`，trait 方法改为
+自由函数 `emitter_emit()`。
 
 单文件 `ctc` 上限 64 个函数，PH-17 起已触顶；多单元后上限是 256/单元。
 `ct build` 不读 `CT_STD_DIR` 也能编（本实现不用 `Vec`/`Map` 泛型），四个已知阻塞的绕法
@@ -240,10 +257,12 @@ clang 直接报 `error: member reference type 'struct S *' is a pointer`，`ct b
 
 ## 明确没做
 
-- 真实宿主：`run` 只认 `--fakes`；没有真实进程/文件/网络（PH-19/PH-20）。
-- `fmt` 子命令（PH-18）；真实并发调度、取消、超时（本层按源序串行模拟）。
-- `Bytes` / `Opaque` 的 truthy 与透传：没有 fake 注入通道，未建立单测
-  （见 `closeout-16.md` §6、`diff/PH-17.md` §5）。
+- 真实宿主：PH-19 落 Shell（fs/process/env/stdio/exit），PH-20 落 Agent
+  （工具注册表 + role/limits/context）；`--fakes` 仍可覆盖（fake 优先）。
+- 生产安全策略、真实审批、并发调度、取消：不在 0.1.0 范围（按源序串行模拟）。
+- `Bytes` / `Opaque` 的 truthy 与透传：`Bytes` 已有 Shell/Agent 真实入口（非法 UTF-8
+  读取、二进制 stdin、truthy 均为真），`Opaque` 在当前实现里没有构造入口，判据不记通过
+  （见 `closeout-16.md` §6、`diff/PH-19.md` §11、`diff/PH-17.md` §5）。
 - `Value` 的 arena / retain / release：求值器直接消费 JSON 树，进程即退，未做回收。
 - AST 的 `span`：golden 与 harness canonical 都不含 span，Python 版有 span 但比对时被剥离；
   运行时错误因此只有 `stage=run` 与 `line/col=0`。
@@ -252,8 +271,10 @@ clang 直接报 `error: member reference type 'struct S *' is a pointer`，`ct b
 
 ## 后续相的准备
 
-PH-15 加载期校验、PH-16 求值核心、PH-17 控制流与函数均已完成；剩余是格式化与真实宿主。
+PH-15 加载期校验、PH-16 求值核心、PH-17 控制流与函数、PH-18 格式化、PH-19 Shell 宿主、
+PH-20 Agent 宿主均已完成；剩余是 PH-21 的 0.1.0 完工判定。
 
-1. PH-18 直接往 `ct/src/` 加单元即可，单单元上限 256，不再需要宏化省槽。
-2. PH-19/PH-20 的宿主能力按 `.h.ct` 接口落，复用 `Diag` 的 `stage/code/line/col` 信封。
+1. 新单元直接往 `ct/src/` 加（单单元上限 256 函数）；**跨层**只走 `bridge.h` + 静态库。
+2. 宿主能力按 `.h.ct` 接口落，复用 `Diag` 的 `stage/code/line/col` 信封。
 3. 运行时定位若要精确到行列，需要把 `span` 带进 AST（当前被 golden 剥离）。
+4. 每加一批能力前先看 `ct/build.sh` 的两段各自余量（1024 调用点），别让某一段超表。

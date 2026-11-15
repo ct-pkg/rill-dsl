@@ -38,10 +38,16 @@ def env_with_src(extra=None):
     return env
 
 
-def run_cli(args, cwd=None, env=None):
-    """真实 CLI：``python3 -m rill ...``；返回 CompletedProcess。"""
+def run_cli(args, cwd=None, env=None, sut=None):
+    """真实 CLI：默认 ``python3 -m rill``；``sut`` 可覆盖为任意命令。
+
+    ``sut`` 里的相对可执行路径按仓库根解析（fixture 会把 cwd 换到临时目录）。
+    """
+    command = list(sut) if sut else [sys.executable, "-m", "rill"]
+    if sut and not os.path.isabs(command[0]):
+        command[0] = os.path.join(ROOT, command[0])
     return subprocess.run(
-        [sys.executable, "-m", "rill"] + list(args),
+        command + list(args),
         cwd=cwd or ROOT,
         env=env_with_src(env),
         capture_output=True,

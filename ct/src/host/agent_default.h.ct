@@ -1,0 +1,53 @@
+// agent_default — Agent 默认策略（PH-20）
+//
+// 单独成单元：默认策略与 manifest 校验分开，改默认值时不碰校验逻辑。
+
+#include "bridge.h"
+
+import host::host;
+
+import host::agent;
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+pub AgentHost *ag_default_host(const char *cwd)
+{
+    AgentHost *h = (AgentHost *)xmalloc(sizeof(AgentHost));
+    JVal *roles;
+    JVal *verbs;
+    JVal *defaults = (JVal *)0;
+    const char *names[10];
+    int i;
+    memset(h, 0, sizeof(*h));
+    snprintf(h->name, sizeof(h->name), "%s", "builtin-agent");
+    h->workspace = xstrdup(cwd);
+    h->role = xstrdup("default");
+    h->limit_steps = 64;
+    h->limit_time_ms = 5000;
+    h->limit_bytes = 65536;
+    h->types = jobj();
+    jput(h->types, "file", jstr("path"));
+    h->context = jobj();
+    h->tools = jobj();
+    names[0] = "read";
+    names[1] = "write";
+    names[2] = "parse";
+    names[3] = "send";
+    names[4] = "search";
+    names[5] = "replace";
+    names[6] = "contains";
+    names[7] = "review";
+    names[8] = "run";
+    names[9] = "env";
+    verbs = jarr();
+    for (i = 0; i < 10; i++) jpush(verbs, jstr(names[i]));
+    defaults = jobj();
+    jput(defaults, "verbs", verbs);
+    roles = jobj();
+    jput(roles, "default", defaults);
+    h->roles = roles;
+    return h;
+}
+

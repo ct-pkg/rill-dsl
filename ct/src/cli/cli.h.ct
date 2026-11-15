@@ -1,27 +1,27 @@
 // cli — RILL 0.1.0 CT 多单元版（见 docs/phases/pending/ct-multiunit.md）
 
-import common::common;
-
-import lexer::lexer;
-
-import parser::parser;
-
-import loader::loader;
+#include "bridge.h"
 
 import eval::eval;
 
-import formatter::formatter;
-
 import host::shell;
+
+import host::agent;
+
+import host::agent_default;
+
+import host::agent_profile;
+
+import host::agent_verbs;
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdarg.h>
+#include <unistd.h>
 
 #define LOAD_DEFAULT_ERROR "RILL DSL ERROR"
 #define usage_fail(...) fail("cli", "E_USAGE", 0, 0, __VA_ARGS__)
-
 
 /* ------------------------------------------------------------------ */
 /* CLI                                                                 */
@@ -67,7 +67,7 @@ pub int cmd_tokenize(int argc, char **argv)
     }
 
     out.failed = 0;
-    out.emit("tokens", tokens);
+    emitter_emit(&out, "tokens", tokens);
     return 0;
 }
 
@@ -125,7 +125,7 @@ pub int cmd_parse(int argc, char **argv)
     tree = p_parse_program(&parser);
 
     out.failed = 0;
-    out.emit("ast", tree);
+    emitter_emit(&out, "ast", tree);
     return 0;
 }
 
@@ -183,7 +183,7 @@ pub int cmd_check(int argc, char **argv)
     load_scan(&lexer, warnings);
 
     out.failed = 0;
-    out.emit("warnings", warnings);
+    emitter_emit(&out, "warnings", warnings);
     return 0;
 }
 
@@ -211,6 +211,9 @@ pub int cmd_run(int argc, char **argv)
     JVal *principal;
     JVal *host;
     ShellHost *shell = 0;
+    AgentHost *agent = 0;
+    int agent_mode = 0;
+    char cwd[4096];
     Eval ev;
     EOut out;
 
@@ -246,11 +249,9 @@ pub int cmd_run(int argc, char **argv)
     if (strcmp(profile, "shell") != 0 && strcmp(profile, "agent") != 0) {
         usage_fail("未知 profile %s（只允许 shell / agent）", profile);
     }
-    /* PH-19 只落 Shell 宿主；agent 真实宿主留给 PH-20。 */
-    if (fakes_path == 0 && strcmp(profile, "agent") == 0) {
-        fail("run", "E-RUN-HOST-PROFILE", 0, 0,
-             "agent 宿主不在 PH-19 范围（本相只实现 Shell）");
-    }
+    /* PH-19 落 Shell 宿主，PH-20 落 Agent 宿主；未给 profile 时用各自默认策略。 */
+    if (fakes_path == 0 && strcmp(profile, "agent") == 0) agent_mode = 1;
+    if (getcwd(cwd, sizeof(cwd)) == 0) snprintf(cwd, sizeof(cwd), "%s", ".");
 
     source = read_source(path, &n);
     if (source == 0) usage_fail("无法读取 %s", path);
@@ -279,14 +280,18 @@ pub int cmd_run(int argc, char **argv)
             fail("run", "E-RUN-FAKES", 0, 0, "fakes 缺少 tools 对象");
         }
     } else if (host_profile_path != 0) {
-        shell = sh_load_host(host_profile_path);
+        if (agent_mode) agent = ag_load_host(host_profile_path, cwd);
+        else shell = sh_load_host(host_profile_path);
+    } else if (agent_mode) {
+        agent = ag_default_host(cwd);
     } else {
         shell = sh_default_host();
     }
+    if (agent != 0) ag_validate_program(agent, program);
 
     ev.program = program;
     ev.tools = tools;
-    ev.host = shell != 0 ? sh_ops(shell) : 0;
+    ev.host = agent != 0 ? ag_ops(agent) : (shell != 0 ? sh_ops(shell) : 0);
     ev.vars = 0;
     eout_success(&out, jnull());
     body = jget(program, "body");
@@ -315,6 +320,10 @@ pub int cmd_run(int argc, char **argv)
         jput(host, "profile", jstr("fakes"));
         jput(principal, "kind", jstr("test-transport"));
         jput(principal, "name", jstr("--fakes"));
+    } else if (agent != 0) {
+        jput(host, "profile", jstr("agent"));
+        jput(principal, "kind", jstr("role"));
+        jput(principal, "name", jstr(ag_role(agent)));
     } else {
         const char *user = getenv("USER");
         jput(host, "profile", jstr("shell"));
@@ -326,7 +335,9 @@ pub int cmd_run(int argc, char **argv)
     jdump(stdout, root);
     fputc('\n', stdout);
     fflush(stdout);
-    if (shell != 0) {
+    if (agent != 0) {
+        code = ag_exit_code(agent, out.ok);
+    } else if (shell != 0) {
         code = sh_exit_code(shell, out.ok);
     } else {
         code = out.ok ? 0 : 1;

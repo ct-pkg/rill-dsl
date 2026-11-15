@@ -30,6 +30,7 @@ Python 侧读 ``testdata/0.1.0/sut.json``，CT 侧读 ``tools/diff/sut.ct.json``
 
 import argparse
 import base64
+import copy
 import json
 import os
 import shutil
@@ -506,6 +507,59 @@ def host_fixtures(root):
     return found
 
 
+# PH-20：Agent fixture 的 manifest 默认值，与 tests/phase11/support.py 同源。
+AGENT_MANIFEST = {
+    "schema": "rill.agent-profile/0",
+    "name": "agent-test",
+    "description": "PH-11 测试宿主",
+    "role": "engineer",
+    "roles": {
+        "engineer": {
+            "verbs": [
+                "read", "write", "parse", "send", "search",
+                "replace", "contains", "review", "run", "env",
+            ]
+        },
+        "auditor": {"verbs": ["read", "review"]},
+    },
+    "types": {"file": "path", "net": "text"},
+    "context": {},
+    "limits": {"steps": 32, "time_ms": 2000, "bytes": 65536},
+    "tools": "tools.json",
+}
+
+
+def agent_fixtures(root):
+    base = os.path.join(root, "testdata", "0.1.0", "host", "agent")
+    found = []
+    for name in sorted(os.listdir(base)):
+        path = os.path.join(base, name)
+        if (
+            os.path.isdir(path)
+            and os.path.isfile(os.path.join(path, "script.rill"))
+            and os.path.isfile(os.path.join(path, "expect.json"))
+        ):
+            found.append(path)
+    return found
+
+
+def write_agent_workspace(directory, spec):
+    """把 fixture 的 files/tools/manifest 落成一个可运行的 agent workspace。"""
+    materialize(directory, spec.get("files", {}))
+    with open(os.path.join(directory, "tools.json"), "w", encoding="utf-8") as handle:
+        json.dump(
+            {"schema": "rill-fakes-tools/0", "tools": spec.get("tools", {})},
+            handle,
+            ensure_ascii=False,
+        )
+    doc = copy.deepcopy(AGENT_MANIFEST)
+    doc.update(spec.get("manifest", {}))
+    path = os.path.join(directory, "agent.json")
+    with open(path, "w", encoding="utf-8") as handle:
+        json.dump(doc, handle, ensure_ascii=False)
+    return path
+
+
 def materialize(directory, files):
     for relative, text in files.items():
         path = os.path.join(directory, relative)
@@ -542,11 +596,118 @@ def host_problem(py_rc, py_payload, py_stderr, py_err,
     return ""
 
 
+def strip_pid(payload):
+    """去掉 ``host_meta.tool_meta.transport.pid``：进程号两侧必然不同，同 span 处理。"""
+    if not isinstance(payload, dict):
+        return payload
+    meta = payload.get("host_meta")
+    if not isinstance(meta, dict):
+        return payload
+    tool_meta = meta.get("tool_meta")
+    if not isinstance(tool_meta, dict):
+        return payload
+    transport = tool_meta.get("transport")
+    if not isinstance(transport, dict) or "pid" not in transport:
+        return payload
+    transport = dict(transport)
+    transport.pop("pid")
+    tool_meta = dict(tool_meta)
+    tool_meta["transport"] = transport
+    meta = dict(meta)
+    meta["tool_meta"] = tool_meta
+    out = dict(payload)
+    out["host_meta"] = meta
+    return out
+
+
+def run_agent_host_layer(opts, py_sut, ct_sut, root):
+    """host 层 agent profile：14 个 fixture + real-transport 真实子进程工具。"""
+    fixtures = agent_fixtures(root)
+    base = os.path.join(root, "testdata", "0.1.0", "host", "agent")
+    print("== layer=host profile=agent")
+    print("   python: %s" % " ".join(py_sut["command"]))
+    print("   ct    : %s" % " ".join(ct_sut["command"]))
+
+    diffs = 0
+    for path in fixtures:
+        name = os.path.relpath(path, base)
+        with open(os.path.join(path, "expect.json"), encoding="utf-8") as handle:
+            spec = json.load(handle)
+        script = os.path.join(path, "script.rill")
+        tmp = tempfile.mkdtemp(prefix="rill-agent-")
+        try:
+            manifest = write_agent_workspace(tmp, spec)
+            args = [
+                "run", script, "--profile", "agent", "--host-profile", manifest,
+            ]
+            py_rc, py_payload, py_stderr, py_err = run_host_sut(
+                py_sut, root, args, cwd=tmp, env_extra=spec.get("env")
+            )
+            ct_rc, ct_payload, ct_stderr, ct_err = run_host_sut(
+                ct_sut, root, args, cwd=tmp, env_extra=spec.get("env")
+            )
+            problem = host_problem(
+                py_rc, strip_pid(py_payload), py_stderr, py_err,
+                ct_rc, strip_pid(ct_payload), ct_stderr, ct_err,
+            )
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
+        if problem:
+            diffs += 1
+            print("   DIFF %s: %s" % (name, problem))
+        elif opts.verbose:
+            print("   PASS %s" % name)
+
+    directed = 0
+    directed_diffs = 0
+    tmp = tempfile.mkdtemp(prefix="rill-agent-real-")
+    try:
+        shutil.copytree(os.path.join(base, "tools"), os.path.join(tmp, "tools"))
+        shutil.copyfile(
+            os.path.join(base, "profiles", "agent.json"),
+            os.path.join(tmp, "agent.json"),
+        )
+        shutil.copyfile(
+            os.path.join(base, "profiles", "tools.json"),
+            os.path.join(tmp, "tools.json"),
+        )
+        shutil.copyfile(
+            os.path.join(base, "config.txt"), os.path.join(tmp, "config.txt")
+        )
+        script = os.path.join(tmp, "real-transport.rill")
+        shutil.copyfile(os.path.join(base, "real-transport.rill"), script)
+        args = [
+            "run", script, "--profile", "agent",
+            "--host-profile", os.path.join(tmp, "agent.json"),
+        ]
+        directed += 1
+        py_rc, py_payload, py_stderr, py_err = run_host_sut(py_sut, root, args, cwd=tmp)
+        ct_rc, ct_payload, ct_stderr, ct_err = run_host_sut(ct_sut, root, args, cwd=tmp)
+        problem = host_problem(
+            py_rc, strip_pid(py_payload), py_stderr, py_err,
+            ct_rc, strip_pid(ct_payload), ct_stderr, ct_err,
+        )
+        if problem:
+            directed_diffs += 1
+            print("   DIFF directed/real-transport: %s" % problem)
+        elif opts.verbose:
+            print("   PASS directed/real-transport")
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+
+    print(
+        "   fixtures=%d diffs=%d directed=%d directed_diffs=%d"
+        % (len(fixtures), diffs, directed, directed_diffs)
+    )
+    total = diffs + directed_diffs
+    print("   RESULT: %s" % ("PASS" if total == 0 else "FAIL"))
+    return total
+
+
 def run_host_layer(opts, py_sut, ct_sut, root):
     """host 层：12 个 Shell fixture + 3 个 E-2 定向用例，两侧逐字段比。"""
-    if opts.profile != "shell":
-        print("diff.py: --layer host 目前只覆盖 shell profile", file=sys.stderr)
-        return 2
+    if opts.profile == "agent":
+        return run_agent_host_layer(opts, py_sut, ct_sut, root)
     fixtures = host_fixtures(root)
     print("== layer=host profile=%s" % opts.profile)
     print("   python: %s" % " ".join(py_sut["command"]))
