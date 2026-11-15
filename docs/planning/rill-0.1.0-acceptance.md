@@ -12,17 +12,17 @@
 - 正例端到端运行；负例只跑 `tokenize` / `parse` / `check`，不执行。
 - 同一 fixture 在 shell / agent 两个 profile 的 AST 逐节点相等；运行结果只在
   能力可等价时比较，不等价处进 host-specific 清单。
-- 本轮 fixture 总数 85；`--all` 退出 0 是 E-5 的唯一判据。
+- 本轮 fixture 总数 90；`--all` 退出 0 是 E-5 的唯一判据。
 
-## 1. 通过（85）
+## 1. 通过（90）
 
 | 桶 | 用例数 | 通过 | 说明 |
 | --- | --- | --- | --- |
-| positive | 56 | 56 | ast 23、tokens 12、run 19、check 1、warning 1 |
-| negative | 26 | 26 | tokenize 9、parse 10、load 7，全部按预期错误码失败 |
+| positive | 60 | 60 | ast 25、tokens 12、run 21、check 1、warning 1 |
+| negative | 27 | 27 | tokenize 9、parse 9、load 9，全部按预期错误码失败 |
 | host | 1 | 1 | `host/shared/read-send`，shell/agent AST 相等 |
 | smoke | 2 | 2 | 占位链路自证，单独报告 |
-| 合计 | 85 | 85 | compliance 83 + smoke 2 |
+| 合计 | 90 | 90 | compliance 88 + smoke 2 |
 
 - 全部正例通过；`negative/*` 全部按声明的 stage / code / line / col 失败，
   没有“失败但错误码不对”的用例。
@@ -36,7 +36,7 @@
 | harness FAIL | 0 | `summary.compliance.FAIL = 0`、`summary.smoke.FAIL = 0` |
 | harness BLOCK | 0 | 没有退出码 3 的被测调用 |
 | harness DRAFT | 0 | 35 个 ast/tokens golden 全部存在 |
-| 负例错误码不符 | 0 | 26 个 negative 全部 PASS |
+| 负例错误码不符 | 0 | 27 个 negative 全部 PASS |
 
 本轮没有验收失败项。`tools/check.sh all` 的既有失败属于文档门禁基线，
 不是本报告的用例失败，单列在 `rill-0.1.0-known-limits.md`。
@@ -77,9 +77,9 @@ E-2 以 harness 的 pending 计数 0 为准；数量同时写在 `--all` 的
 ```console
 $ bash tools/check-0.1.0.sh --all
 gate     : all buckets; pending=0, retired=4, problems=无
-fixtures : 85 (positive 56, negative 26, host 1, smoke 2)
+fixtures : 90 (positive 60, negative 27, host 1, smoke 2)
 ...
-compliance: 83 passed, 0 failed, 0 blocked, 0 draft
+compliance: 88 passed, 0 failed, 0 blocked, 0 draft
 smoke:     2 passed, 0 failed, 0 blocked, 0 draft
 pending:   0 not run (A 0, B 0)
 VERDICT: PASS (exit 0)
@@ -97,10 +97,10 @@ PASS phase11 fixtures: agent 五类能力 + role/limits/type + AST 一致
 
 | ID | 条件 | 本轮结果 |
 | --- | --- | --- |
-| E-1 | 全部正例通过；负例按预期错误码失败 | 56 正例 + 26 负例全过 |
+| E-1 | 全部正例通过；负例按预期错误码失败 | 60 正例 + 27 负例全过 |
 | E-2 | pending 数量为 0 | `pending: 0 not run`；4 个 retired 痕迹不计 |
 | E-3 | round-trip 全绿 | 71 个 fixture，`--roundtrip` 退出 0 |
 | E-4 | 同源 AST 相等，host-specific 差异有记录 | `host/shared/read-send` PASS；差异 6 条入表 |
-| E-5 | `--all` 退出 0 | 85 例 PASS，exit 0 |
+| E-5 | `--all` 退出 0 | 90 例 PASS，exit 0 |
 | E-6 | 不修改 0.1.1 正文 | 本轮无 `docs/RILL-0.1.0.md` 改动 |
 | E-7 | 任务清单每项可独立验收 | 逐项 `verify` 见 `docs/reviews/phase12-red.md` |

@@ -1,6 +1,6 @@
 // 供 cross-file/main.ri 跨文件跳转使用的定义。
 //fn{
-@ "format-report" $title <read> $title {
+@ <read> $title {
     <read> $title
 }
 }

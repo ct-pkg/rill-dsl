@@ -1,0 +1,7 @@
+//fn{
+@ <send> $a [to] user { <send> $a [to] user }
+}
+//fn{
+@ <send> $b [to] user { <send> $b [to] user }
+}
+@ <send> "hi" [to] user

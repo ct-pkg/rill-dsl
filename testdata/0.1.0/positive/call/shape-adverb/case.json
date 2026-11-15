@@ -1,0 +1,10 @@
+{
+  "kind": "ast",
+  "phase": "p2",
+  "note": "状语按名称集合匹配：顺序无关，with:smile 的名称是 with（§4.18 / E-9）",
+  "expect": {
+    "profiles": [
+      "shell"
+    ]
+  }
+}

@@ -1,0 +1,7 @@
+//fn{
+@ $who <send> $who [to] user {
+    <send> $who [to] user
+}
+}
+
+@ a <send> a [to] user

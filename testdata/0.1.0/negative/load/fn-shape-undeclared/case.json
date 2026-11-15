@@ -1,0 +1,13 @@
+{
+  "kind": "error",
+  "phase": "p4",
+  "note": "调用形状无候选，加载期报 E-04，错误串不含名字（§4.18 / E-6）",
+  "expect": {
+    "stage": "load",
+    "command": "check",
+    "code": "E-04",
+    "line": 1,
+    "col": 1,
+    "message_contains": "未声明的函数形状"
+  }
+}

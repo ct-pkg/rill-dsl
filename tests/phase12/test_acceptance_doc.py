@@ -53,14 +53,14 @@ def case_counts_match_gate():
     total = len(payload["cases"])
     passed = summary["compliance"]["PASS"] + summary["smoke"]["PASS"]
     pending = sum(summary["pending"].values())
-    assert total == 85, total
-    assert passed == 85, (passed, summary)
+    assert total == 90, total
+    assert passed == 90, (passed, summary)
     assert pending == 0, pending
     for number in (total, passed, pending):
         assert str(number) in doc, "报告缺少计数 %d" % number
-    assert "83" in doc, "报告缺少 compliance 通过数 83"
-    assert "56" in doc and "26" in doc, "报告缺少 positive/negative 计数"
-    assert "85" in doc, "报告缺少总数 85"
+    assert "88" in doc, "报告缺少 compliance 通过数 88"
+    assert "60" in doc and "27" in doc, "报告缺少 positive/negative 计数"
+    assert "90" in doc, "报告缺少总数 90"
     assert "0" in doc, "报告缺少 pending 0"
 
 

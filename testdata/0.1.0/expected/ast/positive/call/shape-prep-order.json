@@ -1,0 +1,133 @@
+{
+  "schema": "rill-ast-golden/0",
+  "case": "positive/call/shape-prep-order",
+  "ast": {
+    "kind": "Program",
+    "headers": [
+      {
+        "kind": "FnBlock",
+        "defs": [
+          {
+            "kind": "FnDef",
+            "shape": {
+              "verb": "send",
+              "subject": {
+                "role": "none"
+              },
+              "object": {
+                "role": "param"
+              },
+              "preps": [
+                {
+                  "prep": "to",
+                  "object": {
+                    "role": "param"
+                  }
+                },
+                {
+                  "prep": "with",
+                  "object": {
+                    "role": "param"
+                  }
+                }
+              ],
+              "adverbs": []
+            },
+            "template": [
+              {
+                "kind": "VerbCall",
+                "subject": null,
+                "verb": "send",
+                "object": {
+                  "kind": "Variable",
+                  "name": "msg"
+                },
+                "post": [
+                  {
+                    "kind": "PrepPhrase",
+                    "prep": "to",
+                    "object": {
+                      "kind": "Variable",
+                      "name": "who"
+                    }
+                  },
+                  {
+                    "kind": "PrepPhrase",
+                    "prep": "with",
+                    "object": {
+                      "kind": "Variable",
+                      "name": "what"
+                    }
+                  }
+                ]
+              }
+            ],
+            "body": {
+              "kind": "Block",
+              "body": [
+                {
+                  "kind": "SimpleStmt",
+                  "call": {
+                    "kind": "VerbCall",
+                    "subject": null,
+                    "verb": "send",
+                    "object": {
+                      "kind": "Variable",
+                      "name": "msg"
+                    },
+                    "post": [
+                      {
+                        "kind": "PrepPhrase",
+                        "prep": "to",
+                        "object": {
+                          "kind": "Variable",
+                          "name": "who"
+                        }
+                      }
+                    ]
+                  },
+                  "tail": [],
+                  "pipe": null
+                }
+              ]
+            }
+          }
+        ]
+      }
+    ],
+    "body": [
+      {
+        "kind": "CallStmt",
+        "call": {
+          "kind": "VerbCall",
+          "subject": null,
+          "verb": "send",
+          "object": {
+            "kind": "String",
+            "value": "hi"
+          },
+          "post": [
+            {
+              "kind": "PrepPhrase",
+              "prep": "to",
+              "object": {
+                "kind": "Bare",
+                "text": "user"
+              }
+            },
+            {
+              "kind": "PrepPhrase",
+              "prep": "with",
+              "object": {
+                "kind": "String",
+                "value": "x"
+              }
+            }
+          ]
+        },
+        "tail": [],
+        "pipe": null
+      }
+    ]
+  }
+}

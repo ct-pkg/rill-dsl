@@ -1,0 +1,6 @@
+//fn{
+@ <send> $m [to] $a [with] $b {
+    <send> $m [to] $a [with] $b
+}
+}
+@ <send> "hi" [with] "w"

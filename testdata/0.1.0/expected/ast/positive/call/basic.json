@@ -9,14 +9,21 @@
         "defs": [
           {
             "kind": "FnDef",
-            "name": "check-config",
+            "shape": {
+              "verb": "read",
+              "subject": {
+                "role": "none"
+              },
+              "object": {
+                "role": "param"
+              },
+              "preps": [],
+              "adverbs": []
+            },
             "template": [
               {
                 "kind": "VerbCall",
-                "subject": {
-                  "kind": "Variable",
-                  "name": "path"
-                },
+                "subject": null,
                 "verb": "read",
                 "object": {
                   "kind": "Variable",
@@ -76,13 +83,16 @@
     "body": [
       {
         "kind": "CallStmt",
-        "name": "check-config",
-        "args": [
-          {
+        "call": {
+          "kind": "VerbCall",
+          "subject": null,
+          "verb": "read",
+          "object": {
             "kind": "String",
             "value": "config.yml"
-          }
-        ],
+          },
+          "post": []
+        },
         "tail": [],
         "pipe": {
           "kind": "SimpleStmt",

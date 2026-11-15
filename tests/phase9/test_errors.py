@@ -1,8 +1,8 @@
-"""PH-9-T4：函数调用错误码（未声明、名字精确匹配、参数个数）。
+"""PH-9-T4（PH-22 迁移）：函数加载期错误码（形状未声明、参数个数、轮廓）。
 
 用法：python3 tests/phase9/test_errors.py（退出 0 = 通过）。
-覆盖 E-5：未声明函数与错误实参个数都在加载期给出稳定错误码与位置；
-名字按大小写/连字符精确匹配，不补默认值。
+覆盖 E-5：未声明形状与参数个数不符都在加载期给出稳定错误码与位置；
+函数不再有名字，按形状键精确匹配。
 """
 
 import os
@@ -14,21 +14,21 @@ from support import LoadError, tables
 
 FN_ONE = (
     "//fn{\n"
-    '@ "one" $x <read> $x {\n'
+    "@ <read> $x {\n"
     "    <read> $x\n"
     "}\n"
     "}\n"
 )
 FN_TWO = (
     "//fn{\n"
-    '@ "two" $x <read> $x |> $y <parse> $y {\n'
+    "@ <read> $x |> <parse> $y {\n"
     "    <read> $x\n"
     "}\n"
     "}\n"
 )
 FN_TWO_WITH_DEFAULT = (
     "//fn{\n"
-    '@ "two" $x <read> $x |> $y?yaml <parse> $y {\n'
+    "@ <read> $x |> <parse> $y?yaml {\n"
     "    <read> $x\n"
     "}\n"
     "}\n"
@@ -46,45 +46,38 @@ def expect_load_error(source, code, line, col, contains):
     raise AssertionError("应报 %s：%r" % (code, source))
 
 
-def case_undeclared_function():
+def case_undeclared_shape():
     expect_load_error(
-        '@ "nope" "a.yml"\n', "E-LOAD-FN-UNDECLARED", 1, 1, "nope"
+        '@ <read> "a.yml"\n', "E-04", 1, 1, "未声明的函数形状"
     )
 
 
-def case_name_is_exact_match():
+def case_shape_is_exact_match():
     expect_load_error(
-        FN_ONE + '@ "One" "a.yml"\n', "E-LOAD-FN-UNDECLARED", 6, 1, "One"
+        FN_ONE + '@ <send> "a.yml"\n', "E-04", 6, 1, "未声明的函数形状"
     )
     expect_load_error(
-        FN_ONE + '@ "one " "a.yml"\n', "E-LOAD-FN-UNDECLARED", 6, 1, "one "
-    )
-
-
-def case_too_few_arguments():
-    expect_load_error(
-        FN_TWO + '@ "two" "a.yml"\n', "E-LOAD-FN-ARITY", 6, 1, "2"
+        FN_ONE + '@ <read> "a.yml" [to] user\n', "E-04", 6, 1, "未声明的函数形状"
     )
 
 
-def case_too_many_arguments():
+def case_missing_required_position():
     expect_load_error(
-        FN_TWO + '@ "two" "a.yml" "yaml" "extra"\n', "E-LOAD-FN-ARITY", 6, 1, "2"
+        FN_TWO + '@ <send> $x [to] $y\n', "E-04", 6, 1, "未声明的函数形状"
     )
 
 
 def case_tail_default_allows_fewer():
-    load = tables(FN_TWO_WITH_DEFAULT + '@ "two" "a.yml"\n')
-    assert "two" in load.functions
+    load = tables(FN_TWO_WITH_DEFAULT + '@ <read> "a.yml"\n')
+    assert len(load.functions) == 1
 
 
 def main():
-    case_undeclared_function()
-    case_name_is_exact_match()
-    case_too_few_arguments()
-    case_too_many_arguments()
+    case_undeclared_shape()
+    case_shape_is_exact_match()
+    case_missing_required_position()
     case_tail_default_allows_fewer()
-    print("PASS phase9 errors: 未声明、精确名字、少参/多参、尾部默认值")
+    print("PASS phase9 errors: 未声明形状、精确形状、缺位、尾部默认值")
 
 
 if __name__ == "__main__":

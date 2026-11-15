@@ -1,8 +1,8 @@
-"""PH-9-T3：`//fn` 参数绑定、默认值与返回值。
+"""PH-9-T3（PH-22 迁移）：`//fn` 形状绑定、默认值与返回值。
 
 用法：python3 tests/phase9/test_fn.py（退出 0 = 通过）。
-覆盖 E-3（同名参数去重）、E-4（默认值仅尾部）、E-6（最后一条语句段输出），
-以及 `//fn {` 空格容忍与块内 `//` 不再触发 header 特例。
+覆盖形状位绑定（同一参数多处必须相等）、默认值仅尾部、最后一条语句段输出，
+以及 `//fn {` 空格容忍与块内 `//` 不再触发 header 特例。函数不再有名字。
 """
 
 import os
@@ -24,29 +24,31 @@ SEND = {"queue": [], "default": success(None)}
 READ = {"queue": [], "default": success("A")}
 PARSE = {"queue": [], "default": success("PARSED")}
 
+OLD = "@" + " " + chr(34)
 
-def case_three_occurrences_one_argument():
+
+def case_occurrences_share_one_argument():
     source = (
         "//fn{\n"
-        '@ "f" $x <read> $x |> $x <parse> $x {\n'
+        "@ $x <read> $x |> $x <parse> $x {\n"
         "    <send> $x [to] user\n"
         "}\n"
         "}\n"
-        '@ "f" "a.yml"\n'
+        "@ a.yml <read> \"a.yml\"\n"
     )
     interp, out = run_loaded(source, {"send": SEND})
     assert out.ok is True, out
-    assert objects(interp, "send") == ["a.yml"], "3 处 $x 应绑定同一个实参"
+    assert objects(interp, "send") == ["a.yml"], "同一 $x 的多个位必须绑定同值"
 
 
 def case_default_tail_can_be_omitted():
     source = (
         "//fn{\n"
-        '@ "load" $path <read> $path |> $fmt?yaml <parse> $fmt {\n'
+        "@ <read> $path |> $fmt?yaml <parse> $fmt {\n"
         "    <read> $path |> <parse> $fmt\n"
         "}\n"
         "}\n"
-        '@ "load" "a.yml"\n'
+        '@ <read> "a.yml"\n'
     )
     interp, out = run_loaded(
         source,
@@ -59,34 +61,28 @@ def case_default_tail_can_be_omitted():
     assert objects(interp, "parse") == ["yaml"], "省略的尾部参数应取默认值"
 
 
-def case_default_tail_can_be_overridden():
+def case_optional_prep_can_be_overridden():
     source = (
         "//fn{\n"
-        '@ "load" $path <read> $path |> $fmt?yaml <parse> $fmt {\n'
-        "    <read> $path |> <parse> $fmt\n"
+        "@ <send> $msg [to] $who?user {\n"
+        "    <send> $msg [to] $who\n"
         "}\n"
         "}\n"
-        '@ "load" "a.yml" "json"\n'
+        '@ <send> "hi" [to] admin\n'
     )
-    interp, out = run_loaded(
-        source,
-        {
-            "read": {"queue": [], "default": success("A")},
-            "parse": {"queue": [], "default": success("PARSED")},
-        },
-    )
+    interp, out = run_loaded(source, {"send": SEND})
     assert out.ok is True, out
-    assert objects(interp, "parse") == ["json"], "尾部默认值应可被实参覆盖"
+    assert interp.log[0]["post"][0]["object"] == "admin"
 
 
 def case_default_in_middle_is_rejected():
     source = (
         "//fn{\n"
-        '@ "bad" $a?one <read> $a |> $b <parse> $b {\n'
+        "@ <read> $a?one |> <parse> $b {\n"
         "    <read> $a\n"
         "}\n"
         "}\n"
-        '@ "bad" "x"\n'
+        '@ <read> "x"\n'
     )
     try:
         run_loaded(source, {"read": READ, "parse": PARSE})
@@ -99,12 +95,12 @@ def case_default_in_middle_is_rejected():
 def case_return_is_last_segment():
     source = (
         "//fn{\n"
-        '@ "last-word" $path <read> $path {\n'
+        "@ <read> $path {\n"
         "    <read> $path\n"
         "    <parse> yaml\n"
         "}\n"
         "}\n"
-        '@ "last-word" "a.yml" ->$ret\n'
+        '@ <read> "a.yml" ->$ret\n'
         "<send> $ret [to] user\n"
     )
     interp, out = run_loaded(
@@ -122,29 +118,21 @@ def case_return_is_last_segment():
 def case_return_ignores_earlier_value():
     source = (
         "//fn{\n"
-        '@ "read-then-send" $path <read> $path {\n'
+        "@ <read> $path {\n"
         "    <read> $path\n"
         '    <send> "done" [to] user\n'
         "}\n"
         "}\n"
-        '@ "read-then-send" "a.yml" ->$ret\n'
+        '@ <read> "a.yml" ->$ret\n'
         "<send> $ret [to] user\n"
     )
-    interp, out = run_loaded(
-        source,
-        {"read": READ, "send": SEND},
-    )
+    interp, out = run_loaded(source, {"read": READ, "send": SEND})
     assert out.ok is True, out
     assert objects(interp, "send") == ["done", None], "不能把第一条语句的值当返回"
 
 
 def case_empty_body_returns_null():
-    source = (
-        "//fn{\n"
-        '@ "noop" $x <read> $x { }\n'
-        "}\n"
-        '@ "noop" "a.yml"\n'
-    )
+    source = "//fn{\n@ <read> $x { }\n}\n" '@ <read> "a.yml"\n'
     interp, out = run_loaded(source, {"read": READ})
     assert out.ok is True, out
     assert out.value is None, out.value
@@ -153,11 +141,11 @@ def case_empty_body_returns_null():
 def case_body_dollar_is_call_dollar():
     source = (
         "//fn{\n"
-        '@ "selfie" $x <read> $x {\n'
+        "@ <read> $x {\n"
         "    <send> $ [to] user\n"
         "}\n"
         "}\n"
-        '@ "selfie" "a.yml"\n'
+        '@ <read> "a.yml"\n'
     )
     interp, out = run_loaded(source, {"read": READ, "send": SEND})
     assert out.ok is True, out
@@ -167,11 +155,11 @@ def case_body_dollar_is_call_dollar():
 def case_body_break_becomes_call_failure():
     source = (
         "//fn{\n"
-        '@ "stop" $x <read> $x {\n'
+        "@ <read> $x {\n"
         '    break "F_STOP"\n'
         "}\n"
         "}\n"
-        '@ "stop" "a.yml" [error] { <send> $ [to] user }\n'
+        '@ <read> "a.yml" [error] { <send> $ [to] user }\n'
     )
     interp, out = run_loaded(source, {"read": READ, "send": SEND})
     assert out.ok is True, "调用上的 [error] 应处理函数体 break：%r" % (out,)
@@ -181,11 +169,11 @@ def case_body_break_becomes_call_failure():
 def case_body_scope_does_not_leak():
     source = (
         "//fn{\n"
-        '@ "leak" $x <read> $x {\n'
-        '    <send> $x [to] user ->$tmp\n'
+        "@ <read> $x {\n"
+        "    <send> $x [to] user ->$tmp\n"
         "}\n"
         "}\n"
-        '@ "leak" "a.yml"\n'
+        '@ <read> "a.yml"\n'
         "<send> $tmp [to] user\n"
     )
     try:
@@ -199,13 +187,15 @@ def case_body_scope_does_not_leak():
 def case_body_reads_outer_variable():
     source = (
         "//fn{\n"
-        '@ "outer" $x <read> $x {\n'
+        "@ <read> $x {\n"
         "    <send> $cfg [to] user\n"
         "}\n"
         "}\n"
-        '@ "outer" "a.yml"\n'
+        '@ <read> "a.yml"\n'
     )
-    interp, out = run_loaded(source, {"read": READ, "send": SEND}, variables={"cfg": "OUTER"})
+    interp, out = run_loaded(
+        source, {"read": READ, "send": SEND}, variables={"cfg": "OUTER"}
+    )
     assert out.ok is True, out
     assert objects(interp, "send") == ["OUTER"], objects(interp, "send")
 
@@ -213,25 +203,25 @@ def case_body_reads_outer_variable():
 def case_default_name_conflict_keeps_first():
     source = (
         "//fn{\n"
-        '@ "dup" $a?one <read> $a |> $a?two <parse> $a {\n'
-        "    <read> $a\n"
+        "@ <send> $msg [to] $a?one [with] $a?two {\n"
+        "    <send> $msg [to] $a\n"
         "}\n"
         "}\n"
-        '@ "dup"\n'
+        '@ <send> "hi"\n'
     )
-    interp, out = run_loaded(source, {"read": READ})
+    interp, out = run_loaded(source, {"send": SEND})
     assert out.ok is True, out
-    assert objects(interp, "read") == ["one"], "同名默认值冲突取首次出现"
+    assert interp.log[0]["post"][0]["object"] == "one", "同名默认值冲突取首次出现"
 
 
 def case_spaced_fn_header():
     source = (
         "//fn {\n"
-        '@ "f" $x <read> $x {\n'
+        "@ <read> $x {\n"
         "    <read> $x\n"
         "}\n"
         "}\n"
-        '@ "f" "a.yml"\n'
+        '@ <read> "a.yml"\n'
     )
     interp, out = run_loaded(source, {"read": READ})
     assert out.ok is True, out
@@ -241,13 +231,13 @@ def case_spaced_fn_header():
 def case_comment_inside_fn_block():
     source = (
         "//fn{\n"
-        '@ "f" $x <read> $x {\n'
+        "@ <read> $x {\n"
         "// fn { 这一行在函数体内是注释\n"
         "// map { 这一行同样只是注释\n"
         "    <read> $x\n"
         "}\n"
         "}\n"
-        '@ "f" "a.yml"\n'
+        '@ <read> "a.yml"\n'
     )
     interp, out = run_loaded(source, {"read": READ})
     assert out.ok is True, "//fn 块内的 // 不应再触发 header 特例：%r" % (out,)
@@ -257,9 +247,10 @@ def case_comment_inside_fn_block():
 def case_nested_fn_definition_is_rejected():
     source = (
         "//fn{\n"
-        '@ "outer" $x <read> $x {\n'
+        "@ <read> $x {\n"
         "//fn{\n"
-        '@ "inner" $y <read> $y {\n'
+        + OLD
+        + "inner\" $y <read> $y {\n"
         "    <read> $y\n"
         "}\n"
         "}\n"
@@ -268,15 +259,15 @@ def case_nested_fn_definition_is_rejected():
     try:
         parse_source(source)
     except ParseError as exc:
-        assert exc.code == "E-PARSE-FN-DEF-BODY", exc.code
+        assert exc.code == "E-07", exc.code
         return
-    raise AssertionError("嵌套 //fn 不能成为新的区块头")
+    raise AssertionError("嵌套 //fn 不能成为新的区块头，旧 @ 名字形态应报 E-07")
 
 
 def main():
-    case_three_occurrences_one_argument()
+    case_occurrences_share_one_argument()
     case_default_tail_can_be_omitted()
-    case_default_tail_can_be_overridden()
+    case_optional_prep_can_be_overridden()
     case_default_in_middle_is_rejected()
     case_return_is_last_segment()
     case_return_ignores_earlier_value()
@@ -289,7 +280,7 @@ def main():
     case_spaced_fn_header()
     case_comment_inside_fn_block()
     case_nested_fn_definition_is_rejected()
-    print("PASS phase9 fn: 去重参数、尾部默认值、返回值、//fn 边界")
+    print("PASS phase9 fn: 形状位绑定、尾部默认值、返回值、//fn 边界")
 
 
 if __name__ == "__main__":

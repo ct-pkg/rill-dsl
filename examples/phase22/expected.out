@@ -1,0 +1,4 @@
+phase22
+one
+two
+{"ok":true,"value":"two","error":null,"host_meta":{},"host":{"profile":"shell","principal":{"kind":"os-user","name":"samxx"}}}

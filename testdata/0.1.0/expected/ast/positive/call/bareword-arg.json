@@ -9,14 +9,29 @@
         "defs": [
           {
             "kind": "FnDef",
-            "name": "notify",
+            "shape": {
+              "verb": "send",
+              "subject": {
+                "role": "none"
+              },
+              "object": {
+                "role": "param"
+              },
+              "preps": [
+                {
+                  "prep": "to",
+                  "object": {
+                    "role": "const",
+                    "value": "user"
+                  }
+                }
+              ],
+              "adverbs": []
+            },
             "template": [
               {
                 "kind": "VerbCall",
-                "subject": {
-                  "kind": "Variable",
-                  "name": "msg"
-                },
+                "subject": null,
                 "verb": "send",
                 "object": {
                   "kind": "Variable",
@@ -70,13 +85,16 @@
     "body": [
       {
         "kind": "CallStmt",
-        "name": "notify",
-        "args": [
-          {
-            "kind": "String",
-            "value": "foo"
-          }
-        ],
+        "call": {
+          "kind": "VerbCall",
+          "subject": null,
+          "verb": "send",
+          "object": {
+            "kind": "Bare",
+            "text": "foo"
+          },
+          "post": []
+        },
         "tail": [],
         "pipe": null
       }

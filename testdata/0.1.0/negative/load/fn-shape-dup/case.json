@@ -1,0 +1,13 @@
+{
+  "kind": "error",
+  "phase": "p4",
+  "note": "同一 //fn{} 内形状相同（只差参数变量名），加载期报 E-03（§4.18 / E-4 / E-5）",
+  "expect": {
+    "stage": "load",
+    "command": "check",
+    "code": "E-03",
+    "line": 5,
+    "col": 1,
+    "message_contains": "形状重复"
+  }
+}

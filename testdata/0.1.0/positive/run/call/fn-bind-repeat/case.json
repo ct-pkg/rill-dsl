@@ -1,0 +1,11 @@
+{
+  "kind": "run",
+  "phase": "r1",
+  "note": "同一参数在主语与宾语位出现，两次值相等才绑定（§4.18 / E-11）",
+  "fakes": "fakes/fn-call.json",
+  "expect": {
+    "profile": "shell",
+    "ok": true,
+    "value": null
+  }
+}

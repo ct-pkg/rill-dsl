@@ -1,7 +1,7 @@
 {
   "kind": "error",
   "phase": "p4",
-  "note": "少传实参在加载期报 E-LOAD-FN-ARITY，不补默认值（§4.18）",
+  "note": "省略必需的尾部介宾，加载期报 E-LOAD-FN-ARITY（§4.18 / E-8）",
   "expect": {
     "stage": "load",
     "command": "check",

@@ -1,1 +1,4 @@
-@ "nope" "a.yml"
+//fn{
+@ <send> $m [to] user { <send> $m [to] user }
+}
+@ <send> "hi" [with] user

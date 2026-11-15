@@ -1,13 +1,13 @@
 {
   "kind": "error",
   "phase": "p4",
-  "note": "未声明函数在加载期报错，错误串含函数名（§4.18）",
+  "note": "同动词有定义但形状不匹配：加载期报 E-04，Hint 列出同动词已定义形状（§4.18 / E-6）",
   "expect": {
     "stage": "load",
     "command": "check",
-    "code": "E-LOAD-FN-UNDECLARED",
-    "line": 1,
+    "code": "E-04",
+    "line": 4,
     "col": 1,
-    "message_contains": "nope"
+    "message_contains": "未声明的函数形状"
   }
 }

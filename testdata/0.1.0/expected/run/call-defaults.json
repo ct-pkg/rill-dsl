@@ -28,7 +28,18 @@
     },
     {
       "event": "fn",
-      "name": "load",
+      "shape": {
+        "verb": "read",
+        "subject": {
+          "role": "none"
+        },
+        "object": {
+          "role": "const",
+          "value": "a.yml"
+        },
+        "preps": [],
+        "adverbs": []
+      },
       "ok": true,
       "value": "PARSED",
       "error": null

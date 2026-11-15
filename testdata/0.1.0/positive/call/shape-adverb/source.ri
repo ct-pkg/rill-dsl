@@ -1,0 +1,7 @@
+//fn{
+@ <send> $msg (friendly, with:smile) [to] user {
+    <send> $msg [to] user
+}
+}
+
+@ <send> 'hi' (with:smile, friendly) [to] user

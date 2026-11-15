@@ -1,0 +1,141 @@
+{
+  "schema": "rill-ast-golden/0",
+  "case": "positive/call/shape-adverb",
+  "ast": {
+    "kind": "Program",
+    "headers": [
+      {
+        "kind": "FnBlock",
+        "defs": [
+          {
+            "kind": "FnDef",
+            "shape": {
+              "verb": "send",
+              "subject": {
+                "role": "none"
+              },
+              "object": {
+                "role": "param"
+              },
+              "preps": [
+                {
+                  "prep": "to",
+                  "object": {
+                    "role": "const",
+                    "value": "user"
+                  }
+                }
+              ],
+              "adverbs": [
+                "friendly",
+                "with"
+              ]
+            },
+            "template": [
+              {
+                "kind": "VerbCall",
+                "subject": null,
+                "verb": "send",
+                "object": {
+                  "kind": "Variable",
+                  "name": "msg"
+                },
+                "post": [
+                  {
+                    "kind": "Adverb",
+                    "items": [
+                      {
+                        "kind": "Bare",
+                        "text": "friendly"
+                      },
+                      {
+                        "kind": "Bare",
+                        "text": "with:smile"
+                      }
+                    ]
+                  },
+                  {
+                    "kind": "PrepPhrase",
+                    "prep": "to",
+                    "object": {
+                      "kind": "Bare",
+                      "text": "user"
+                    }
+                  }
+                ]
+              }
+            ],
+            "body": {
+              "kind": "Block",
+              "body": [
+                {
+                  "kind": "SimpleStmt",
+                  "call": {
+                    "kind": "VerbCall",
+                    "subject": null,
+                    "verb": "send",
+                    "object": {
+                      "kind": "Variable",
+                      "name": "msg"
+                    },
+                    "post": [
+                      {
+                        "kind": "PrepPhrase",
+                        "prep": "to",
+                        "object": {
+                          "kind": "Bare",
+                          "text": "user"
+                        }
+                      }
+                    ]
+                  },
+                  "tail": [],
+                  "pipe": null
+                }
+              ]
+            }
+          }
+        ]
+      }
+    ],
+    "body": [
+      {
+        "kind": "CallStmt",
+        "call": {
+          "kind": "VerbCall",
+          "subject": null,
+          "verb": "send",
+          "object": {
+            "kind": "String",
+            "value": "hi"
+          },
+          "post": [
+            {
+              "kind": "Adverb",
+              "items": [
+                {
+                  "kind": "Bare",
+                  "text": "with:smile"
+                },
+                {
+                  "kind": "Bare",
+                  "text": "friendly"
+                }
+              ]
+            },
+            {
+              "kind": "PrepPhrase",
+              "prep": "to",
+              "object": {
+                "kind": "Bare",
+                "text": "user"
+              }
+            }
+          ]
+        },
+        "tail": [],
+        "pipe": null
+      }
+    ]
+  }
+}

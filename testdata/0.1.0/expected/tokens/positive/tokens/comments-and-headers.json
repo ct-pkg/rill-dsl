@@ -81,40 +81,34 @@
       "col": 1
     },
     {
-      "kind": "STRING",
-      "text": "f",
-      "line": 7,
-      "col": 3
-    },
-    {
       "kind": "VARIABLE",
       "text": "x",
       "line": 7,
-      "col": 7
+      "col": 3
     },
     {
       "kind": "VERB",
       "text": "read",
       "line": 7,
-      "col": 10
+      "col": 6
     },
     {
       "kind": "VARIABLE",
       "text": "x",
       "line": 7,
-      "col": 17
+      "col": 13
     },
     {
       "kind": "LBRACE",
       "text": "{",
       "line": 7,
-      "col": 20
+      "col": 16
     },
     {
       "kind": "NEWLINE",
       "text": "\n",
       "line": 7,
-      "col": 21
+      "col": 17
     },
     {
       "kind": "RBRACE",

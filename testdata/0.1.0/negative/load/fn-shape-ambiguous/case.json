@@ -1,0 +1,12 @@
+{
+  "kind": "error",
+  "phase": "p4",
+  "note": "跨 //fn{} 同形导致调用二义，加载期报 E-05（§4.18 / E-7）",
+  "expect": {
+    "stage": "load",
+    "command": "check",
+    "code": "E-05",
+    "line": 7,
+    "col": 1
+  }
+}

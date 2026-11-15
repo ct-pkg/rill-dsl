@@ -1,9 +1,9 @@
 //fn{
-@ "last-word" $path <read> $path {
+@ <read> $path {
     <read> $path
     <parse> yaml
 }
 }
 
-@ "last-word" "a.yml" ->$ret
+@ <read> "a.yml" ->$ret
 <send> $ret [to] user

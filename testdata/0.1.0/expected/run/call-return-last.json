@@ -34,7 +34,18 @@
     },
     {
       "event": "fn",
-      "name": "last-word",
+      "shape": {
+        "verb": "read",
+        "subject": {
+          "role": "none"
+        },
+        "object": {
+          "role": "const",
+          "value": "a.yml"
+        },
+        "preps": [],
+        "adverbs": []
+      },
       "ok": true,
       "value": "PARSED",
       "error": null

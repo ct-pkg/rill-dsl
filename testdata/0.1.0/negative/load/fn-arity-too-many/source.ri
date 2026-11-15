@@ -1,6 +1,0 @@
-//fn{
-@ "two" $x <read> $x |> $y <parse> $y {
-    <read> $x
-}
-}
-@ "two" "a.yml" "yaml" "extra"

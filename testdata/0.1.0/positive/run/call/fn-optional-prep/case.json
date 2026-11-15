@@ -1,0 +1,11 @@
+{
+  "kind": "run",
+  "phase": "r1",
+  "note": "带默认值的介宾可整段省略，$who 取 user（§4.18 / E-8）",
+  "fakes": "fakes/fn-call.json",
+  "expect": {
+    "profile": "shell",
+    "ok": true,
+    "value": null
+  }
+}

@@ -1,12 +1,12 @@
 //fn{
-@ "announce" $who?world <send> $who [to] user {
-    <send> $who [to] user
+@ <send> $msg [to] $who?user {
+    <send> $msg [to] $who
 }
-@ "pick" $left <send> $right?right-default {
+@ $left <send> $right {
     <send> $left [to] user
     <send> $right [to] user
 }
 }
-@ "announce" 'RILL'
-@ "announce"
-@ "pick" 'L'
+@ <send> 'RILL' [to] user
+@ <send> 'hello'
+@ A <send> B

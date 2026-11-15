@@ -1,8 +1,8 @@
 //fn{
-@ "load" $path <read> $path |> $fmt?yaml <parse> $fmt {
+@ <read> $path |> $fmt?yaml <parse> $fmt {
     <read> $path |> <parse> $fmt
 }
 }
 
-@ "load" "a.yml" ->$ret
+@ <read> "a.yml" ->$ret
 <send> $ret [to] user

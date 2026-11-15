@@ -1,13 +1,12 @@
 {
   "kind": "error",
   "phase": "p4",
-  "note": "多传实参在加载期报 E-LOAD-FN-ARITY，不忽略多余参数（§4.18）",
+  "note": "中间跳过介宾不是形状相同，加载期报 E-LOAD-FN-ARITY（§4.18 / E-8）",
   "expect": {
     "stage": "load",
     "command": "check",
     "code": "E-LOAD-FN-ARITY",
     "line": 6,
-    "col": 1,
-    "message_contains": "2"
+    "col": 1
   }
 }

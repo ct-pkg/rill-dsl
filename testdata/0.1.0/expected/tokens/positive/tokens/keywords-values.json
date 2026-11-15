@@ -255,7 +255,7 @@
       "col": 1
     },
     {
-      "kind": "STRING",
+      "kind": "BARE",
       "text": "f",
       "line": 11,
       "col": 3
@@ -264,25 +264,25 @@
       "kind": "NUMBER",
       "text": "42",
       "line": 11,
-      "col": 7
+      "col": 5
     },
     {
       "kind": "VARIABLE",
       "text": "x",
       "line": 11,
-      "col": 10
+      "col": 8
     },
     {
       "kind": "FIELD",
       "text": "host",
       "line": 11,
-      "col": 13
+      "col": 11
     },
     {
       "kind": "NEWLINE",
       "text": "\n",
       "line": 11,
-      "col": 18
+      "col": 16
     },
     {
       "kind": "VARIABLE",

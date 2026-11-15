@@ -1,0 +1,7 @@
+//fn{
+@ <send> $msg [to] $who?user {
+    <send> $msg [to] $who
+}
+}
+
+@ <send> 'hello'

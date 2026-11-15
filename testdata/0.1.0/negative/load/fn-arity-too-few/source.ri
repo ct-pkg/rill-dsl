@@ -1,6 +1,6 @@
 //fn{
-@ "two" $x <read> $x |> $y <parse> $y {
-    <read> $x
+@ <send> $msg [to] $who {
+    <send> $msg [to] $who
 }
 }
-@ "two" "a.yml"
+@ <send> "hi"

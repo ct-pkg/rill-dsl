@@ -1,0 +1,11 @@
+//fn{
+@ <send> $msg [to] $who?user {
+    <send> $msg [to] $who
+}
+@ $left <send> $right {
+    <send> $left [to] user
+    <send> $right [to] user
+}
+}
+@ <send> 'phase22' [to] user
+@ one <send> two

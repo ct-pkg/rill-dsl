@@ -44,8 +44,8 @@ def case_all_is_green():
 def case_all_reports_bucket_counts():
     result = run_gate("--all")
     output = result.stdout
-    assert re.search(r"fixtures\s*:\s*85\b", output), output[:1000]
-    for bucket, count in (("positive", 56), ("negative", 26), ("host", 1), ("smoke", 2)):
+    assert re.search(r"fixtures\s*:\s*90\b", output), output[:1000]
+    for bucket, count in (("positive", 60), ("negative", 27), ("host", 1), ("smoke", 2)):
         assert re.search(r"%s\s*%d\b" % (bucket, count), output), (
             bucket,
             output[:1000],

@@ -1,7 +1,7 @@
 //fn{
-@ "check-config" $path <read> $path |> <parse> yaml {
+@ <read> $path |> <parse> yaml {
     <read> $path |> <parse> yaml
 }
 }
 
-@ "check-config" "config.yml" |> <send> "完成" [to] user
+@ <read> "config.yml" |> <send> "完成" [to] user

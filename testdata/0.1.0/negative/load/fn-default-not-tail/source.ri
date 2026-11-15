@@ -1,6 +1,6 @@
 //fn{
-@ "bad" $a?one <read> $a |> $b <parse> $b {
+@ <read> $a?one |> <parse> $b {
     <read> $a
 }
 }
-@ "bad" "x"
+@ <read> "x"

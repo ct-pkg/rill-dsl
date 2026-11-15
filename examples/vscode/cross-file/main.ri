@@ -1,5 +1,5 @@
 // RILL 0.1.x 没有 import / 模块机制，函数定义只在同一个 //fn{} 程序内可见。
 // 这个文件用于验证插件的“工作区跨文件索引”导航能力：
-// 在下一行的 "format-report" 上按 F12，应跳到 cross-file/shared.ri 的定义。
-// 注意：按语言加载期规则，本文件单独 check 会报“未声明的函数”，这是预期的。
-@ "format-report" 'README.md'
+// 在下一行的 <read> 上按 F12，应跳到 cross-file/shared.ri 的定义。
+// 注意：按语言加载期规则，本文件单独 check 会报“未声明的函数形状”（E-04），这是预期的。
+@ <read> 'README.md'

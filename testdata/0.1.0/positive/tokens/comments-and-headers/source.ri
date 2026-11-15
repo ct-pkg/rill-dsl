@@ -4,6 +4,6 @@
 cfg`configuration
 }
 //fn {
-@ "f" $x <read> $x {
+@ $x <read> $x {
 }
 }
