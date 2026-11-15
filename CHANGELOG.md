@@ -26,6 +26,6 @@
 ### Notes
 
 - 本相不停留在“名字 + 字符串匹配”；同形冲突在加载期显式报错，不做静默覆盖。
-- 版本号 bump 方式见 `docs/phases/PH-22/card.md` §9（A/B/C 待用户签字）；
-  `version-minor` 已登记为 `22`，实际 `MAJOR.MINOR.PATCH` 落点见
-  `docs/reviews/closeout-22.md` §5。
+- 版本：**保持 `0.12.0`**。C 裁定 phase 号与产品版本解耦，PH-22 不跳号；
+  `version-minor=22` 已登记，映射表与重编号触发条件见 `AGENTS.md` 0.3
+  与 `docs/reviews/closeout-22.md` §5。

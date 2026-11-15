@@ -82,3 +82,17 @@
   管理或并发调度入口。
 - 双宿主的差异只允许出现在能力层；六项 host-specific 差异均不影响语法/AST，
   明细见 `docs/planning/rill-0.1.0-host-matrix.md` §9.2。
+
+## 7. 门禁缺陷（PH-22 收口记录）
+
+### GD-001：单条 fixture schema 错误会中止整个门禁
+
+| 项 | 内容 |
+| --- | --- |
+| 现象 | 一个 `case.json` 写错，`tools/check-0.1.0.sh --all` 打印 `fixtures 不合法，未执行任何用例。`，合法用例一条也不跑 |
+| 触发实例 | PH-22 新增的 `positive/run/call/fn-bind-repeat`、`fn-optional-prep` 把 `phase` 写成 `p22`（不在 `cases.py#PHASES` 白名单），两条坏数据让 90 个 fixture 全部停摆 |
+| 根因 | `tools/rill_harness/cli.py` 先把 `discover()` 的 schema 错误汇总，再在 `if errors:` 分支直接 `return EXIT_FAIL`（L420–L425），运行阶段根本不会进入 |
+| 为什么算缺陷 | 单条数据错误抹掉了其余用例的信号：门禁从“报告 N 条失败”退化为“0 条执行”，无法区分“夹具写坏”与“实现回归”；且 `--all` 的 `pending=0` 等汇总也只在此后才有 |
+| 现状 | PH-22 只修数据（`p22` → `r1`），未改共享门禁；本相不动门禁行为，避免与 0.1.0 判据混在一起 |
+| 建议修法 | schema 错误定位到单个 case 记 `FAIL`，其余 case 继续执行，最终整体非 0；`--all` 仍要求 `pending=0` 且非法 case 数 = 0 |
+| 归属 | 0.1.1 门禁修复，另开 issue / phase；不占 PH-22 的 PATCH |
