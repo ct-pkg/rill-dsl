@@ -3,6 +3,23 @@
 > 版本规则见 `AGENTS.md` 6.7。本项目 phase 号与产品版本已解耦，映射见
 > `AGENTS.md` 0.3；本文件只记已经落地的行为变更。
 
+## 0.23.0 — 2026-11-16（PH-23 收口 / P-025=B）
+
+### Changed
+
+- 函数签名常量位不再剥离 `类型:值` 前缀：按 AST 字面原文比较（`String.value` /
+  `Bare.text` / 数字规范字符串）；`file:x` 与 `text:x` 是不同形状，可共存；
+  跨前缀调用报 `E-04`。依据 `docs/decisions/D-024.md`。
+- 引号透明：`file:x` 与 `"file:x"` 同形；常量槽不按节点种类区分。
+- 定义侧 `FnDef.shape` 首位新增 `shape_version: 2`；Python/CT 各持
+  `SHAPE_VERSION = 2`；loader 收集时断言，不匹配报 `E-LOAD-FN-SHAPE-VERSION`。
+- PH-22 的 E-26 被 D-024 §判决 6 取代；PH-22 卡与 `closeout-22.md` 未改。
+
+### Notes
+
+- 版本：产品 `0.22.0` → `0.23.0`（PH-23 收口）。4 份 AST golden 重录并登记
+  `GC-23-01…GC-23-04`；全层对拍 `total diffs: 0`。
+
 ## 0.22.0 — 2026-11-15（PH-22 收口 / 0.1.0 判定转 GO / 重编号点）
 
 ### Breaking

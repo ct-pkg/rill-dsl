@@ -1,8 +1,7 @@
 # PH-23 立项卡：P-025=B（shape_version=2，签名层不识别类型前缀）
 
-> 状态：编码中（2026-11-16 核对）。T1/T2 已在分支 `ph-23-py-void` 完成
-> （含红证），未合入 `main`；T3–T7 未开始；本卡未收口，产品仍 `0.22.0`。
-> 依据 [D-024](../../decisions/D-024.md) §判决 1–6；实际进度见 §11。
+> 状态：已收口（2026-11-16）。T1…T7 完成，E-1…E-24 全绿；产品 `0.23.0`，
+> tag `v0.23.0`。依据 [D-024](../../decisions/D-024.md) §判决 1–6；实际进度见 §11。
 
 ## 0. 开卡必填
 
@@ -153,17 +152,16 @@ golden 格式沿用现有 AST JSON；新增键只允许 `shape_version`，且必
 | 复跑需要什么 | ①CT 值种类与 truthy/透传；②同一性断言入口（C 单测或 trace）；③测试专用注入通道，且生产 `--fakes` 对 `$test-opaque` 保持惰性；④一条可重复执行的命令，纳入门禁或独立脚本 |
 | 去向 | `issues/RILL-001.md`（`status: open`，owner `REV`）；完成后把本行判定改回“可复跑” |
 
-## 11. 实际进度（2026-11-16 核对）
+## 11. 实际进度（2026-11-16 收口）
 
 | 任务 | 状态 | 证据 |
 | --- | --- | --- |
-| T1 | 完成，在分支 `ph-23-py-void`，未合入 `main` | 红 `cba0cc3`、绿 `cf94008`；`tests/phase23/test_shape_literal.py` 报 PASS 7 项 |
-| T2 | 完成，同上 | 红 `66cb3a5`、绿 `bbddfc6`；`tests/phase23/test_shape_version_load.py` 报 PASS 5 项 |
-| T3 | 未开始；仅有未跟踪红夹具 `tests/phase23/test_ct_shape_version.py`、`tests/phase23/ct/shape_version_test.c` | CT 侧 `SHAPE_VERSION` 0 命中，`shape_strip_type` 仍在 |
-| T4 | 未开始 | 4 份 AST golden 未重录；`docs/reviews/diff/registry.md` 无 `GC-23-*` |
-| T5 | 未开始 | `docs/RILL-0.1.0.md` §4.18 未补“字面原文”句 |
-| T6 | 未开始；未跟踪的 `testdata/0.1.0/directed/fn-prefix-shapes/`、`negative/load/fn-prefix-not-merged/` 为其红夹具 | `tools/check-0.1.0.sh --all` 因 `fn-prefix-not-merged` 报 1 FAIL |
-| T7 | 未开始 | 无 `docs/reviews/closeout-23.md`、`docs/reviews/diff/PH-23.md` |
+| T1 | 完成 | 红 `cba0cc3`、绿 `cf94008`；`pytest tests/phase23/test_shape_literal.py -q` → 7 passed |
+| T2 | 完成 | 红 `66cb3a5`、绿 `bbddfc6`；`pytest tests/phase23/test_shape_version_load.py -q` → 5 passed |
+| T3 | 完成 | 红 `552a12a`、绿 `c3292dd`；CT 版本断言 PASS；ast/error `--filter fn` 均 0 差异 |
+| T4 | 完成 | 4 份 AST golden 重录；`GC-23-01…04`；`check-0.1.0.sh --all` → 89 passed |
+| T5 | 完成 | `docs/RILL-0.1.0.md` §4.18 补字面原文口径；`tools/check.sh g4` PASS |
+| T6 | 完成 | 红 `9be6354`、绿 `5235a8b`；`pytest tests/phase23 -q` → 16 passed；全层对拍 0 差异 |
+| T7 | 完成 | `docs/reviews/closeout-23.md`、`docs/reviews/diff/PH-23.md`；`tools/check.sh all` PASS |
 
-结论：T1/T2 完成但未合入 `main`；T3–T7 未开始。本卡未收口，`version-minor=23`
-仍只是目标值，未 bump `0.23.0`、未建 `v0.23.0`。
+结论：T1…T7 完成，E-1…E-24 全绿；产品 `0.23.0`、tag `v0.23.0`。
