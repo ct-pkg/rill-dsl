@@ -5,6 +5,9 @@
 > （产品 `0.22.0`，annotated tag `v0.22.0`）。
 > C-6 口径：参考实现除 `__version__` 外未改，
 > `git diff --quiet 4dd303d -- src/rill ':!src/rill/__init__.py'` rc=0。
+>
+> **2026-11-16 追记**：本文证据依赖 Python 参考实现；该实现退场后不可复跑，
+> C-8 改记“证据归档、不可复跑”（PH-23 卡 §10、`issues/RILL-001.md`）。
 
 ## 1. 先判定：承载路径结论
 

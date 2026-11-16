@@ -52,3 +52,12 @@ grep -n 'enum JKind' -A9 ct/src/common/common.h.ct
 5. 复跑命令独立可执行并给出 0/非 0 退出码；在通道未加入时该命令必须红（先红后绿，红证含 `baseline: <sha>` 与原始输出）。
 
 验收命令建议：`python3 tests/opaque/run_ct.py`（或 `bash tests/opaque/run.sh`），并纳入 `tools/check.sh` 的既有门禁或作为独立脚本被收口记录引用。
+
+## 去向（2026-11-16 裁定）
+
+按项目惯例登记为已知缺口，本轮不补 CT 证据：
+
+- 已入 `docs/planning/rill-0.1.1-backlog.md` 的 `BL-003`。
+- 理由：CT `JKind` 没有 `Opaque`，补齐要改值种类、宿主边界与 fake 注入，属 0.1.1 语义扩展，不是测试通道移植。
+- 不阻塞 PH-23 收口，也不推翻 2026-11-15 的 GO 与 `v0.22.0`。
+- 关闭条件：`BL-003` 落地后本条目转 `verified`，并把 PH-23 卡 §10 的“证据归档、不可复跑”改回“可复跑”。
