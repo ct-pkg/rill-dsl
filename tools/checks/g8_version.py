@@ -3,7 +3,8 @@
 检查项（主规范 §6.7 V-1…V-7 的可机械部分）：
 - 每个 v* tag：名符合 v<MAJOR>.<MINOR>.<PATCH>；annotated；message 含 PH-<n> 且 MINOR=n；
   phase tag 的 PATCH=0；指向提交是 HEAD 祖先；
-- AGENTS.md「版本落点」已声明时：各落点版本一致；tag 版本等于落点版本；
+- AGENTS.md「版本落点」已声明时：各落点版本一致；tag 版本不得高于落点版本，
+  落点版本本身应有对应 tag（tag 常在收口提交之后打，缺失时只提示）。
 - 落点写「缺失/未建」或无 tag 时只提示，不伪造通过。
 
 未覆盖（收口对照表人工核）：V-2/V-3/V-4/V-5 的提交级 PATCH 计数与同提交落点。
@@ -135,11 +136,21 @@ else:
 
     if declared and tag_versions:
         tag_text = {"%d.%d.%d" % item for item in tag_versions}
-        missing = tag_text - declared
-        if missing:
+        current = sorted(declared)[0]
+        current_key = tuple(int(part) for part in current.split("."))
+        future = [
+            value for value in tag_text
+            if tuple(int(part) for part in value.split(".")) > current_key
+        ]
+        if future:
             res.fail(
-                "tag 版本 %s 与版本落点 %s 不一致"
-                % ("、".join(sorted(missing)), "、".join(sorted(declared)))
+                "tag 版本 %s 高于版本落点 %s"
+                % ("、".join(sorted(future)), current)
+            )
+        if current not in tag_text:
+            res.warn(
+                "版本落点 %s 尚无对应 tag；收口提交后应打 annotated tag 并推送"
+                % current
             )
 
 if not tags:

@@ -16,7 +16,7 @@ import re
 from common import ROOT, Result, read_lines, rel, walk_markdown
 
 VERSION_RX = re.compile(r"\bv\d+\.\d+(?:\.\d+)?\b")
-ALLOWED = {"v0.1", "v0.12.0", "v0.22.0", "v1.7.0", "v1.9.0"}
+ALLOWED = {"v0.1", "v0.12.0", "v0.22.0", "v0.23.0", "v1.7.0", "v1.9.0"}
 SKIP = {"docs/spec/ai-coding-workflow.md"}
 
 res = Result("version-wording")
