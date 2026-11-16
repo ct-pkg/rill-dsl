@@ -266,6 +266,23 @@ static void load_walk(JVal *node, FnList *fns)
     }
 }
 
+/* PH-23 / D-024 §判决 4：收集时断言 shape_version，旧形状不得静默参与匹配。 */
+static void load_check_shape_version(JVal *definition)
+{
+    JVal *shape = jget(definition, "shape");
+    JVal *version = shape != 0 ? jget(shape, "shape_version") : 0;
+    if (version != 0 && version->kind == J_INT && version->num == shape_version()) {
+        return;
+    }
+    {
+        JVal *span = jget(definition, "span");
+        fail("load", "E-LOAD-FN-SHAPE-VERSION",
+             span != 0 ? (int)jget(span, "line")->num : 0,
+             span != 0 ? (int)jget(span, "col")->num : 0,
+             "函数形状版本不受支持；当前需要 %d", shape_version());
+    }
+}
+
 /* PH-22：函数形状表、同块冲突、arity 与调用选型。 */
 pub void load_shapes(JVal *tree)
 {
@@ -283,6 +300,7 @@ pub void load_shapes(JVal *tree)
             defs = jget(header, "defs");
             for (j = 0; j < defs->len; j++) {
                 JVal *definition = defs->items[j];
+                load_check_shape_version(definition);
                 fn_list_push(&fns, definition);
             }
             /* 块内同形检查：只在本次块新收进来的定义之间比较。 */

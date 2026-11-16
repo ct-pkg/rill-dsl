@@ -283,18 +283,13 @@ pub int jval_equal(JVal *a, JVal *b)
     }
 }
 
-/* P-025 未裁定前：常量位的 ``类型:值`` 前缀不进形状键。 */
-static char *shape_strip_type(const char *text)
+/* D-024 §判决 3：v1 = PH-22 收口时的“剥离类型前缀”临时口径；v2 = 字面原文。 */
+#define SHAPE_VERSION 2
+
+/* 跨单元读取同一常量：loader 不重复写字面量。 */
+pub int shape_version(void)
 {
-    const char *colon = strchr(text, ':');
-    const char *p;
-    if (colon == 0 || colon == text || colon[1] == 0) return xstrdup(text);
-    if (!(is_alpha((unsigned char)text[0]) || text[0] == '_')) return xstrdup(text);
-    for (p = text; p < colon; p++) {
-        unsigned char c = (unsigned char)*p;
-        if (!(is_alnum(c) || c == '_' || c == '-')) return xstrdup(text);
-    }
-    return xstrdup(colon + 1);
+    return SHAPE_VERSION;
 }
 
 static char *shape_const_value(JVal *node)
@@ -302,8 +297,8 @@ static char *shape_const_value(JVal *node)
     const char *kind;
     if (node == 0 || node->kind != J_OBJ) return 0;
     kind = jget_str(node, "kind");
-    if (strcmp(kind, "String") == 0) return shape_strip_type(jget_str(node, "value"));
-    if (strcmp(kind, "Bare") == 0) return shape_strip_type(jget_str(node, "text"));
+    if (strcmp(kind, "String") == 0) return xstrdup(jget_str(node, "value"));
+    if (strcmp(kind, "Bare") == 0) return xstrdup(jget_str(node, "text"));
     if (strcmp(kind, "Number") == 0) {
         JVal *v = jget(node, "value");
         char buf[64];
@@ -413,6 +408,7 @@ pub JVal *shape_of_call(JVal *call, int template_side)
     JVal *preps = jarr();
     JVal *post = jget(call, "post");
     int i;
+    if (template_side) jput(o, "shape_version", jint(SHAPE_VERSION));
     jput(o, "verb", jstr(jget_str(call, "verb")));
     jput(o, "subject", shape_slot(jget(call, "subject"), template_side));
     jput(o, "object", shape_slot(jget(call, "object"), template_side));
