@@ -10,6 +10,7 @@
           {
             "kind": "FnDef",
             "shape": {
+              "shape_version": 2,
               "verb": "read",
               "subject": {
                 "role": "none"

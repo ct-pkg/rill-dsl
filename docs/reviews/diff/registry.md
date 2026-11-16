@@ -17,3 +17,7 @@
 | AD-22-01 | 登记豁免 | `directed/pd2` | Python `E-PARSE-UNEXPECTED@2:12` ↔ CT 解析成功 | 登记豁免（裁定 A） | PD-2 有意分歧；`expected_diff` 精确匹配，无通配 | PH-22 |
 | AD-22-02 | 登记豁免 | `positive/run/call/fn-*` 的裸词/可选介宾 | 无旧值，新增用例 | 登记豁免（新增覆盖） | PH-22 / E-11 / E-8 | PH-22 |
 | GC-22-07 | golden 修订 | `positive/tokens/keywords-values` | 第 11 行 `@ "f" 42 $x .host` → `@ f 42 $x .host`；`STRING f` → `BARE f`，同行 `NUMBER/VARIABLE/FIELD/NEWLINE` 列号随宽度左移 | golden 修订 | PH-22-T6 收口补：E-20 清零 `@ "` 后按新词法重录 token 列号 | PH-22 |
+| GC-23-01 | golden 修订 | `positive/call/basic` | `FnDef.shape` 首位新增 `"shape_version": 2` | golden 修订 | PH-23-T4 / D-024 §判决 3；形状内容不变 | PH-23 |
+| GC-23-02 | golden 修订 | `positive/call/bareword-arg` | `FnDef.shape` 首位新增 `"shape_version": 2` | golden 修订 | 同上 | PH-23 |
+| GC-23-03 | golden 修订 | `positive/call/shape-adverb` | `FnDef.shape` 首位新增 `"shape_version": 2` | golden 修订 | 同上；状语名集合与顺序不变 | PH-23 |
+| GC-23-04 | golden 修订 | `positive/call/shape-prep-order` | `FnDef.shape` 首位新增 `"shape_version": 2` | golden 修订 | 同上；介词名与顺序不变 | PH-23 |
