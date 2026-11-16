@@ -93,6 +93,7 @@ def _collect_functions(program):
             continue
         seen = []
         for definition in header["defs"]:
+            _check_shape_version(definition)
             for first in seen:
                 if first["shape"] == definition["shape"]:
                     span = definition["span"]
@@ -108,6 +109,20 @@ def _collect_functions(program):
             seen.append(definition)
             functions.append(definition)
     return functions
+
+
+def _check_shape_version(definition):
+    """D-024 §判决 4：收集时断言版本，旧形状不得静默参与匹配。"""
+    version = definition["shape"].get("shape_version")
+    if version != shape.SHAPE_VERSION:
+        span = definition["span"]
+        raise LoadError(
+            "E-LOAD-FN-SHAPE-VERSION",
+            "函数形状版本 %r 不受支持；当前需要 %d"
+            % (version, shape.SHAPE_VERSION),
+            span["line"],
+            span["col"],
+        )
 
 
 def template_params(definition):
