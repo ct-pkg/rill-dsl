@@ -1,0 +1,12 @@
+{
+  "kind": "error",
+  "phase": "p4",
+  "note": "PH-23：前缀不剥离后 file:x 与 text:x 不同形，跨前缀调用无候选",
+  "expect": {
+    "stage": "load",
+    "command": "check",
+    "code": "E-04",
+    "line": 4,
+    "col": 1
+  }
+}

@@ -1,0 +1,6 @@
+//fn{
+@ <send> file:x { <send> file:x }
+@ <send> text:x { <send> text:x }
+}
+@ <send> "file:x"
+@ <send> "text:x"
