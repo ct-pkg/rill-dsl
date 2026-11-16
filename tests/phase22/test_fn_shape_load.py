@@ -53,14 +53,17 @@ def test_duplicate_shape_differs_only_by_adverb_value():
     _expect(source, "E-03", 3, 1)
 
 
-def test_type_prefix_does_not_change_shape():
+def test_type_prefix_is_part_of_shape():
+    # D-024 取代 PH-22 E-26：file:x 与 text:x 是不同形状，可在同一 //fn 共存。
     source = (
         "//fn{\n"
         "@ <send> file:x { <send> file:x }\n"
         "@ <send> text:x { <send> text:x }\n"
         "}\n"
+        '@ <send> "file:x"\n'
+        '@ <send> "text:x"\n'
     )
-    _expect(source, "E-03", 3, 1)
+    load(source)
 
 
 def test_ambiguous_across_blocks():
