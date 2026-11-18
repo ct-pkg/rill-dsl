@@ -72,4 +72,38 @@ AssertionError: 退出码 0，payload={'ok': True, 'value': [None], 'error': Non
 
 ## 处置（DEV 追加，不改 status）
 
-（待修复）
+fix: `07baf72`（`fix(ct): RILL-002 非字符串 break 值不再吞失败`）
+
+- CT `break_error`：字符串原样、int/float/bool/null 落字符串；数组/对象/字节回落默认错误串。
+- Python `result.break_error` 同口径，`eval_parallel._run_branch` / `_run_results` / `eval_fn` 三处接入。
+- 重新 `./ct/build.sh` 产出 `ct/bin/rill`；构建脚本另加 `--c-boundary=allow`（`9cbf54f`，适配 ct 0.65 strict 边界）。
+
+验证原始输出：
+
+```console
+$ ./ct/bin/rill run /tmp/b2.rill --profile shell
+{"ok":false,"value":[null],"error":"42","host_meta":{},"host":{"profile":"shell","principal":{"kind":"os-user","name":"samxx"}}}
+[exit=1]
+
+$ PYTHONPATH=src python3 -m rill run /tmp/b2.rill --profile shell
+{"ok": false, "value": [null], "error": "42", "host_meta": {}, "host": {"profile": "shell", "principal": {"kind": "os-user", "name": "samxx"}}}
+[exit=1]
+
+$ python3 tests/regressions/test_break_value.py
+PASS
+[exit=0]
+
+$ bash ct/test.sh
+VERDICT: PASS (exit 0)
+
+$ python3 tools/diff/diff.py --layer eval
+== total diffs: 0
+```
+
+脚本内容：
+
+```rill
+parallel {
+    <read> missing.rill [error] { break 42 }
+}
+```
