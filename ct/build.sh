@@ -43,6 +43,7 @@ mkdir -p "$(dirname "$OUT")" "$BUILD"
 rm -rf "$LIBGEN"
 mkdir -p "$LIBGEN"
 
+# ct 0.65+ 默认 strict C 边界；本实现用 #include 与内联 C，需显式 allow。
 # 第一层：语言核心 -> 静态库（导出头落在 $LIBGEN）
 (
     cd "$ROOT/ct"
@@ -52,6 +53,7 @@ mkdir -p "$LIBGEN"
         src/loader/loader.h.ct \
         src/formatter/formatter.h.ct \
         --lib -I src --outdir "$LIBGEN" \
+        --c-boundary=allow \
         --cflags "-Wall -Wextra -O2" \
         -o "$LIB"
 )
@@ -61,6 +63,7 @@ mkdir -p "$LIBGEN"
     cd "$ROOT/ct"
     "$CT" build src/main.ct -I src \
         --outdir "$TMP/gen" \
+        --c-boundary=allow \
         --cflags "-Wall -Wextra -O2 -I$LIBGEN -I$ROOT/ct/src/host" \
         --ldflags "$LIB" \
         -o "$OUT"
