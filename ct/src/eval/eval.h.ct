@@ -590,13 +590,15 @@ static EOut eval_fn_call(Eval *ev, JVal *stmt, JVal *dollar)
     JVal *def = 0;
     JVal *headers = jget(ev->program, "headers");
     JVal *body;
-    char *pname[64];
-    JVal *pdef[64];
-    JVal *bind[64];
-    int has[64];
-    JVal *stack[512];
+    char **pname = 0;
+    JVal **pdef = 0;
+    JVal **bind;
+    int *has;
+    JVal **stack = 0;
     EVar *saved;
     EOut out;
+    int pcap = 0;
+    int scap = 0;
     int np = 0;
     int sp = 0;
     int i;
@@ -621,6 +623,8 @@ static EOut eval_fn_call(Eval *ev, JVal *stmt, JVal *dollar)
              "未声明的函数形状：%s", shape_describe(call_shape));
     }
 
+    scap = 64;
+    stack = (JVal **)xrealloc(stack, sizeof(JVal *) * (size_t)scap);
     stack[sp++] = jget(def, "template");
     while (sp > 0) {
         JVal *n = stack[--sp];
@@ -629,7 +633,12 @@ static EOut eval_fn_call(Eval *ev, JVal *stmt, JVal *dollar)
         if (n == 0) continue;
         if (n->kind == J_ARR) {
             for (k = n->len - 1; k >= 0; k--) {
-                if (sp < 512) stack[sp++] = n->items[k];
+                if (sp == scap) {
+                    scap *= 2;
+                    stack = (JVal **)xrealloc(
+                        stack, sizeof(JVal *) * (size_t)scap);
+                }
+                stack[sp++] = n->items[k];
             }
             continue;
         }
@@ -638,22 +647,36 @@ static EOut eval_fn_call(Eval *ev, JVal *stmt, JVal *dollar)
         if (strcmp(nk, "Variable") == 0 || strcmp(nk, "Default") == 0) {
             const char *pn = jget_str(n, "name");
             int idx = eval_param_index(pname, np, pn);
-            if (idx < 0 && np < 64) {
+            if (idx < 0) {
+                if (np == pcap) {
+                    pcap = pcap ? pcap * 2 : 8;
+                    pname = (char **)xrealloc(
+                        pname, sizeof(char *) * (size_t)pcap);
+                    pdef = (JVal **)xrealloc(
+                        pdef, sizeof(JVal *) * (size_t)pcap);
+                }
                 idx = np;
                 pname[np] = xstrdup(pn);
                 pdef[np] = 0;
                 np++;
             }
-            if (strcmp(nk, "Default") == 0 && idx >= 0 && pdef[idx] == 0) {
+            if (strcmp(nk, "Default") == 0 && pdef[idx] == 0) {
                 pdef[idx] = jget(n, "value");
             }
         } else {
             for (k = n->len - 1; k >= 0; k--) {
                 if (strcmp(n->keys[k], "kind") == 0) continue;
-                if (sp < 512) stack[sp++] = n->items[k];
+                if (sp == scap) {
+                    scap *= 2;
+                    stack = (JVal **)xrealloc(
+                        stack, sizeof(JVal *) * (size_t)scap);
+                }
+                stack[sp++] = n->items[k];
             }
         }
     }
+    bind = (JVal **)xmalloc(sizeof(JVal *) * (size_t)(np > 0 ? np : 1));
+    has = (int *)xmalloc(sizeof(int) * (size_t)(np > 0 ? np : 1));
     for (i = 0; i < np; i++) {
         bind[i] = 0;
         has[i] = 0;
