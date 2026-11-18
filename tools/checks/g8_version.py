@@ -27,6 +27,109 @@ def git(args):
     )
 
 
+def check_target(tag):
+    """返回 tag 指向的 commit sha；失败时已记 FAIL 并返回 None。"""
+    target = git(["rev-parse", tag + "^{commit}"])
+    sha = target.stdout.strip() if target.returncode == 0 else ""
+    if not sha:
+        res.fail("tag %s:1 无法解析指向提交" % tag)
+        return None
+    ancestor = subprocess.run(
+        ["git", "-C", ROOT, "merge-base", "--is-ancestor", sha, "HEAD"]
+    )
+    if ancestor.returncode != 0:
+        res.fail("tag %s:1 指向提交 %s 不是 HEAD 祖先" % (tag, sha[:7]))
+        return None
+    return sha
+
+
+def read_pkg(tag):
+    """读 tag 根下的 ct.pkg；不存在返回 None。"""
+    show = git(["show", tag + ":ct.pkg"])
+    if show.returncode != 0:
+        return None
+    data = {}
+    for line in show.stdout.splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, _, value = line.partition("=")
+        data[key.strip()] = value.strip()
+    return data
+
+
+PKG_MSG_RX = re.compile(r"^(\S+)\s+(\d+\.\d+\.\d+)$")
+
+
+def check_package_tag(tag, version, message, annotated):
+    """识别并校验 CT 包 tag；返回 (是否包 tag, 是否通过)。
+
+    包 tag 形态：message 恰为 `<包名> <version>`，且 tag 内 ct.pkg 的
+    name/version/publisher/ns-root 与 tag 自洽。不是包 tag 时返回
+    (False, False)，由调用方按 phase tag 处理。
+    """
+    match = PKG_MSG_RX.match(message.strip())
+    if match is None:
+        return False, False
+    name, msg_version = match.group(1), match.group(2)
+    ok = annotated
+    if msg_version != version:
+        res.fail(
+            "tag %s:1 包 tag message 版本 %s 与 tag 名 %s 不一致"
+            % (tag, msg_version, version)
+        )
+        ok = False
+    pkg = read_pkg(tag)
+    if pkg is None:
+        res.fail("tag %s:1 包 tag 缺 ct.pkg" % tag)
+        ok = False
+    else:
+        if pkg.get("name") != name:
+            res.fail(
+                "tag %s:1 包 tag 名 %s 与 ct.pkg name=%r 不一致"
+                % (tag, name, pkg.get("name"))
+            )
+            ok = False
+        if pkg.get("version") != version:
+            res.fail(
+                "tag %s:1 包 tag 版本 %s 与 ct.pkg version=%r 不一致"
+                % (tag, version, pkg.get("version"))
+            )
+            ok = False
+        publisher = pkg.get("publisher", "")
+        if not publisher or publisher == "local" or "/" in publisher:
+            res.fail(
+                "tag %s:1 ct.pkg publisher=%r 非法（非空、非 local、不含 /）"
+                % (tag, publisher)
+            )
+            ok = False
+        ns_root = pkg.get("ns-root", "")
+        if not ns_root or ns_root.startswith("/") or ".." in ns_root.split("/"):
+            res.fail(
+                "tag %s:1 ct.pkg ns-root=%r 非法（相对路径、不含 ..）"
+                % (tag, ns_root)
+            )
+            ok = False
+        else:
+            spec = tag + "^{tree}" if ns_root == "." else tag + ":" + ns_root
+            tree = git(["cat-file", "-t", spec])
+            if tree.returncode != 0 or tree.stdout.strip() != "tree":
+                res.fail(
+                    "tag %s:1 ct.pkg ns-root=%r 在 tag 内不是目录"
+                    % (tag, ns_root)
+                )
+                ok = False
+    sha = check_target(tag)
+    if sha is None:
+        ok = False
+    if ok:
+        res.ok(
+            "tag %s：包 tag %s %s、ct.pkg 一致、指向 %s 且可追溯"
+            % (tag, name, version, sha[:7])
+        )
+    return True, ok
+
+
 probe = git(["rev-parse", "--show-toplevel"])
 if probe.returncode != 0:
     res.skip("当前 ROOT 不是 git 仓库：%s" % ROOT)
@@ -47,6 +150,7 @@ for tag in sorted(tags):
         continue
     tag_failed = False
     major, minor, patch = (int(part) for part in match.groups())
+    version = "%d.%d.%d" % (major, minor, patch)
     kind = git(["cat-file", "-t", tag])
     annotated = kind.returncode == 0 and kind.stdout.strip() == "tag"
     if not annotated:
@@ -56,31 +160,31 @@ for tag in sorted(tags):
     message = contents.stdout if contents.returncode == 0 else ""
     phase = re.search(r"PH-(\d+)", message)
     if phase is None:
-        res.fail("tag %s:1 message 未含 PH-<n>" % tag)
-        tag_failed = True
-    elif int(phase.group(1)) != minor:
+        is_package, _package_ok = check_package_tag(tag, version, message, annotated)
+        if is_package:
+            continue
         res.fail(
-            "tag %s:1 MINOR=%d 与 message 里的 PH-%s 不对应"
-            % (tag, minor, phase.group(1))
+            "tag %s:1 message 未含 PH-<n>，也不符合包 tag '<name> <version>'" % tag
         )
-        tag_failed = True
-    if patch != 0:
-        res.fail("tag %s:1 phase tag 的 PATCH 必须为 0，实际 %d" % (tag, patch))
-        tag_failed = True
-    target = git(["rev-parse", tag + "^{commit}"])
-    sha = target.stdout.strip() if target.returncode == 0 else ""
-    if not sha:
-        res.fail("tag %s:1 无法解析指向提交" % tag)
         tag_failed = True
     else:
-        ancestor = subprocess.run(
-            ["git", "-C", ROOT, "merge-base", "--is-ancestor", sha, "HEAD"]
-        )
-        if ancestor.returncode != 0:
-            res.fail("tag %s:1 指向提交 %s 不是 HEAD 祖先" % (tag, sha[:7]))
+        if int(phase.group(1)) != minor:
+            res.fail(
+                "tag %s:1 MINOR=%d 与 message 里的 PH-%s 不对应"
+                % (tag, minor, phase.group(1))
+            )
             tag_failed = True
-    if not tag_failed:
-        res.ok("tag %s：annotated、PH-%d、指向 %s 且可追溯" % (tag, minor, sha[:7]))
+        if patch != 0:
+            res.fail("tag %s:1 phase tag 的 PATCH 必须为 0，实际 %d" % (tag, patch))
+            tag_failed = True
+        sha = check_target(tag)
+        if sha is None:
+            tag_failed = True
+        if not tag_failed:
+            res.ok(
+                "tag %s：annotated、PH-%d、指向 %s 且可追溯"
+                % (tag, minor, sha[:7])
+            )
     tag_versions.add((major, minor, patch))
 
 # 版本落点
