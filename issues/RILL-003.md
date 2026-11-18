@@ -55,4 +55,24 @@ AssertionError: (65, 2, {'error': {'stage': 'run', 'code': 'E-RUN-UNDEFINED', 'l
 
 ## 处置（DEV 追加，不改 status）
 
-（待修复）
+fix: `63ac0e8`（`fix(ct): RILL-003 函数参数收集移除 64/512 静默上限`）
+
+- `pname` / `pdef` / `bind` / `has` 与遍历栈改为 `xrealloc` 按需增长。
+- 删除 `if (np < 64)` 与 `if (sp < 512)` 的静默丢弃；加载期与运行期口径一致。
+- 重新 `./ct/build.sh` 产出 `ct/bin/rill`。
+
+验证原始输出：
+
+```console
+$ python3 tests/regressions/test_fn_param_limit.py
+PASS
+[exit=0]
+
+$ bash ct/test.sh
+VERDICT: PASS (exit 0)
+
+$ python3 tools/diff/diff.py --layer eval
+== total diffs: 0
+```
+
+回归覆盖 65（原 `pname[64]` 边界）与 600（原 `stack[512]` 边界）个介宾参数，CT 与 Python 两侧均返回最后一个参数值。
