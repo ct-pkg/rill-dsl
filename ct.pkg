@@ -10,5 +10,5 @@
 name = rill-dsl
 publisher = ct
 ns-root = ct/src
-version = 0.23.2
+version = 0.23.3
 requires = ct >= 0.65.1
