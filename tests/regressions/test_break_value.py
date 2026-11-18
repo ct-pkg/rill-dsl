@@ -64,10 +64,16 @@ def test_results_break_number_is_failure():
         _assert_failure(sut, source, "42")
 
 
-def test_fn_break_number_is_failure():
-    source = '//fn{\n@ <send> "x" { break 42 }\n}\n@ <send> "x"\n'
+def test_fn_break_number_reaches_error_block():
+    source = (
+        '//fn{\n@ <send> "x" { break 42 }\n}\n'
+        '@ <send> "x" [error] { break $ }\n'
+    )
     for sut in (CT, PY):
-        _assert_failure(sut, source, "42")
+        rc, payload = _run(sut, source)
+        assert rc == 0, (rc, payload)
+        assert payload.get("ok") is True, payload
+        assert payload.get("value") == "42", payload
 
 
 def test_parallel_break_string_keeps_value():
@@ -79,6 +85,6 @@ def test_parallel_break_string_keeps_value():
 if __name__ == "__main__":
     test_parallel_break_number_is_failure()
     test_results_break_number_is_failure()
-    test_fn_break_number_is_failure()
+    test_fn_break_number_reaches_error_block()
     test_parallel_break_string_keeps_value()
     print("PASS")

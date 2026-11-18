@@ -44,6 +44,26 @@ class ExecOutcome(object):
         )
 
 
+def break_error(value):
+    """§4.15：break 值最终落字符串。
+
+    标量转字符串；数组/对象/字节暂归一为默认错误串（与 CT 侧同口径，
+    至少不把失败吞成成功）。
+    """
+    if isinstance(value, str):
+        return value
+    if value is None:
+        return "null"
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if isinstance(value, int):
+        return str(value)
+    if isinstance(value, float):
+        text = ("%.3f" % value).rstrip("0").rstrip(".")
+        return text or "0"
+    return DEFAULT_ERROR
+
+
 def triggers_ok(outcome):
     """§4.10：``[ok]`` 的条件是 ``ok == true``，与 value 真值无关。"""
     return outcome.ok is True

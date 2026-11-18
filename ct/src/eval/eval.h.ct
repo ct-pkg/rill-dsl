@@ -193,10 +193,24 @@ static EOut unhandled(EOut cause)
     return o;
 }
 
-/* break 值作错误串时只认字符串；0.1.0 的 fixture 里 break 值都是串。 */
+/* §4.15：break 值最终落字符串。标量转字符串；数组/对象/字节暂归一为
+   默认错误串（至少不把失败吞成成功）。 */
 static const char *break_error(JVal *v)
 {
-    return (v != 0 && v->kind == J_STR) ? v->str : 0;
+    char buf[64];
+    if (v == 0) return LOAD_DEFAULT_ERROR;
+    if (v->kind == J_STR) return v->str;
+    if (v->kind == J_INT) {
+        snprintf(buf, sizeof(buf), "%lld", v->num);
+        return xstrdup(buf);
+    }
+    if (v->kind == J_FLOAT) {
+        jfmt_double(buf, sizeof(buf), v->dbl);
+        return xstrdup(buf);
+    }
+    if (v->kind == J_BOOL) return v->boolean ? "true" : "false";
+    if (v->kind == J_NULL) return "null";
+    return LOAD_DEFAULT_ERROR;
 }
 
 static EOut apply_tail(Eval *ev, JVal *tail, EOut out)

@@ -66,7 +66,7 @@ AssertionError: 退出码 0，payload={'ok': True, 'value': [None], 'error': Non
 ## 期望
 
 1. `parallel` 分支内 `break 42` → 整体 `ok:false`、`error:"42"`、退出 1；`value` 仍为 `[null]`。
-2. `[results]` 块内 `break 42` 与函数体内 `break 42` 同样得到 `"42"`。
+2. `[results]` 块内 `break 42` 同样得到 `"42"`；函数体内 `break 42` 在调用点 `[error]` 块中可见为 `"42"`（未处理调用仍按 §4.10 落默认错误串，这是既有语义）。
 3. 字符串 break 值（`break "boom"`）保持原样。
 4. CT 与 Python 两侧对同一脚本输出一致；红测覆盖上述三类位置。
 

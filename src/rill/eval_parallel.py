@@ -67,7 +67,7 @@ def _run_branch(interp, branch, scope, dollar):
     except BreakSignal as signal:
         if signal.target:
             scope.set(signal.target, signal.value)
-        return result.ExecOutcome.failure(signal.value)
+        return result.ExecOutcome.failure(result.break_error(signal.value))
 
 
 def _run_results(interp, block, scope, values):
@@ -77,4 +77,4 @@ def _run_results(interp, block, scope, values):
     except BreakSignal as signal:
         if signal.target:
             scope.set(signal.target, signal.value)
-        return result.ExecOutcome.failure(signal.value), values
+        return result.ExecOutcome.failure(result.break_error(signal.value)), values

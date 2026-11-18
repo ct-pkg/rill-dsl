@@ -75,7 +75,7 @@ def call_function(interp, statement, scope, dollar):
         except BreakSignal as signal:
             if signal.target:
                 scope.set(signal.target, signal.value)
-            outcome = result.ExecOutcome.failure(signal.value)
+            outcome = result.ExecOutcome.failure(result.break_error(signal.value))
         if outcome.ok:
             outcome = result.ExecOutcome.success(outcome.value)
 
