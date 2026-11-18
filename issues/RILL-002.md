@@ -1,6 +1,6 @@
 ---
 id: RILL-002
-status: open
+status: verified
 owner: REV
 opened: 2026-11-18
 anchor: eb5c74b
@@ -107,3 +107,89 @@ parallel {
     <read> missing.rill [error] { break 42 }
 }
 ```
+
+## 复核（REV）
+
+- 复核日期：2026-11-18
+- 干净检出 sha：`152365d`（`git fetch origin main` 后 `origin/main` = `152365de15e31f85f5554f70c866035a55e7cedb`）
+- 临时目录：`<TMP>`（本次 `/tmp/rill-rev-s2Rusj`）；`git archive origin/main | tar -x -C <TMP>/work`
+- 构建：`HOME=<TMP>/cthome CT_HOME=<TMP>/cthome/.ct CT=/Users/samxx/.local/bin/ct bash ct/build.sh` → 退出 0，`ct/bin/rill` 存在（sha256 `2f047f099ce2db61424023492434e75d058c7836dceecfb761af6b096e3f3d8f`）
+- 环境：macOS，Python 3.15.2，ct 0.65.1
+- 复现脚本置于 `<TMP>/repro/{a,b,c,d}/s.ri`；CT 用 `ct/bin/rill run s.ri --profile shell`，Python 用 `PYTHONPATH=src python3 -m rill run s.ri --profile shell`
+
+逐项原始输出：
+
+a. `parallel { <read> missing.rill [error] { break 42 } }`
+
+```console
+$ ct/bin/rill run s.ri --profile shell
+{"ok":false,"value":[null],"error":"42","host_meta":{},"host":{"profile":"shell","principal":{"kind":"os-user","name":"samxx"}}}
+[exit=1]
+
+$ PYTHONPATH=src python3 -m rill run s.ri --profile shell
+{"ok": false, "value": [null], "error": "42", "host_meta": {}, "host": {"profile": "shell", "principal": {"kind": "os-user", "name": "samxx"}}}
+[exit=1]
+```
+
+b. `parallel { <read> missing.rill [error] { break "boom" } }`
+
+```console
+$ ct/bin/rill run s.ri --profile shell
+{"ok":false,"value":[null],"error":"boom","host_meta":{},"host":{"profile":"shell","principal":{"kind":"os-user","name":"samxx"}}}
+[exit=1]
+
+$ PYTHONPATH=src python3 -m rill run s.ri --profile shell
+{"ok": false, "value": [null], "error": "boom", "host_meta": {}, "host": {"profile": "shell", "principal": {"kind": "os-user", "name": "samxx"}}}
+[exit=1]
+```
+
+c. `parallel { <send> "x" } [results] { break 42 }`
+
+```console
+$ ct/bin/rill run s.ri --profile shell
+{"ok":false,"value":null,"error":"42","host_meta":{},"host":{"profile":"shell","principal":{"kind":"os-user","name":"samxx"}}}
+[exit=1]
+
+$ PYTHONPATH=src python3 -m rill run s.ri --profile shell
+{"ok": false, "value": null, "error": "42", "host_meta": {}, "host": {"profile": "shell", "principal": {"kind": "os-user", "name": "samxx"}}}
+[exit=1]
+```
+
+d. `//fn{ @ <send> "x" { break 42 } }` + 调用 `@ <send> "x" [error] { break $ }`
+
+```console
+$ ct/bin/rill run s.ri --profile shell
+{"ok":true,"value":"42","error":null,"host_meta":{},"host":{"profile":"shell","principal":{"kind":"os-user","name":"samxx"}}}
+[exit=0]
+
+$ PYTHONPATH=src python3 -m rill run s.ri --profile shell
+{"ok": true, "value": "42", "error": null, "host_meta": {}, "host": {"profile": "shell", "principal": {"kind": "os-user", "name": "samxx"}}}
+[exit=0]
+```
+
+补充回归（同一干净归档内）：
+
+```console
+$ python3 tests/regressions/test_break_value.py
+PASS
+[exit=0]
+
+$ bash ct/test.sh
+summary
+  compliance: 18 passed, 0 failed, 0 blocked, 0 draft
+  smoke:     0 passed, 0 failed, 0 blocked, 0 draft
+  pending:   0 not run (A 0, B 0)
+VERDICT: PASS (exit 0)
+
+ct/test.sh: PASS
+[exit=0]
+
+$ python3 tools/diff/diff.py --layer eval
+== layer=eval
+   sources=24 ok=23 diagnostics=0 expected=1 diffs=0
+   RESULT: PASS
+== total diffs: 0
+[exit=0]
+```
+
+结论：独立复现通过。`break 42` / `break "boom"` 在 parallel 分支、`[results]` 块与函数体调用点三处均按期望落字符串，CT 与 Python 输出一致；未再出现 `ok:true` 吞失败。

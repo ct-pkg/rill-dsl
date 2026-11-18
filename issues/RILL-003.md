@@ -1,6 +1,6 @@
 ---
 id: RILL-003
-status: open
+status: verified
 owner: REV
 opened: 2026-11-18
 anchor: ce97219
@@ -76,3 +76,67 @@ $ python3 tools/diff/diff.py --layer eval
 ```
 
 回归覆盖 65（原 `pname[64]` 边界）与 600（原 `stack[512]` 边界）个介宾参数，CT 与 Python 两侧均返回最后一个参数值。
+
+## 复核（REV）
+
+- 复核日期：2026-11-18
+- 干净检出 sha：`152365d`（`git fetch origin main` 后 `origin/main` = `152365de15e31f85f5554f70c866035a55e7cedb`）
+- 临时目录：`<TMP>`（本次 `/tmp/rill-rev-s2Rusj`）；`git archive origin/main | tar -x -C <TMP>/work`
+- 构建：`HOME=<TMP>/cthome CT_HOME=<TMP>/cthome/.ct CT=/Users/samxx/.local/bin/ct bash ct/build.sh` → 退出 0，`ct/bin/rill` 存在（sha256 `2f047f099ce2db61424023492434e75d058c7836dceecfb761af6b096e3f3d8f`）
+- 环境：macOS，Python 3.15.2，ct 0.65.1
+- 手工生成（内联 `python3`，非调用回归脚本）：按 issue 期望模板 `//fn{ @ <send> "x" [to] $p1 … [to] $pN { <send> $pN } }` + 调用 `[to] "v1" … [to] "vN"`，得到 `fn65.ri`（1397 字节）与 `fn600.ri`（13635 字节），置于 `<TMP>/repro/fn/`
+
+逐项原始输出：
+
+```console
+$ ct/bin/rill run fn65.ri --profile shell
+{"ok":true,"value":"v65","error":null,"host_meta":{},"host":{"profile":"shell","principal":{"kind":"os-user","name":"samxx"}}}
+[exit=0]
+
+$ PYTHONPATH=src python3 -m rill run fn65.ri --profile shell
+{"ok": true, "value": "v65", "error": null, "host_meta": {}, "host": {"profile": "shell", "principal": {"kind": "os-user", "name": "samxx"}}}
+[exit=0]
+
+$ ct/bin/rill check fn65.ri
+{"warnings":[]}
+[exit=0]
+```
+
+```console
+$ ct/bin/rill run fn600.ri --profile shell
+{"ok":true,"value":"v600","error":null,"host_meta":{},"host":{"profile":"shell","principal":{"kind":"os-user","name":"samxx"}}}
+[exit=0]
+
+$ PYTHONPATH=src python3 -m rill run fn600.ri --profile shell
+{"ok": true, "value": "v600", "error": null, "host_meta": {}, "host": {"profile": "shell", "principal": {"kind": "os-user", "name": "samxx"}}}
+[exit=0]
+```
+
+两轮输出中 `E-RUN-UNDEFINED` 命中数均为 0（`grep -c` 对 stdout/stderr 均为 `0`）；65 参数脚本 `check` 退出 0，未见参数上限诊断。
+
+补充回归（同一干净归档内）：
+
+```console
+$ python3 tests/regressions/test_fn_param_limit.py
+PASS
+[exit=0]
+
+$ bash ct/test.sh
+summary
+  compliance: 18 passed, 0 failed, 0 blocked, 0 draft
+  smoke:     0 passed, 0 failed, 0 blocked, 0 draft
+  pending:   0 not run (A 0, B 0)
+VERDICT: PASS (exit 0)
+
+ct/test.sh: PASS
+[exit=0]
+
+$ python3 tools/diff/diff.py --layer eval
+== layer=eval
+   sources=24 ok=23 diagnostics=0 expected=1 diffs=0
+   RESULT: PASS
+== total diffs: 0
+[exit=0]
+```
+
+结论：独立复现通过。65/600 个介宾参数在加载期与运行期口径一致，CT 与 Python 均绑定并返回最后一个参数值，无静默丢弃、无 `E-RUN-UNDEFINED`。

@@ -1,6 +1,6 @@
 # Issue 台账
 
-> 状态：目录与索引已建立，当前 **3 条 issue**（`RILL-001`…`RILL-003` 均 open）。
+> 状态：目录与索引已建立，当前 **3 条 issue**（`RILL-001` open；`RILL-002`、`RILL-003` verified）。
 > 状态词与分权见 `AGENTS.md` §5.4；台账闭合门禁 G6 在 Phase 1 后启用。
 
 ## 1. ID 前缀
@@ -53,5 +53,5 @@
 | id | 标题 | status | owner | 文件 |
 | --- | --- | --- | --- | --- |
 | RILL-001 | 移植 Opaque 测试通道到 CT fake 宿主以复跑 C-8 | open | REV | [RILL-001.md](RILL-001.md) |
-| RILL-002 | parallel 分支非字符串 break 被吞成成功 | open | REV | [RILL-002.md](RILL-002.md) |
-| RILL-003 | 函数参数收集的 64/512 静默上限 | open | REV | [RILL-003.md](RILL-003.md) |
+| RILL-002 | parallel 分支非字符串 break 被吞成成功 | verified | REV | [RILL-002.md](RILL-002.md) |
+| RILL-003 | 函数参数收集的 64/512 静默上限 | verified | REV | [RILL-003.md](RILL-003.md) |
