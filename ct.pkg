@@ -1,4 +1,4 @@
-# rill - RILL 语言实现的 CT 源码包。
+# rill-dsl - RILL 语言实现的 CT 源码包。
 #
 # 包根是仓库根；CT 单元在 `ct/src` 下（`main.ct` 为入口，其余按
 # `common::common`、`loader::loader` 这类命名空间导入），因此 ns-root 取
@@ -6,8 +6,9 @@
 #
 # publisher 与 ns-root 是 ct-pkg 共享库契约要求的两个身份键；同一包的
 # 所有版本必须保持同一 publisher，确定后不再修改。
-name = rill
+# name 必须与 GitHub 仓库名一致（ct-pkg/index 约定）：仓库为 rill-dsl。
+name = rill-dsl
 publisher = ct
 ns-root = ct/src
-version = 0.23.1
+version = 0.23.2
 requires = ct >= 0.65.1
